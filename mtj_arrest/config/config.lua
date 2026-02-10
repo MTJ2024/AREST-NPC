@@ -15,6 +15,7 @@ Config.UI = {
 }
 
 -- Polizei-Spawning bei Wanted (Fahndung)
+Config.PoliceMode = "aggressive"  -- "aggressive" = always attack, "surrender" = allow surrender window
 Config.PoliceCount = 7 -- Wie viele Cops maximal spawnen
 Config.PoliceSpawnRadius = 40.0 -- Entfernung um Spieler, in der gespawnt wird (Meter)
 Config.PoliceChaseWanted = true -- Wenn true: Cops spawnen und verfolgen Spieler bei Wanted automatisch
@@ -62,5 +63,18 @@ Config.RequiredWantedLevel = 1
 
 -- Debug
 Config.Debug = false
+
+-- WantedSystem Configuration
+Config.WantedSystem = {
+  enabled = true,                    -- Enable/disable automatic wanted levels on crimes
+  shootingWantedLevel = 2,          -- Wanted level for shooting a weapon
+  injuringWantedLevel = 3,          -- Wanted level for injuring a ped
+  killingWantedLevel = 4,           -- Wanted level for killing a ped
+  cooldownMs = 3000,                -- Cooldown in milliseconds between wanted level increases
+  applyForPlayerKills = false,      -- Whether to apply wanted levels for killing other players
+  deathDetectionRadius = 50.0,      -- Radius in meters to detect ped deaths caused by player
+  injuryDetectionRadius = 30.0,     -- Radius in meters to detect ped injuries caused by player
+  combatTimeoutMs = 5000            -- Milliseconds after shooting to consider player in combat
+}
 
 return Config

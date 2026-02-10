@@ -20,6 +20,7 @@ shared_scripts {
 }
 
 client_scripts {
+  'client/wanted_level.lua',         -- Must load FIRST to set wanted levels
   'client/main.lua',                 -- <--- FEHLTE!
   'client/nui_focus_handlers.lua',
   'client/auto_cop_spawn.lua',
