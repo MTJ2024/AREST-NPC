@@ -70,7 +70,11 @@ Config.AutoWantedLevel = {
   SetWantedOnPoliceDetection = true,    -- Set wanted level when police detect you
   DefaultWantedLevel = 2,               -- Default wanted level when auto-generated
   MinWantedLevel = 2,                   -- Minimum wanted level for arrest scenario
-  MaxWantedLevel = 5                    -- Maximum wanted level
+  MaxWantedLevel = 5,                   -- Maximum wanted level
+  RecklessDrivingSpeed = 120,           -- Speed threshold in km/h for reckless driving
+  RecklessDrivingCooldown = 10000,      -- Cooldown in ms between reckless driving detections
+  MeleeCombatCooldown = 5000,           -- Cooldown in ms between melee combat detections
+  CrimeCheckInterval = 2000             -- How often to check for crimes in ms
 }
 
 -- Enhanced Effects Settings

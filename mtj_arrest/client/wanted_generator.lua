@@ -2,13 +2,31 @@
 -- Automatically generates wanted level based on player actions
 
 local Config = Config or {}
-local DEBUG = Config.Debug or true -- Enable debug by default to help troubleshoot
+local DEBUG = Config.Debug
+if DEBUG == nil then DEBUG = true end -- Enable debug by default if not set
 
 local function dbg(...)
   if not DEBUG then return end
   local t = {}
   for i = 1, select('#', ...) do t[#t+1] = tostring(select(i, ...)) end
   print(("[mtj_arrest][WANTED_GEN] %s"):format(table.concat(t, " ")))
+end
+
+-- Configuration defaults
+local function getCheckInterval()
+  return (Config.AutoWantedLevel and Config.AutoWantedLevel.CrimeCheckInterval) or 2000
+end
+
+local function getRecklessDrivingSpeed()
+  return (Config.AutoWantedLevel and Config.AutoWantedLevel.RecklessDrivingSpeed) or 120
+end
+
+local function getRecklessDrivingCooldown()
+  return (Config.AutoWantedLevel and Config.AutoWantedLevel.RecklessDrivingCooldown) or 10000
+end
+
+local function getMeleeCombatCooldown()
+  return (Config.AutoWantedLevel and Config.AutoWantedLevel.MeleeCombatCooldown) or 5000
 end
 
 -- Check if auto wanted is enabled
@@ -33,9 +51,11 @@ local function setWantedLevel(level)
   
   dbg(("✓ Set wanted level to %d"):format(level))
   
-  -- Show notification
-  if ESX and ESX.ShowNotification then
-    ESX.ShowNotification(("~r~Wanted Level: %d Stars"):format(level))
+  -- Show notification if ESX is available and initialized
+  if ESX and ESX.ShowNotification and type(ESX.ShowNotification) == "function" then
+    pcall(function()
+      ESX.ShowNotification(("~r~Wanted Level: %d Stars"):format(level))
+    end)
   end
 end
 
@@ -56,11 +76,11 @@ CreateThread(function()
   
   dbg("Auto wanted level generator started")
   
-  local lastCrimeCheck = 0
-  local checkInterval = 2000 -- Check every 2 seconds
+  local lastRecklessDrivingCheck = 0
+  local lastMeleeCombatCheck = 0
   
   while true do
-    Wait(checkInterval)
+    Wait(getCheckInterval())
     
     local playerPed = PlayerPedId()
     local currentWanted = GetPlayerWantedLevel(PlayerId())
@@ -79,12 +99,12 @@ CreateThread(function()
       local speed = GetEntitySpeed(vehicle) * 3.6 -- Convert to km/h
       
       -- High speed driving
-      if speed > 120 and currentWanted == 0 then
+      if speed > getRecklessDrivingSpeed() and currentWanted == 0 then
         local now = GetGameTimer()
-        if now - lastCrimeCheck > 10000 then -- Only once per 10 seconds
+        if now - lastRecklessDrivingCheck > getRecklessDrivingCooldown() then
           dbg("Reckless driving detected - setting wanted level")
           setWantedLevel(1)
-          lastCrimeCheck = now
+          lastRecklessDrivingCheck = now
         end
       end
     end
@@ -93,10 +113,10 @@ CreateThread(function()
     if IsPedInMeleeCombat(playerPed) then
       if currentWanted == 0 then
         local now = GetGameTimer()
-        if now - lastCrimeCheck > 5000 then
+        if now - lastMeleeCombatCheck > getMeleeCombatCooldown() then
           dbg("Melee combat detected - setting wanted level")
           setWantedLevel(1)
-          lastCrimeCheck = now
+          lastMeleeCombatCheck = now
         end
       end
     end

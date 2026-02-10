@@ -1,6 +1,9 @@
 -- MTJ Arrest: Automatisches Spawnen von 2-7 Police-NPCs ab 2 Sternen im Radius um den Spieler
 
-local DEBUG = true
+local Config = Config or {}
+local DEBUG = Config.Debug
+if DEBUG == nil then DEBUG = false end -- Default to false if not configured
+
 local function dbg(...)
   if not DEBUG then return end
   local t = {}
