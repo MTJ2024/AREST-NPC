@@ -54,6 +54,23 @@ local function increaseWantedLevel(level, reason)
   end
 end
 
+-- Check if player should get wanted (not in jail, not frozen, etc.)
+local function shouldApplyWanted()
+  local playerPed = PlayerPedId()
+  
+  -- Don't apply if player is dead
+  if IsEntityDead(playerPed) then
+    return false
+  end
+  
+  -- Don't apply if entity is frozen (likely in jail or cutscene)
+  if IsEntityPositionFrozen(playerPed) then
+    return false
+  end
+  
+  return true
+end
+
 -- Monitor shooting
 CreateThread(function()
   if not wantedConfig.enabled then return end
@@ -69,8 +86,10 @@ CreateThread(function()
       if now - lastShotFired > 1000 then -- Only trigger once per second
         lastShotFired = now
         
-        -- Give wanted level for shooting
-        increaseWantedLevel(wantedConfig.shootingWantedLevel, "Shooting weapon")
+        -- Give wanted level for shooting (only if should apply)
+        if shouldApplyWanted() then
+          increaseWantedLevel(wantedConfig.shootingWantedLevel, "Shooting weapon")
+        end
       end
     else
       Wait(100) -- Reduce load when not shooting
@@ -84,6 +103,10 @@ CreateThread(function()
   
   while true do
     Wait(1000) -- Check every second
+    
+    if not shouldApplyWanted() then
+      goto continue
+    end
     
     local playerPed = PlayerPedId()
     local playerPos = GetEntityCoords(playerPed)
@@ -149,6 +172,8 @@ CreateThread(function()
       
       EndFindPed(handle)
     end
+    
+    ::continue::
     
     -- Clean up tracked peds (remove entries older than 30 seconds)
     -- This prevents the table from growing indefinitely
