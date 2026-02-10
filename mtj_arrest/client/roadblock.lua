@@ -61,8 +61,10 @@ function SpawnRoadblock()
   local playerHeading = GetEntityHeading(playerPed)
   
   -- Calculate roadblock position ahead of player
-  local forwardX = playerCoords.x + (math.cos(math.rad(playerHeading)) * 50.0)
-  local forwardY = playerCoords.y + (math.sin(math.rad(playerHeading)) * 50.0)
+  -- GTA V heading: 0 = North (positive Y), 90 = East (positive X)
+  local headingRad = math.rad(playerHeading)
+  local forwardX = playerCoords.x + (math.sin(headingRad) * 50.0)
+  local forwardY = playerCoords.y + (math.cos(headingRad) * 50.0)
   local forwardZ = playerCoords.z
   
   -- Get ground Z
@@ -119,9 +121,9 @@ function SpawnRoadblock()
         CreateThread(function()
           local duration = 15000
           local startTime = GetGameTimer()
-          local vehCoords = GetEntityCoords(veh)
           
           while DoesEntityExist(veh) and (GetGameTimer() - startTime) < duration do
+            local vehCoords = GetEntityCoords(veh)
             local toggle = (GetGameTimer() % 400) < 200
             
             if toggle then

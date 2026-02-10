@@ -6,6 +6,7 @@
     toastQueue: [],
     toastShowing: false,
     initialized: false,
+    urgentCountdownThreshold: 3, // Seconds at which countdown becomes urgent
   };
 
   function $(sel) { return document.querySelector(sel); }
@@ -153,7 +154,7 @@
     
     // Add urgent class when countdown is low
     if (el.sCountdown) {
-      if (v <= 3) {
+      if (v <= state.urgentCountdownThreshold) {
         el.sCountdown.classList.add('urgent');
       } else {
         el.sCountdown.classList.remove('urgent');

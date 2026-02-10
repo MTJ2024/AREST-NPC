@@ -50,6 +50,9 @@ end
 
 -- Main thread to monitor wanted level
 CreateThread(function()
+  -- Cache config check
+  local useCustomDisplay = Config.Effects and Config.Effects.EnableCustomWantedDisplay
+  
   while true do
     Wait(100)
     
@@ -62,7 +65,7 @@ CreateThread(function()
     end
     
     -- Hide native wanted stars if custom display is enabled
-    if Config.Effects and Config.Effects.EnableCustomWantedDisplay then
+    if useCustomDisplay then
       hideNativeWantedLevel()
     end
   end
