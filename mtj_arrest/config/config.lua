@@ -63,6 +63,16 @@ Config.RequiredWantedLevel = 1
 -- Debug
 Config.Debug = false
 
+-- Auto Wanted Level Generation
+Config.AutoWantedLevel = {
+  Enabled = true,                       -- Enable automatic wanted level generation
+  SetWantedOnCrime = true,              -- Set wanted level when committing crimes
+  SetWantedOnPoliceDetection = true,    -- Set wanted level when police detect you
+  DefaultWantedLevel = 2,               -- Default wanted level when auto-generated
+  MinWantedLevel = 2,                   -- Minimum wanted level for arrest scenario
+  MaxWantedLevel = 5                    -- Maximum wanted level
+}
+
 -- Enhanced Effects Settings
 Config.Effects = {
   EnableSlowMotion = true,          -- Enable slow motion during arrest

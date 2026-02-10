@@ -21,10 +21,23 @@ AREST NPC - Enhanced Police Arrest System with Cinematic Effects
 - **Flashing Lights** - Police light effects and animations
 - **Enhanced UI** - Pulsing, glowing, and urgent countdown effects
 
-## 📋 Configuration
+## ⚙️ Configuration
 
-All effects can be configured in `config/config.lua`:
+All effects and features can be configured in `config/config.lua`:
 
+### Auto Wanted Level Generation
+```lua
+Config.AutoWantedLevel = {
+  Enabled = true,                       -- Enable automatic wanted level generation
+  SetWantedOnCrime = true,              -- Set wanted level when committing crimes
+  SetWantedOnPoliceDetection = true,    -- Set wanted level when police detect you
+  DefaultWantedLevel = 2,               -- Default wanted level when auto-generated
+  MinWantedLevel = 2,                   -- Minimum wanted level for arrest scenario
+  MaxWantedLevel = 5                    -- Maximum wanted level
+}
+```
+
+### Visual Effects
 ```lua
 Config.Effects = {
   EnableSlowMotion = true,
@@ -44,11 +57,26 @@ Config.Effects = {
 
 ## 🎮 How It Works
 
-1. **Get Wanted Stars** - Commit crimes to get a wanted level
+1. **Get Wanted Level** 
+   - The system will auto-generate wanted level when you commit crimes (shooting, reckless driving, melee combat)
+   - OR use test commands: `/mtj_wanted 2` to set wanted level manually
+   - OR use quick presets: `/mtj_wanted1`, `/mtj_wanted2`, `/mtj_wanted3`, `/mtj_wanted4`, `/mtj_wanted5`
 2. **Police Response** - NPCs spawn at 2+ stars, roadblocks at 3+, helicopter at 4+
 3. **Surrender Option** - Press [E] to surrender when surrounded
 4. **Cinematic Arrest** - Enjoy the enhanced visual effects during arrest
 5. **Jail Time** - Serve your time with the enhanced UI
+
+## 🎮 Test Commands
+
+For testing purposes, you can use these commands:
+
+- `/mtj_wanted [1-5]` - Set wanted level to specific number
+- `/mtj_wanted1` through `/mtj_wanted5` - Quick presets
+- `/mtj_clearwanted` - Clear wanted level
+- `/mtj_checkwanted` - Check current wanted level
+- `/mtj_test_start` - Manually trigger arrest scenario
+- `/mtj_test_arrestlog` - Test arrest log UI
+- `/mtj_test_cuff` - Test handcuff visuals
 
 ## 🎨 New Visual Effects
 

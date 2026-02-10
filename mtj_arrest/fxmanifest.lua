@@ -26,6 +26,7 @@ client_scripts {
   'client/helicopter.lua',
   'client/roadblock.lua',
   'client/wanted_display.lua',
+  'client/wanted_generator.lua',
   'client/nui_focus_handlers.lua',
   'client/auto_cop_spawn.lua',
   'client/controls.lua',

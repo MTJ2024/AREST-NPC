@@ -368,10 +368,23 @@ AddEventHandler('mtj_arrest:startScenario', function()
     dbg("startScenario: already active")
     return
   end
-  if GetPlayerWantedLevel(PlayerId()) == 0 then
-    dbg("startScenario abgebrochen: Kein Wanted Level!")
-    return
+  
+  local currentWanted = GetPlayerWantedLevel(PlayerId())
+  
+  -- Auto-generate wanted level if configured and wanted is 0
+  if currentWanted == 0 then
+    if Config.AutoWantedLevel and Config.AutoWantedLevel.Enabled then
+      local defaultLevel = Config.AutoWantedLevel.DefaultWantedLevel or 2
+      SetPlayerWantedLevel(PlayerId(), defaultLevel, false)
+      SetPlayerWantedLevelNow(PlayerId(), false)
+      dbg(("Auto-generated wanted level: %d"):format(defaultLevel))
+      currentWanted = defaultLevel
+    else
+      dbg("startScenario abgebrochen: Kein Wanted Level!")
+      return
+    end
   end
+  
   scenarioActive = true
   canSurrender = true
   jailRequested = false

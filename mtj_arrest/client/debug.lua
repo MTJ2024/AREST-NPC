@@ -1,6 +1,62 @@
 print("[mtj_arrest][DEBUG] debug.lua loaded")
 print("[mtj_arrest][DEBUG] Hinweis: playCuffSequence ist lokal in main.lua; externer Hook nicht möglich ohne Anpassung.")
 
+-- === TEST COMMANDS FOR WANTED LEVEL ===
+
+-- Set wanted level manually (for testing)
+RegisterCommand('mtj_wanted', function(source, args)
+  local level = tonumber(args[1]) or 3
+  level = math.max(0, math.min(5, level)) -- Clamp between 0-5
+  SetPlayerWantedLevel(PlayerId(), level, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  print(("[mtj_arrest][TEST] Set wanted level to %d"):format(level))
+end, false)
+
+-- Quick wanted level presets
+RegisterCommand('mtj_wanted1', function() 
+  SetPlayerWantedLevel(PlayerId(), 1, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  print("[mtj_arrest][TEST] Set wanted level to 1")
+end, false)
+
+RegisterCommand('mtj_wanted2', function() 
+  SetPlayerWantedLevel(PlayerId(), 2, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  print("[mtj_arrest][TEST] Set wanted level to 2")
+end, false)
+
+RegisterCommand('mtj_wanted3', function() 
+  SetPlayerWantedLevel(PlayerId(), 3, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  print("[mtj_arrest][TEST] Set wanted level to 3")
+end, false)
+
+RegisterCommand('mtj_wanted4', function() 
+  SetPlayerWantedLevel(PlayerId(), 4, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  print("[mtj_arrest][TEST] Set wanted level to 4 (helicopter)")
+end, false)
+
+RegisterCommand('mtj_wanted5', function() 
+  SetPlayerWantedLevel(PlayerId(), 5, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  print("[mtj_arrest][TEST] Set wanted level to 5 (max)")
+end, false)
+
+RegisterCommand('mtj_clearwanted', function() 
+  SetPlayerWantedLevel(PlayerId(), 0, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  print("[mtj_arrest][TEST] Cleared wanted level")
+end, false)
+
+-- Check current wanted level
+RegisterCommand('mtj_checkwanted', function()
+  local wanted = GetPlayerWantedLevel(PlayerId())
+  print(("[mtj_arrest][TEST] Current wanted level: %d"):format(wanted))
+end, false)
+
+-- === EXISTING TEST COMMANDS ===
+
 -- Startet das Festnahme-Szenario wie im echten Ablauf
 RegisterCommand('mtj_test_start', function()
   print("[mtj_arrest][TEST] Trigger mtj_arrest:startScenario (event)")
