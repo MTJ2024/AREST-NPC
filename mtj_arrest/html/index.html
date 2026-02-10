@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>MTJ Arrest UI</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="mtj-root">
+      <!-- Szenario-Panel -->
+      <section id="scenario" class="card scenario hidden" aria-live="polite">
+        <div class="card-header">
+          <div class="chip neon">Einsatz</div>
+          <h1 class="title neon-glow">POLIZEI-EINSATZ</h1>
+        </div>
+        <p class="hint">Du bist <span class="neon2">umzingelt!</span> <br> <span class="key neon-glow">[E]</span> <span>zum Ergeben</span></p>
+        <div class="countdown neon-glow">Letzte Chance: <span class="count">10</span>s</div>
+        <div class="accent-line"></div>
+      </section>
+
+      <!-- Toast / Hinweise -->
+      <div id="toast" class="toast hidden neon2" role="status" aria-live="polite">Hinweis</div>
+
+      <!-- Jail-Panel -->
+      <section id="jail" class="card jail hidden" aria-live="polite">
+        <div class="card-header">
+          <div class="chip neon alt">JVA</div>
+          <h1 class="title neon-glow">G E F Ä N G N I S</h1>
+        </div>
+        <p class="subtitle">Du verbüßt deine <span class="neon2">Strafe</span></p>
+        <div class="timer-display">
+          <div class="timer neon-glow">00:00</div>
+          <div class="bar-wrap">
+            <div class="bar-back"></div>
+            <div class="bar"></div>
+          </div>
+        </div>
+        <!-- GELDSTRAFE BADGE -->
+        <div class="fine-badge">
+          <span class="fine-label">Geldstrafe</span>
+          <span class="fine-amount">15.000&nbsp;€</span>
+        </div>
+        <div class="accent-line"></div>
+      </section>
+
+      <!-- Arrest-Log-Panel -->
+      <section id="arrest-log" class="card arrest hidden">
+        <div class="card-header tight">
+          <div class="chip neon">Protokoll</div>
+          <h2 class="title neon-glow">Festnahmeprotokoll</h2>
+        </div>
+        <ul class="lines">
+          <!-- JS befüllt -->
+        </ul>
+        <div class="accent-line subtle"></div>
+      </section>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

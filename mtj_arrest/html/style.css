@@ -1,0 +1,372 @@
+:root {
+  --primary: #121b3b;
+  --surface: #181e2eeb;
+  --accent: #ff2a2a;
+  --accent2: #217aff;
+  --accent3: #fff;
+  --accent-glow: #ff2323cc;
+  --accent2-glow: #217affcc;
+  --accent3-glow: #ffffffb8;
+  --danger: #ff1550;
+  --chip-bg: #192042;
+  --card-radius: 28px;
+  --shadow: 0 10px 60px 0 #11284c99;
+  --font-main: 'Inter', Arial, sans-serif;
+  --font-digi: 'Orbitron', Arial, sans-serif;
+}
+
+body {
+  background: transparent;
+  font-family: var(--font-main);
+  color: var(--accent3);
+  overflow: hidden;
+  min-height: 100vh;
+}
+
+#mtj-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Panels ohne Rahmen/Hintergrund/Schatten */
+.card {
+  min-width: 400px;
+  max-width: 480px;
+  background: transparent;    /* kein Hintergrund */
+  border-radius: var(--card-radius);
+  box-shadow: none;           /* kein Schatten */
+  margin: 0 18px;
+  padding: 38px 38px 32px 38px;
+  box-sizing: border-box;
+  opacity: 1;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: popIn 0.8s cubic-bezier(.22,1.1,.38,1) both;
+  border: 0;                  /* kein Rahmen */
+  position: relative;
+}
+
+.card.hidden,
+.toast.hidden {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: scale(0.98) translateY(80px);
+}
+
+.card-header {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.card-header.tight {
+  margin-bottom: 0;
+}
+
+.chip {
+  font-family: var(--font-digi);
+  font-size: 1.1rem;
+  background: var(--chip-bg);
+  color: var(--accent2);
+  padding: 6px 18px;
+  border-radius: 50px;
+  letter-spacing: 0.09em;
+  margin-bottom: 7px;
+  box-shadow: 0 0 16px 0 var(--accent2-glow);
+  text-shadow: 0 0 8px var(--accent2-glow), 0 0 2px #fff4;
+}
+.chip.alt {
+  color: var(--accent);
+  box-shadow: 0 0 10px 0 var(--accent-glow);
+  background: #2b1924;
+}
+.chip.white {
+  color: var(--primary);
+  background: var(--accent3);
+  box-shadow: 0 0 10px 0 var(--accent3-glow);
+  text-shadow: 0 0 8px var(--accent3-glow), 0 0 2px #0004;
+}
+
+.neon {
+  color: var(--accent2);
+  text-shadow: 0 0 10px var(--accent2-glow), 0 0 3px #fff8;
+}
+.neon2 {
+  color: var(--accent);
+  text-shadow: 0 0 12px var(--accent-glow), 0 0 2px #fff8;
+}
+.neon3 {
+  color: var(--accent3);
+  text-shadow: 0 0 16px var(--accent3-glow), 0 0 3px #fff8;
+}
+.neon-glow {
+  text-shadow: 0 0 20px var(--accent-glow), 0 0 8px #ff2a2a99, 0 0 2px #fff8;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+.title {
+  font-family: var(--font-digi);
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin: 0 0 2px 0;
+  letter-spacing: 0.07em;
+  line-height: 1.1;
+}
+.subtitle {
+  font-size: 1.15rem;
+  margin: 7px 0 20px 0;
+  color: var(--accent3);
+  letter-spacing: 0.02em;
+}
+.hint {
+  font-size: 1.12rem;
+  color: #b3d6ff;
+  margin: 10px 0 18px 0;
+  text-align: center;
+}
+.key {
+  font-family: var(--font-digi);
+  background: var(--accent2-glow);
+  color: #fff;
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 1.09em;
+  margin: 0 2px;
+  vertical-align: 2px;
+  box-shadow: 0 0 8px var(--accent2-glow);
+}
+
+.countdown {
+  font-family: var(--font-digi);
+  font-size: 1.25rem;
+  margin-top: 6px;
+  color: var(--accent2);
+  text-shadow: 0 0 8px var(--accent2-glow);
+  letter-spacing: 0.06em;
+  animation: pulseGlow 1.2s infinite alternate;
+}
+
+.accent-line {
+  width: 100%;
+  height: 3px;
+  margin: 22px 0 0 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3), var(--accent2), var(--accent));
+  box-shadow: 0 0 18px 0 var(--accent-glow), 0 0 8px var(--accent2-glow), 0 0 10px var(--accent3-glow);
+  opacity: 0.97;
+}
+.accent-line.subtle {
+  opacity: 0.5;
+}
+
+.toast {
+  position: absolute;
+  bottom: 8vh;
+  left: 50%;
+  transform: translateX(-50%) scale(1.05);
+  background: linear-gradient(90deg, var(--accent-glow) 0%, var(--accent2-glow) 60%, var(--accent3-glow) 100%);
+  color: #fff;
+  font-size: 1.12rem;
+  font-family: var(--font-digi);
+  border-radius: 22px;
+  padding: 13px 40px;
+  opacity: 0.97;
+  box-shadow: 0 2px 28px 0 var(--accent2-glow);
+  pointer-events: none;
+  animation: popIn 0.7s cubic-bezier(.52,1.4,.38,1) both;
+  transition: opacity 0.25s, transform 0.22s;
+}
+
+.bar-wrap {
+  width: 100%;
+  margin: 13px 0 0 0;
+  height: 14px;
+  border-radius: 12px;
+  background: #1c2340;
+  overflow: hidden;
+  position: relative;
+}
+.bar-back {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #1c2340 0%, #223660 100%);
+  opacity: 0.6;
+  border-radius: 12px;
+}
+.bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 70%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--accent), var(--accent3));
+  border-radius: 12px;
+  box-shadow: 0 0 20px 0 var(--accent2-glow);
+  transition: width 0.7s cubic-bezier(.6,1.14,.38,1);
+}
+
+/* --- Jail-Timer: Neon, Alarm, Gitter, Progressring --- */
+.timer-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 12px;
+  position: relative;
+}
+.timer {
+  font-family: var(--font-digi);
+  font-size: 3.4rem;
+  font-weight: 900;
+  letter-spacing: 0.20em;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(90deg, #217aff 10%, #fff 45%, #ff2a2a 90%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 16px #217affcc) drop-shadow(0 0 26px #ff2a2a99);
+  border: 4px solid #217affcc;
+  border-radius: 22px;
+  padding: 17px 44px 10px 44px;
+  margin-bottom: 12px;
+  box-shadow: 0 0 60px 0 #217aff88, 0 0 34px 0 #ff2a2a44;
+  animation: jail-timer-pulse 1.1s infinite alternate, jail-timer-glow 2.1s infinite linear;
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+}
+.timer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  background: repeating-linear-gradient(135deg, #1f2a4d55 0 8px, transparent 8px 16px);
+  opacity: 0.28;
+  pointer-events: none;
+  z-index: 1;
+}
+.timer::after {
+  content: "";
+  position: absolute;
+  left: -7px; top: -7px; right: -7px; bottom: -7px;
+  border-radius: 32px;
+  box-shadow: 0 0 32px 6px #217affbb inset, 0 0 20px 4px #ff2a2a99 inset;
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 1;
+  animation: jail-border-blink 2.2s infinite alternate;
+}
+@keyframes jail-timer-pulse {
+  0% { filter: drop-shadow(0 0 8px #217affcc) drop-shadow(0 0 12px #ff2a2a77);}
+  100% { filter: drop-shadow(0 0 30px #217affcc) drop-shadow(0 0 40px #ff2a2abb);}
+}
+@keyframes jail-timer-glow {
+  0% { text-shadow: 0 0 2px #fff, 0 0 6px #217aff;}
+  50% { text-shadow: 0 0 24px #ff2a2a, 0 0 18px #fff;}
+  100% { text-shadow: 0 0 2px #fff, 0 0 6px #217aff;}
+}
+@keyframes jail-border-blink {
+  0% { box-shadow: 0 0 16px 3px #217aff77 inset, 0 0 6px 1px #ff2a2a66 inset;}
+  100% { box-shadow: 0 0 40px 12px #217affcc inset, 0 0 32px 8px #ff2a2acc inset;}
+}
+
+/* Jail Grundtext/Subtitle */
+.jail-reason {
+  font-size: 1.17rem;
+  color: #e7f0ff;
+  margin: 8px 0 15px 0;
+  text-align: center;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 10px #10182b99;
+  z-index: 2;
+  position: relative;
+}
+
+/* Geldstrafe Badge */
+.fine-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin: 14px auto 8px auto;
+  padding: 9px 28px 9px 24px;
+  border-radius: 42px;
+  font-family: var(--font-digi);
+  font-size: 1.35rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, #ff2a2a 0%, #217aff 90%);
+  box-shadow: 0 0 22px #217aff88, 0 0 10px #ff2a2a99;
+  color: #fff;
+  border: 2.5px solid #fff4;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 8px #fff, 0 0 2px #ff2a2acc;
+  animation: fine-glow 1.8s infinite alternate;
+}
+.fine-label {
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+  opacity: 0.92;
+}
+.fine-amount {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: #ffefae;
+  text-shadow: 0 0 6px #ffefaecc, 0 0 2px #ff2a2acc;
+}
+@keyframes fine-glow {
+  0%   { box-shadow: 0 0 18px #217aff55, 0 0 6px #ff2a2a33; }
+  100% { box-shadow: 0 0 34px #217affcc, 0 0 20px #ff2a2a99; }
+}
+
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0.85) translateY(60px);}
+  72% { opacity: 1; transform: scale(1.06) translateY(-6px);}
+  100% { opacity: 1; transform: scale(1.0) translateY(0);}
+}
+@keyframes pulseGlow {
+  0% { text-shadow: 0 0 10px var(--accent2-glow), 0 0 2px #fff7;}
+  100% { text-shadow: 0 0 18px var(--accent-glow), 0 0 10px #fff9;}
+}
+
+.lines {
+  width: 100%;
+  margin: 0;
+  padding: 0 0 0 12px;
+  list-style: disc;
+  color: var(--accent3);
+  font-size: 1.01rem;
+}
+
+@media (max-width: 650px) {
+  .card {
+    min-width: 98vw;
+    max-width: 99vw;
+    padding: 18px 2vw 16px 2vw;
+  }
+  .toast { font-size: 0.99rem; padding: 10px 14vw;}
+  .timer { font-size: 2.0rem; padding: 10px 8vw 8px 8vw;}
+}
+
+/* Szenario-UI: langsamer Gesamt-Puls (optional zuschalten per Klasse 'pulse-ui') */
+.card.scenario.pulse-ui {
+  animation: popIn 0.8s cubic-bezier(.22,1.1,.38,1) both,
+             scenarioPulse 7s ease-in-out infinite;
+}
+
+/* Puls zwischen „voll sichtbar“ und „fast transparent“ (ca. 5%) */
+@keyframes scenarioPulse {
+  0%   { opacity: 1; }
+  35%  { opacity: 0.05; }
+  65%  { opacity: 0.05; }
+  100% { opacity: 1; }
+}
