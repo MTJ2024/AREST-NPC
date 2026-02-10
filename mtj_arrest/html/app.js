@@ -146,6 +146,15 @@
   function handleScenarioCountdown(d) {
     const v = Number(d.value);
     safeText(el.sCountdown, `${state.countdownLabel}${isFinite(v) ? v : 0}s`);
+    
+    // Add urgent class when countdown is low
+    if (el.sCountdown) {
+      if (v <= 3) {
+        el.sCountdown.classList.add('urgent');
+      } else {
+        el.sCountdown.classList.remove('urgent');
+      }
+    }
   }
 
   function handleArrestLog(d) {

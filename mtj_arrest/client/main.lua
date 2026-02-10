@@ -213,6 +213,12 @@ end
 local function showScenarioUI()
   TriggerEvent('mtj_arrest:nui:scenario', true, Config.UI.ScenarioHint, Config.ComplianceWindow)
   dbg("SendNUIMessage: scenarioToggle via event")
+  
+  -- Enhanced effects when scenario starts
+  local playerCoords = GetEntityCoords(PlayerPedId())
+  TriggerEvent('mtj_arrest:effects:policeArrival', playerCoords)
+  TriggerEvent('mtj_arrest:effects:playSiren')
+  TriggerEvent('mtj_arrest:effects:playRadioChatter')
 end
 
 local function hideScenarioUI()
@@ -227,6 +233,11 @@ local function playCuffSequence()
     return
   end
   cuffing = true
+  
+  -- Play surrender sound effect
+  TriggerEvent('mtj_arrest:effects:playSurrenderSound')
+  TriggerEvent('mtj_arrest:effects:applySurrenderEffects')
+  
   forceExitVehicleIfIn()
   local player = PlayerPedId()
   local ppos = GetEntityCoords(player)
@@ -249,6 +260,10 @@ local function playCuffSequence()
   end
   if not loadAnimDict("random@arrests") then cuffing = false return end
   if not loadAnimDict("mp_arrest_paired") then cuffing = false return end
+  
+  -- Enable slow motion for dramatic effect
+  TriggerEvent('mtj_arrest:effects:enableSlowMotion', 4000, 0.3)
+  
   TaskPlayAnim(player, "random@arrests", "idle_2_hands_up", 8.0, -8.0, 2500, 49, 0, false, false, false)
   Wait(2200)
   if nearest and DoesEntityExist(nearest) then
@@ -256,13 +271,28 @@ local function playCuffSequence()
     TaskLookAtEntity(nearest, player, 5000, 2048, 3)
   end
   TaskPlayAnim(player, "random@arrests", "kneeling_arrest_idle", 8.0, -8.0, 4500, 49, 0, false, false, false)
+  
+  -- Create dramatic camera
+  TriggerEvent('mtj_arrest:effects:createArrestCamera', player, nearest)
+  
   Wait(2000)
+  
+  -- Play cuffing sound and effects
+  TriggerEvent('mtj_arrest:effects:playCuffingSound')
+  TriggerEvent('mtj_arrest:effects:playArrestSound')
+  TriggerEvent('mtj_arrest:effects:applyArrestEffects')
+  TriggerEvent('mtj_arrest:effects:createDustEffect', ppos)
+  
   SetEnableHandcuffs(player, true)
   FreezeEntityPosition(player, true)
   cuffed = true
   deescalateAllPolice()
   TriggerEvent('mtj_arrest:nui:arrest_log', true, Config.UI.ArrestLogLines)
   Wait(3000)
+  
+  -- Destroy arrest camera
+  TriggerEvent('mtj_arrest:effects:destroyArrestCamera')
+  
   TriggerEvent('mtj_arrest:nui:arrest_log', false)
   cuffing = false
   dbg("cuff sequence done")

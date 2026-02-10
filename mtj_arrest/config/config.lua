@@ -63,4 +63,19 @@ Config.RequiredWantedLevel = 1
 -- Debug
 Config.Debug = false
 
+-- Enhanced Effects Settings
+Config.Effects = {
+  EnableSlowMotion = true,          -- Enable slow motion during arrest
+  EnableArrestCamera = true,         -- Enable cinematic camera during arrest
+  EnableHelicopter = true,           -- Enable helicopter spawning at high wanted levels
+  EnableRoadblocks = true,           -- Enable dynamic roadblock spawning
+  EnableScreenEffects = true,        -- Enable screen effects (blur, shake, etc.)
+  EnableSoundEffects = true,         -- Enable sound effects
+  EnableParticleEffects = true,      -- Enable particle effects
+  SlowMotionStrength = 0.3,          -- Slow motion speed (0.0-1.0, lower = slower)
+  SlowMotionDuration = 4000,         -- Slow motion duration in milliseconds
+  HelicopterWantedLevel = 4,         -- Wanted level to spawn helicopter
+  RoadblockWantedLevel = 3           -- Wanted level to spawn roadblocks
+}
+
 return Config

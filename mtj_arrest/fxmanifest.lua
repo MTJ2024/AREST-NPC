@@ -4,8 +4,8 @@ lua54 'yes'
 
 name 'mtj_arrest'
 author 'MTJ'
-version '1.0.0'
-description 'Immersives RP-Festnahme-Szenario mit NPC-Polizei, ESX Jail, UI-Timer'
+version '2.0.0'
+description 'Immersives RP-Festnahme-Szenario mit NPC-Polizei, ESX Jail, UI-Timer, Enhanced Effects: Helicopter, Roadblocks, Slow Motion, Cinematic Camera, Particle Effects & More'
 
 ui_page 'html/index.html'
 
@@ -21,6 +21,10 @@ shared_scripts {
 
 client_scripts {
   'client/main.lua',                 -- <--- FEHLTE!
+  'client/effects.lua',
+  'client/effects_handler.lua',
+  'client/helicopter.lua',
+  'client/roadblock.lua',
   'client/nui_focus_handlers.lua',
   'client/auto_cop_spawn.lua',
   'client/controls.lua',

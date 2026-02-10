@@ -370,3 +370,47 @@ body {
   65%  { opacity: 0.05; }
   100% { opacity: 1; }
 }
+/* Enhanced glowing effects for scenario */
+.card.scenario::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: var(--card-radius);
+  background: linear-gradient(45deg, #ff2a2a55, #217aff55, #ffffff33);
+  opacity: 0;
+  animation: scenarioGlowPulse 3s ease-in-out infinite;
+  z-index: -1;
+  filter: blur(20px);
+}
+
+@keyframes scenarioGlowPulse {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.8; }
+}
+
+/* Add police light flash animation */
+.card.scenario .chip {
+  animation: policeFlash 1s infinite;
+}
+
+@keyframes policeFlash {
+  0%, 100% { 
+    box-shadow: 0 0 16px 0 #217aff88;
+    color: var(--accent2);
+  }
+  50% { 
+    box-shadow: 0 0 30px 0 #ff2a2a88;
+    color: var(--accent);
+  }
+}
+
+/* Enhanced countdown with urgent flash */
+.countdown.urgent {
+  animation: urgentFlash 0.5s infinite, pulseGlow 1.2s infinite alternate;
+  font-size: 1.5rem;
+}
+
+@keyframes urgentFlash {
+  0%, 100% { color: var(--accent); text-shadow: 0 0 20px var(--accent-glow);}
+  50% { color: #fff; text-shadow: 0 0 30px #ffffff, 0 0 10px var(--accent-glow);}
+}
