@@ -25,6 +25,7 @@ client_scripts {
   'client/effects_handler.lua',
   'client/helicopter.lua',
   'client/roadblock.lua',
+  'client/wanted_display.lua',
   'client/nui_focus_handlers.lua',
   'client/auto_cop_spawn.lua',
   'client/controls.lua',

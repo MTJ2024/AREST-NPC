@@ -41,6 +41,9 @@
       aLog: byId('arrest-log'),
       aLogTitle: $('#arrest-log .title'),
       aLogLines: $('#arrest-log .lines'),
+      // Wanted display elements
+      wantedDisplay: byId('wanted-display'),
+      wantedStars: document.querySelectorAll('.wanted-stars .star'),
       // debug elements (may be present from index.html)
       dbgRoot: byId('mtj-debug'),
       dbgStatus: byId('mtj-debug-status'),
@@ -55,6 +58,7 @@
     setHidden(el.toast, true);
     setHidden(el.jail, true);
     setHidden(el.aLog, true);
+    setHidden(el.wantedDisplay, true);
 
     // Ensure UI is hidden globally until something is shown
     setUiVisible(false);
@@ -199,6 +203,45 @@
     }
   }
 
+  function handleWantedUpdate(d) {
+    const level = Number(d.level) || 0;
+    const show = d.show !== false;
+    
+    if (!el.wantedDisplay || !el.wantedStars) return;
+    
+    // Show/hide the wanted display
+    setHidden(el.wantedDisplay, !show);
+    
+    // Update star states
+    el.wantedStars.forEach((star, index) => {
+      const starNumber = index + 1;
+      const wasActive = star.classList.contains('active');
+      const shouldBeActive = starNumber <= level;
+      
+      if (shouldBeActive && !wasActive) {
+        // Star is becoming active
+        star.classList.add('active', 'new-active');
+        setTimeout(() => star.classList.remove('new-active'), 600);
+      } else if (!shouldBeActive && wasActive) {
+        // Star is becoming inactive
+        star.classList.remove('active', 'new-active');
+      }
+    });
+    
+    // Add flash effect when wanted level increases
+    if (show && level > 0) {
+      el.wantedDisplay.classList.add('flash');
+      setTimeout(() => el.wantedDisplay.classList.remove('flash'), 500);
+    }
+    
+    // Add special styling for max wanted level
+    if (level >= 5) {
+      el.wantedDisplay.classList.add('level-5');
+    } else {
+      el.wantedDisplay.classList.remove('level-5');
+    }
+  }
+
   function initDebug() {
     if (!el || !el.dbgRoot) return;
     if (el.dbgBtnClear) {
@@ -292,6 +335,9 @@
         break;
       case 'jailTick':
         handleJailTick(d);
+        break;
+      case 'updateWanted':
+        handleWantedUpdate(d);
         break;
       case 'uiToggle':
         if (typeof d.show !== 'undefined') setUiVisible(!!d.show);

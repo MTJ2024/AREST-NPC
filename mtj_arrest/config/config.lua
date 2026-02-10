@@ -72,6 +72,7 @@ Config.Effects = {
   EnableScreenEffects = true,        -- Enable screen effects (blur, shake, etc.)
   EnableSoundEffects = true,         -- Enable sound effects
   EnableParticleEffects = true,      -- Enable particle effects
+  EnableCustomWantedDisplay = true,  -- Enable custom GTA V Online style wanted display
   SlowMotionStrength = 0.3,          -- Slow motion speed (0.0-1.0, lower = slower)
   SlowMotionDuration = 4000,         -- Slow motion duration in milliseconds
   HelicopterWantedLevel = 4,         -- Wanted level to spawn helicopter

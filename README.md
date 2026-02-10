@@ -10,6 +10,7 @@ AREST NPC - Enhanced Police Arrest System with Cinematic Effects
 - **UI Timer** - Beautiful countdown and jail timer interface
 
 ### 🎬 Enhanced Effects (v2.0)
+- **Custom Wanted Level Display** - Beautiful GTA V Online style wanted stars above minimap
 - **Slow Motion** - Dramatic slow motion during arrest sequence
 - **Cinematic Camera** - Automatic camera angles during cuffing
 - **Screen Effects** - Blur, shake, and visual effects
@@ -33,6 +34,7 @@ Config.Effects = {
   EnableScreenEffects = true,
   EnableSoundEffects = true,
   EnableParticleEffects = true,
+  EnableCustomWantedDisplay = true,  -- GTA V Online style wanted stars
   SlowMotionStrength = 0.3,
   SlowMotionDuration = 4000,
   HelicopterWantedLevel = 4,
@@ -50,6 +52,12 @@ Config.Effects = {
 
 ## 🎨 New Visual Effects
 
+- **Custom Wanted Level Stars**: GTA V Online style display above minimap with:
+  - Animated star appearance
+  - Color-coded by danger level (gold → orange → red)
+  - Pulsing glow effects
+  - Shake effect at max wanted level
+  - Smooth transitions
 - **Police Arrival**: Screen flash, camera shake, dust particles
 - **Surrender**: Blur effect, surrender sound
 - **Arrest Sequence**: Slow motion, cinematic camera, dramatic lighting
