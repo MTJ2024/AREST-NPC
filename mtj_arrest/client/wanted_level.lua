@@ -1,7 +1,7 @@
 -- mtj_arrest: Wanted Level System
 -- Automatically sets wanted levels when player commits crimes (shooting, killing NPCs)
 
-local DEBUG = true
+local DEBUG = Config and Config.Debug or false
 local function dbg(...)
   if not DEBUG then return end
   local t = {}
@@ -28,7 +28,12 @@ local wantedConfig = Config.WantedSystem or {
   cooldownMs = 3000,
   
   -- Whether to apply wanted level for killing other players
-  applyForPlayerKills = false
+  applyForPlayerKills = false,
+  
+  -- Detection radii and timeouts
+  deathDetectionRadius = 50.0,
+  injuryDetectionRadius = 30.0,
+  combatTimeoutMs = 5000
 }
 
 -- State tracking
@@ -92,7 +97,7 @@ CreateThread(function()
         end
       end
     else
-      Wait(100) -- Reduce load when not shooting
+      Wait(500) -- Reduce load when not shooting
     end
   end
 end)
@@ -120,19 +125,17 @@ CreateThread(function()
           local isPedPlayer = IsPedAPlayer(ped)
           
           if not isPedPlayer or wantedConfig.applyForPlayerKills then
-            local pedId = ped
-            
             -- Check if ped was killed by player
-            if IsEntityDead(ped) and not trackedPeds[pedId] then
+            if IsEntityDead(ped) and not trackedPeds[ped] then
               -- Check if player was involved in the death
               local pedPos = GetEntityCoords(ped)
               local distance = #(playerPos - pedPos)
               
-              -- If ped died near player (within 50m), assume player involvement
-              if distance < 50.0 then
+              -- If ped died near player, assume player involvement
+              if distance < wantedConfig.deathDetectionRadius then
                 -- Check if player was recently shooting or in combat
-                if IsPedInCombat(playerPed, ped) or (GetGameTimer() - lastShotFired) < 5000 then
-                  trackedPeds[pedId] = true
+                if IsPedInCombat(playerPed, ped) or (GetGameTimer() - lastShotFired) < wantedConfig.combatTimeoutMs then
+                  trackedPeds[ped] = true
                   
                   if isPedPlayer then
                     increaseWantedLevel(wantedConfig.killingWantedLevel, "Killed a person")
@@ -144,7 +147,7 @@ CreateThread(function()
             end
             
             -- Check if ped was injured (has health damage)
-            if not IsEntityDead(ped) and not trackedPeds[pedId] then
+            if not IsEntityDead(ped) and not trackedPeds[ped] then
               local health = GetEntityHealth(ped)
               local maxHealth = GetEntityMaxHealth(ped)
               
@@ -153,10 +156,10 @@ CreateThread(function()
                 local pedPos = GetEntityCoords(ped)
                 local distance = #(playerPos - pedPos)
                 
-                if distance < 30.0 then
+                if distance < wantedConfig.injuryDetectionRadius then
                   -- Check if player was attacking this ped
                   if IsPedInCombat(playerPed, ped) or HasEntityBeenDamagedByEntity(ped, playerPed, true) then
-                    trackedPeds[pedId] = true
+                    trackedPeds[ped] = true
                     increaseWantedLevel(wantedConfig.injuringWantedLevel, "Injured a ped")
                     ClearEntityLastDamageEntity(ped)
                   end
@@ -178,9 +181,9 @@ CreateThread(function()
     -- Clean up tracked peds (remove entries older than 30 seconds)
     -- This prevents the table from growing indefinitely
     local cleanupCount = 0
-    for pedId, _ in pairs(trackedPeds) do
-      if not DoesEntityExist(pedId) then
-        trackedPeds[pedId] = nil
+    for pedHandle, _ in pairs(trackedPeds) do
+      if not DoesEntityExist(pedHandle) then
+        trackedPeds[pedHandle] = nil
         cleanupCount = cleanupCount + 1
       end
     end

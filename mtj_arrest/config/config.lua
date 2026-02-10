@@ -63,14 +63,17 @@ Config.RequiredWantedLevel = 1
 -- Debug
 Config.Debug = false
 
--- Wanted Level System Configuration
+-- WantedSystem Configuration
 Config.WantedSystem = {
   enabled = true,                    -- Enable/disable automatic wanted levels on crimes
   shootingWantedLevel = 2,          -- Wanted level for shooting a weapon
   injuringWantedLevel = 3,          -- Wanted level for injuring a ped
   killingWantedLevel = 4,           -- Wanted level for killing a ped
   cooldownMs = 3000,                -- Cooldown in milliseconds between wanted level increases
-  applyForPlayerKills = false       -- Whether to apply wanted levels for killing other players
+  applyForPlayerKills = false,      -- Whether to apply wanted levels for killing other players
+  deathDetectionRadius = 50.0,      -- Radius in meters to detect ped deaths caused by player
+  injuryDetectionRadius = 30.0,     -- Radius in meters to detect ped injuries caused by player
+  combatTimeoutMs = 5000            -- Milliseconds after shooting to consider player in combat
 }
 
 return Config

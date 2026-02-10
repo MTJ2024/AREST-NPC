@@ -55,16 +55,19 @@ The following commands are available for testing:
 
 ## Configuration
 
-The wanted level system can be configured in `mtj_arrest/client/wanted_level.lua`:
+The wanted level system can be configured in `mtj_arrest/config/config.lua`:
 
 ```lua
-local wantedConfig = {
+Config.WantedSystem = {
   enabled = true,                    -- Enable/disable the system
   shootingWantedLevel = 2,          -- Stars for shooting
   injuringWantedLevel = 3,          -- Stars for injuring
   killingWantedLevel = 4,           -- Stars for killing
   cooldownMs = 3000,                -- Cooldown between increases
-  applyForPlayerKills = false       -- Apply to PvP kills
+  applyForPlayerKills = false,      -- Apply to PvP kills
+  deathDetectionRadius = 50.0,      -- Radius to detect deaths
+  injuryDetectionRadius = 30.0,     -- Radius to detect injuries
+  combatTimeoutMs = 5000            -- Combat timeout after shooting
 }
 ```
 
