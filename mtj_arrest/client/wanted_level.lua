@@ -11,7 +11,7 @@ end
 
 -- Configuration
 local Config = Config or {}
-local wantedConfig = {
+local wantedConfig = Config.WantedSystem or {
   -- Enable automatic wanted level on crimes
   enabled = true,
   
