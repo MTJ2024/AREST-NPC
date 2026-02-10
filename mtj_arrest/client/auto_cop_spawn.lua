@@ -1,5 +1,16 @@
 -- MTJ Arrest: Automatisches Spawnen von 2-7 Police-NPCs ab 2 Sternen im Radius um den Spieler
 
+local Config = Config or {}
+local DEBUG = Config.Debug
+if DEBUG == nil then DEBUG = false end -- Default to false if not configured
+
+local function dbg(...)
+  if not DEBUG then return end
+  local t = {}
+  for i = 1, select('#', ...) do t[#t+1] = tostring(select(i, ...)) end
+  print(("[mtj_arrest][AUTO_COP] %s"):format(table.concat(t, " ")))
+end
+
 local activeCops = {}
 local maxCops = 7
 local minCops = 2
@@ -29,6 +40,7 @@ local function spawnCopNearPlayer(playerCoords)
     SetBlockingOfNonTemporaryEvents(cop, true)
     TaskCombatPed(cop, PlayerPedId(), 0, 16)
     table.insert(activeCops, cop)
+    dbg("Spawned cop:", model, "at distance:", math.floor(dist))
 end
 
 -- Hilfsfunktion: Entfernt alle gespawnten Cops
@@ -39,19 +51,31 @@ local function clearCops()
         end
     end
     activeCops = {}
+    dbg("Cleared all cops")
 end
 
 -- Haupt-Loop
 CreateThread(function()
+    dbg("Auto cop spawn system started")
+    local lastWanted = 0
+    
     while true do
         Wait(1500)
         local wanted = GetPlayerWantedLevel(PlayerId())
+        
+        -- Debug when wanted level changes
+        if wanted ~= lastWanted then
+            dbg("Wanted level changed:", lastWanted, "->", wanted)
+            lastWanted = wanted
+        end
+        
         if wanted >= 2 then
             local playerPed = PlayerPedId()
             local playerCoords = GetEntityCoords(playerPed)
             -- Falls zu wenige Cops: Nachspawnen
             if #activeCops < maxCops then
                 local toSpawn = math.max(minCops, math.min(maxCops, wanted + 1)) - #activeCops
+                dbg("Spawning", toSpawn, "cops (wanted:", wanted, "active:", #activeCops, ")")
                 for i=1, toSpawn do
                     spawnCopNearPlayer(playerCoords)
                     Wait(500)
@@ -66,8 +90,11 @@ CreateThread(function()
         else
             -- Wanted-Level < 2: Alle Cops despawnen
             if #activeCops > 0 then
+                dbg("Wanted < 2, clearing cops")
                 clearCops()
             end
         end
     end
 end)
+
+dbg("Auto cop spawn loaded")

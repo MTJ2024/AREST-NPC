@@ -63,4 +63,34 @@ Config.RequiredWantedLevel = 1
 -- Debug
 Config.Debug = false
 
+-- Auto Wanted Level Generation
+Config.AutoWantedLevel = {
+  Enabled = true,                       -- Enable automatic wanted level generation
+  SetWantedOnCrime = true,              -- Set wanted level when committing crimes
+  SetWantedOnPoliceDetection = true,    -- Set wanted level when police detect you
+  DefaultWantedLevel = 2,               -- Default wanted level when auto-generated
+  MinWantedLevel = 2,                   -- Minimum wanted level for arrest scenario
+  MaxWantedLevel = 5,                   -- Maximum wanted level
+  RecklessDrivingSpeed = 120,           -- Speed threshold in km/h for reckless driving
+  RecklessDrivingCooldown = 10000,      -- Cooldown in ms between reckless driving detections
+  MeleeCombatCooldown = 5000,           -- Cooldown in ms between melee combat detections
+  CrimeCheckInterval = 2000             -- How often to check for crimes in ms
+}
+
+-- Enhanced Effects Settings
+Config.Effects = {
+  EnableSlowMotion = true,          -- Enable slow motion during arrest
+  EnableArrestCamera = true,         -- Enable cinematic camera during arrest
+  EnableHelicopter = true,           -- Enable helicopter spawning at high wanted levels
+  EnableRoadblocks = true,           -- Enable dynamic roadblock spawning
+  EnableScreenEffects = true,        -- Enable screen effects (blur, shake, etc.)
+  EnableSoundEffects = true,         -- Enable sound effects
+  EnableParticleEffects = true,      -- Enable particle effects
+  EnableCustomWantedDisplay = true,  -- Enable custom GTA V Online style wanted display
+  SlowMotionStrength = 0.3,          -- Slow motion speed (0.0-1.0, lower = slower)
+  SlowMotionDuration = 4000,         -- Slow motion duration in milliseconds
+  HelicopterWantedLevel = 4,         -- Wanted level to spawn helicopter
+  RoadblockWantedLevel = 3           -- Wanted level to spawn roadblocks
+}
+
 return Config
