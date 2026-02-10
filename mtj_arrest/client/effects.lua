@@ -1,5 +1,6 @@
 -- MTJ Arrest: Enhanced Visual & Audio Effects System
-local DEBUG = true
+local Config = Config or {}
+local DEBUG = Config.Debug or false
 
 local function dbg(...)
   if not DEBUG then return end
@@ -11,6 +12,12 @@ end
 -- ===== PARTICLE EFFECTS =====
 local activeParticles = {}
 
+--- Starts a looped particle effect at specified coordinates
+-- @param particleName string The name of the particle effect to play
+-- @param coords vector3 The coordinates where to spawn the particle
+-- @param scale number Optional scale multiplier for the effect (default: 1.0)
+-- @param duration number Optional duration in milliseconds before auto-stopping (default: nil/infinite)
+-- @return number The particle effect handle
 function StartParticleEffect(particleName, coords, scale, duration)
     UseParticleFxAssetNextCall("core")
     local fx = StartParticleFxLoopedAtCoord(particleName, coords.x, coords.y, coords.z, 0.0, 0.0, 0.0, scale or 1.0, false, false, false, false)

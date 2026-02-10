@@ -1,7 +1,8 @@
 -- MTJ Arrest: Effects Event Handlers
 -- This file listens to effect events and triggers the appropriate functions
 
-local DEBUG = true
+local Config = Config or {}
+local DEBUG = Config.Debug or false
 
 local function dbg(...)
   if not DEBUG then return end

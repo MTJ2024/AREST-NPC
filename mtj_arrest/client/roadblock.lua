@@ -1,5 +1,6 @@
 -- MTJ Arrest: Dynamic Roadblock System
-local DEBUG = true
+local Config = Config or {}
+local DEBUG = Config.Debug or false
 
 local function dbg(...)
   if not DEBUG then return end
@@ -43,6 +44,9 @@ local function getStreetAndZone(coords)
   return streetName or "Unknown"
 end
 
+--- Spawns a roadblock ahead of the player with police vehicles and armed officers
+-- Positions 2-3 police vehicles across the road with flashing lights
+-- Places armed cops next to vehicles who aim at the player
 function SpawnRoadblock()
   if roadblockActive then
     dbg("Roadblock already active")
@@ -173,14 +177,16 @@ end)
 -- Auto-spawn roadblock at wanted level 3+
 CreateThread(function()
   local lastSpawnTime = 0
+  local roadblockCooldown = 30000 -- 30 seconds between spawns
   
   while true do
     Wait(10000) -- Check every 10 seconds
     
     local wantedLevel = GetPlayerWantedLevel(PlayerId())
     local currentTime = GetGameTimer()
+    local roadblockWantedLevel = (Config.Effects and Config.Effects.RoadblockWantedLevel) or 3
     
-    if wantedLevel >= 3 and not roadblockActive and (currentTime - lastSpawnTime) > 30000 then
+    if wantedLevel >= roadblockWantedLevel and not roadblockActive and (currentTime - lastSpawnTime) > roadblockCooldown then
       dbg("Auto-spawning roadblock for wanted level", wantedLevel)
       SpawnRoadblock()
       lastSpawnTime = currentTime

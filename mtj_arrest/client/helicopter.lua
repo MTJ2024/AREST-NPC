@@ -1,5 +1,6 @@
 -- MTJ Arrest: Police Helicopter System for High Wanted Levels
-local DEBUG = true
+local Config = Config or {}
+local DEBUG = Config.Debug or false
 
 local function dbg(...)
   if not DEBUG then return end
@@ -32,6 +33,9 @@ local function loadModel(model)
   return hash
 end
 
+--- Spawns a police helicopter that follows and spotlights the target
+-- @param targetPed number The entity handle of the ped to follow
+-- @return number|nil The helicopter entity handle, or nil if spawn failed
 function SpawnPoliceHelicopter(targetPed)
   if helicopterActive then
     dbg("Helicopter already active")
@@ -158,11 +162,12 @@ CreateThread(function()
     Wait(5000)
     
     local wantedLevel = GetPlayerWantedLevel(PlayerId())
+    local heliWantedLevel = (Config.Effects and Config.Effects.HelicopterWantedLevel) or 4
     
-    if wantedLevel >= 4 and not helicopterActive then
+    if wantedLevel >= heliWantedLevel and not helicopterActive then
       dbg("Auto-spawning helicopter for wanted level", wantedLevel)
       SpawnPoliceHelicopter(PlayerPedId())
-    elseif wantedLevel < 4 and helicopterActive then
+    elseif wantedLevel < heliWantedLevel and helicopterActive then
       dbg("Despawning helicopter, wanted level dropped")
       DespawnPoliceHelicopters()
     end
