@@ -2,7 +2,7 @@
 -- Automatically generates wanted level based on player actions
 
 local Config = Config or {}
-local DEBUG = Config.Debug or false
+local DEBUG = Config.Debug or true -- Enable debug by default to help troubleshoot
 
 local function dbg(...)
   if not DEBUG then return end
@@ -18,7 +18,10 @@ end
 
 -- Set wanted level with bounds checking
 local function setWantedLevel(level)
-  if not isAutoWantedEnabled() then return end
+  if not isAutoWantedEnabled() then 
+    dbg("Auto wanted disabled, not setting level")
+    return 
+  end
   
   local minLevel = (Config.AutoWantedLevel and Config.AutoWantedLevel.MinWantedLevel) or 1
   local maxLevel = (Config.AutoWantedLevel and Config.AutoWantedLevel.MaxWantedLevel) or 5
@@ -28,7 +31,12 @@ local function setWantedLevel(level)
   SetPlayerWantedLevel(PlayerId(), level, false)
   SetPlayerWantedLevelNow(PlayerId(), false)
   
-  dbg(("Set wanted level to %d"):format(level))
+  dbg(("✓ Set wanted level to %d"):format(level))
+  
+  -- Show notification
+  if ESX and ESX.ShowNotification then
+    ESX.ShowNotification(("~r~Wanted Level: %d Stars"):format(level))
+  end
 end
 
 -- Increase wanted level by amount

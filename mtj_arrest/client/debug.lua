@@ -3,6 +3,16 @@ print("[mtj_arrest][DEBUG] Hinweis: playCuffSequence ist lokal in main.lua; exte
 
 -- === TEST COMMANDS FOR WANTED LEVEL ===
 
+-- Quick start - Set wanted and trigger scenario
+RegisterCommand('mtj_start', function()
+  print("[mtj_arrest][TEST] Quick start: Setting wanted level 2 and triggering scenario")
+  SetPlayerWantedLevel(PlayerId(), 2, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  Wait(500)
+  TriggerEvent('mtj_arrest:startScenario')
+  print("[mtj_arrest][TEST] Scenario should start in a moment...")
+end, false)
+
 -- Set wanted level manually (for testing)
 RegisterCommand('mtj_wanted', function(source, args)
   local level = tonumber(args[1]) or 3

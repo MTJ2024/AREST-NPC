@@ -70,10 +70,16 @@ Config.Effects = {
 
 For testing purposes, you can use these commands:
 
+### Quick Start
+- `/mtj_start` - **Quick start!** Sets wanted level to 2 and triggers scenario instantly
+
+### Wanted Level Control
 - `/mtj_wanted [1-5]` - Set wanted level to specific number
 - `/mtj_wanted1` through `/mtj_wanted5` - Quick presets
 - `/mtj_clearwanted` - Clear wanted level
 - `/mtj_checkwanted` - Check current wanted level
+
+### Testing Features
 - `/mtj_test_start` - Manually trigger arrest scenario
 - `/mtj_test_arrestlog` - Test arrest log UI
 - `/mtj_test_cuff` - Test handcuff visuals
