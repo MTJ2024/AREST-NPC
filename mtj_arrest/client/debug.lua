@@ -65,6 +65,37 @@ RegisterCommand('mtj_checkwanted', function()
   print(("[mtj_arrest][TEST] Current wanted level: %d"):format(wanted))
 end, false)
 
+-- System status check
+RegisterCommand('mtj_status', function()
+  print("========================================")
+  print("[mtj_arrest] SYSTEM STATUS")
+  print("========================================")
+  
+  local wanted = GetPlayerWantedLevel(PlayerId())
+  print(("Wanted Level: %d"):format(wanted))
+  
+  -- Check config
+  local autoWantedEnabled = Config.AutoWantedLevel and Config.AutoWantedLevel.Enabled or false
+  print(("Auto Wanted Enabled: %s"):format(tostring(autoWantedEnabled)))
+  
+  local customDisplayEnabled = Config.Effects and Config.Effects.EnableCustomWantedDisplay or false
+  print(("Custom Wanted Display: %s"):format(tostring(customDisplayEnabled)))
+  
+  local heliLevel = Config.Effects and Config.Effects.HelicopterWantedLevel or 4
+  print(("Helicopter spawns at: %d stars"):format(heliLevel))
+  
+  local roadblockLevel = Config.Effects and Config.Effects.RoadblockWantedLevel or 3
+  print(("Roadblocks spawn at: %d stars"):format(roadblockLevel))
+  
+  print("========================================")
+  print("Quick commands:")
+  print("  /mtj_start - Quick start scenario")
+  print("  /mtj_wanted2 - Set 2 stars")
+  print("  /mtj_wanted3 - Set 3 stars (roadblocks)")
+  print("  /mtj_wanted4 - Set 4 stars (helicopter)")
+  print("========================================")
+end, false)
+
 -- === EXISTING TEST COMMANDS ===
 
 -- Startet das Festnahme-Szenario wie im echten Ablauf

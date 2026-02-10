@@ -21,6 +21,53 @@ AREST NPC - Enhanced Police Arrest System with Cinematic Effects
 - **Flashing Lights** - Police light effects and animations
 - **Enhanced UI** - Pulsing, glowing, and urgent countdown effects
 
+## 🔧 Troubleshooting
+
+### Nothing happens when I use the script
+
+**Solution:** The system needs a wanted level to activate. Try these steps:
+
+1. **Quick Start (Easiest):**
+   ```
+   /mtj_start
+   ```
+   This will set wanted level 2 and trigger the scenario instantly.
+
+2. **Manual Wanted Level:**
+   ```
+   /mtj_wanted 2
+   ```
+   Then wait a moment for police to spawn.
+
+3. **Auto Wanted (Default):**
+   - Shoot your weapon
+   - Drive recklessly at high speed (120+ km/h)
+   - Get in melee combat
+   - The system will auto-generate wanted level
+
+4. **Check F8 Console:**
+   - Look for debug messages from `[mtj_arrest]`
+   - Check if wanted level is being set
+   - See if cops are spawning
+
+### Wanted stars not showing
+
+- Make sure `Config.Effects.EnableCustomWantedDisplay = true` in config
+- Check F8 console for NUI errors
+- Try `/mtj_checkwanted` to see current level
+
+### Police not spawning
+
+- Wanted level must be 2 or higher for police to spawn
+- Check F8 console for `[mtj_arrest][AUTO_COP]` messages
+- Make sure resource is started: `ensure mtj_arrest` in server.cfg
+
+### Scenario not starting
+
+- Use `/mtj_start` for instant test
+- Check if `Config.AutoWantedLevel.Enabled = true`
+- Verify wanted level is set with `/mtj_checkwanted`
+
 ## ⚙️ Configuration
 
 All effects and features can be configured in `config/config.lua`:
@@ -72,6 +119,7 @@ For testing purposes, you can use these commands:
 
 ### Quick Start
 - `/mtj_start` - **Quick start!** Sets wanted level to 2 and triggers scenario instantly
+- `/mtj_status` - **System status check** - Shows configuration and current state
 
 ### Wanted Level Control
 - `/mtj_wanted [1-5]` - Set wanted level to specific number
