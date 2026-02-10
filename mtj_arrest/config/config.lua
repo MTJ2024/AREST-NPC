@@ -15,6 +15,7 @@ Config.UI = {
 }
 
 -- Polizei-Spawning bei Wanted (Fahndung)
+Config.PoliceMode = "aggressive"  -- "aggressive" = always attack, "surrender" = allow surrender window
 Config.PoliceCount = 7 -- Wie viele Cops maximal spawnen
 Config.PoliceSpawnRadius = 40.0 -- Entfernung um Spieler, in der gespawnt wird (Meter)
 Config.PoliceChaseWanted = true -- Wenn true: Cops spawnen und verfolgen Spieler bei Wanted automatisch

@@ -342,6 +342,10 @@ AddEventHandler('mtj_arrest:startScenario', function()
     dbg("startScenario abgebrochen: Kein Wanted Level!")
     return
   end
+  
+  -- Only spawn surrender cops if mode is "surrender", otherwise auto_cop_spawn handles it
+  local policeMode = Config and Config.PoliceMode or "surrender"
+  
   scenarioActive = true
   canSurrender = true
   jailRequested = false
@@ -349,11 +353,20 @@ AddEventHandler('mtj_arrest:startScenario', function()
   cuffed = false
   cuffing = false
   complianceWindow = Config.ComplianceWindow
-  clearCops()
-  spawnCopsAroundPlayer()
-  setAmbientCopsIgnore(true)
-  showScenarioUI()
-  dbg("startScenario: scenarioActive set, UI requested")
+  
+  if policeMode == "surrender" then
+    -- Spawn passive cops for surrender scenario
+    clearCops()
+    spawnCopsAroundPlayer()
+    setAmbientCopsIgnore(true)
+    showScenarioUI()
+    dbg("startScenario: surrender mode - spawned passive cops with UI")
+  else
+    -- Aggressive mode: auto_cop_spawn handles everything, just show minimal UI
+    showScenarioUI()
+    dbg("startScenario: aggressive mode - auto_cop_spawn handles police")
+  end
+  
   if not complianceCountdownThreadActive then
     complianceCountdownThreadActive = true
     CreateThread(function()
@@ -386,8 +399,14 @@ AddEventHandler('mtj_arrest:endScenario', function()
   jailRequested = false
   complianceWindow = 0
   hideScenarioUI()
-  clearCops()
-  setAmbientCopsIgnore(false)
+  
+  local policeMode = Config and Config.PoliceMode or "surrender"
+  if policeMode == "surrender" then
+    -- Only clear cops in surrender mode (auto_cop_spawn manages its own in aggressive mode)
+    clearCops()
+    setAmbientCopsIgnore(false)
+  end
+  
   dbg("endScenario: scenario ended")
 end)
 
