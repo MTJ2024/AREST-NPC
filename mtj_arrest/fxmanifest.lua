@@ -21,11 +21,13 @@ shared_scripts {
 
 client_scripts {
   'client/wanted_level.lua',         -- Must load FIRST to set wanted levels
-  'client/main.lua',                 -- <--- FEHLTE!
+  'client/main.lua',
   'client/nui_focus_handlers.lua',
   'client/auto_cop_spawn.lua',
   'client/controls.lua',
-  'client/external_police.lua',  
+  'client/external_police.lua',
+  'client/pop_reset.lua',
+  'client/simple_surrender_key.lua',
   'client/debug.lua'
 }
 

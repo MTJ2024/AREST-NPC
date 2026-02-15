@@ -171,7 +171,7 @@
     if (d.show) {
       state.jailTotal = Number(d.seconds) || 0;
       safeText(el.jTitle, d.title || 'Gefängnis');
-      safeText(el.jSub, d.subtitle || '');
+      safeText(el.jSub, d.sub || d.subtitle || '');
       safeText(el.jTimer, fmt(state.jailTotal));
       if (el.jBar) el.jBar.style.width = '0%';
       setHidden(el.jail, false);

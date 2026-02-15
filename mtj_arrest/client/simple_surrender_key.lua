@@ -49,12 +49,8 @@ Citizen.CreateThread(function()
       local nearby = countNearbyPolicePeds(25.0)
       if wanted > 0 or nearby > 0 then
         print(("[mtj_arrest][KEY] E pressed - wanted=%s nearby=%s -> firing surrender events"):format(tostring(wanted), tostring(nearby)))
-        -- Local event for spawn logic (peaceful_spawn listens to this)
-        TriggerEvent('mtj_arrest:localSurrender')
-        -- Local handler that shows UI and notifies server
-        TriggerEvent('mtj_arrest:playerSurrendered')
-        -- Also notify server
-        TriggerServerEvent('mtj_arrest:playerSurrendered')
+        -- Trigger the main scenario start if not already active
+        TriggerEvent('mtj_arrest:startScenario')
       else
         print("[mtj_arrest][KEY] E pressed but no cops nearby and wanted == 0 - not surrendering")
       end
@@ -65,7 +61,5 @@ end)
 -- Extra debug commands
 RegisterCommand('mtj_force_surrender', function()
   print("[mtj_arrest][CMD] Forced surrender via command")
-  TriggerEvent('mtj_arrest:localSurrender')
-  TriggerEvent('mtj_arrest:playerSurrendered')
-  TriggerServerEvent('mtj_arrest:playerSurrendered')
+  TriggerEvent('mtj_arrest:startScenario')
 end, false)

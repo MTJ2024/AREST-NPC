@@ -4,11 +4,11 @@ local jail_control_until = 0
 
 RegisterNetEvent('mtj_arrest:clientBeginJail', function(minutes)
   local ped = PlayerPedId()
-  -- Nach Teleport: Charakter komplett freigeben und unbewaffnet setzen
+  -- Nach Teleport: Charakter-Animationen und Waffen bereinigen, aber NICHT Position freigeben
+  -- Die Position wird vom Jail-Timer in main.lua verwaltet
   CreateThread(function()
     Wait(750)
     ped = PlayerPedId()
-    FreezeEntityPosition(ped, false)
     ClearPedTasksImmediately(ped)
     ClearPedSecondaryTask(ped)
     ResetPedMovementClipset(ped, 0.0)

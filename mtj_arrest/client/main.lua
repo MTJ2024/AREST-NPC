@@ -161,12 +161,12 @@ local function createCopAt(pos, modelName)
     SetPedArmour(ped, 100)
     SetPedFleeAttributes(ped, 0, false)
     SetPedRelationshipGroupHash(ped, GetHashKey("COP"))
-    RemoveAllPedWeapons(ped, true)
-    SetPedSeeingRange(ped, 5.0)
-    SetPedHearingRange(ped, 5.0)
-    SetPedAlertness(ped, 0)
-    SetPedCombatAbility(ped, 0)
-    SetPedCombatRange(ped, 0)
+    GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
+    SetPedSeeingRange(ped, 100.0)
+    SetPedHearingRange(ped, 100.0)
+    SetPedAlertness(ped, 3)
+    SetPedCombatAbility(ped, 2)
+    SetPedCombatRange(ped, 2)
     if SetCanAttackFriendly then SetCanAttackFriendly(ped, false, false) end
     TaskGoToEntity(ped, PlayerPedId(), -1, 2.5, 2.0, 1073741824, 0)
   end
@@ -185,9 +185,6 @@ local function spawnCopsAroundPlayer()
     local off = Config.PoliceOffsets[((i - 1) % #Config.PoliceOffsets) + 1]
     local model = Config.PoliceModels[((i - 1) % #Config.PoliceModels) + 1]
     local pos = vector3(ppos.x + off.x, ppos.y + off.y, ppos.z + (off.z or 0))
-    if #(pos - ppos) < 30.0 then
-      pos = randomPosAroundPlayer(32.0, Config.MaxSpawnDistance)
-    end
     local ped = createCopAt(pos, model)
     if ped then table.insert(cops, ped) end
     Wait(40)
@@ -338,8 +335,8 @@ AddEventHandler('mtj_arrest:startScenario', function()
     dbg("startScenario: already active")
     return
   end
-  if GetPlayerWantedLevel(PlayerId()) == 0 then
-    dbg("startScenario abgebrochen: Kein Wanted Level!")
+  if GetPlayerWantedLevel(PlayerId()) < (Config.RequiredWantedLevel or 1) then
+    dbg("startScenario abgebrochen: Wanted Level zu niedrig!")
     return
   end
   
@@ -433,7 +430,7 @@ end)
 CreateThread(function()
   while true do
     Wait(1000)
-    if scenarioActive then
+    if scenarioActive and not surrendered and not cuffing and not cuffed and not inJail then
       if GetPlayerWantedLevel(PlayerId()) == 0 then
         dbg("Wanted Level = 0, beende Szenario!")
         TriggerEvent('mtj_arrest:endScenario')
