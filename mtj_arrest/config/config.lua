@@ -43,6 +43,7 @@ Config.PoliceOffsets = {
 }
 Config.MaxSpawnDistance = 40.0 -- Legacy, für Kompatibilität
 Config.ComplianceWindow = 10
+Config.CopArrivalRadius = 10.0 -- Cops müssen auf diese Distanz (Meter) kommen, bevor Timer startet
 Config.DisableAmbientCopsAfterSurrender = true
 
 -- Helikopter ab 3 Sternen (mit bewaffneter Besatzung)

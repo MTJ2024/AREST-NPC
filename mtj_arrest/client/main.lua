@@ -386,6 +386,19 @@ local function hideScenarioUI()
   dbg("SendNUIMessage: scenarioToggle hide via event")
 end
 
+-- Prüft ob mindestens ein Cop innerhalb des Radius ist
+local function isAnyCopNearPlayer(radius)
+  local ppos = GetEntityCoords(PlayerPedId())
+  for _, ped in ipairs(cops) do
+    if DoesEntityExist(ped) and not IsEntityDead(ped) then
+      if #(GetEntityCoords(ped) - ppos) <= radius then
+        return true
+      end
+    end
+  end
+  return false
+end
+
 -- === FESTNAHME-ABLAUF ===
 local function playCuffSequence()
   if cuffing or cuffed or inJail then
@@ -547,7 +560,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
   end
   lastScenarioStart = now
   scenarioActive = true
-  canSurrender = true
+  canSurrender = false -- Noch nicht ergeben erlaubt bis Cops da sind
   jailRequested = false
   surrendered = false
   cuffed = false
@@ -558,11 +571,27 @@ AddEventHandler('mtj_arrest:startScenario', function()
   clearCops()
   spawnCopsAroundPlayer()
   setAmbientCopsIgnore(true)
-  showScenarioUI()
-  nativeNotify("~r~POLIZEI~s~: Du bist umzingelt! Druecke ~b~[E]~s~ zum Ergeben.")
-  dbg("startScenario: scenarioActive set, UI requested")
-  complianceCountdownThreadActive = true
+  dbg("startScenario: cops spawned, warte auf Ankunft...")
+
+  -- ETAPPE 1: Warten bis mindestens ein Cop beim Spieler ist
+  local arrivalRadius = Config.CopArrivalRadius or 10.0
+  local arrivalTimeout = GetGameTimer() + 20000 -- Max 20s warten
   CreateThread(function()
+    while scenarioActive and not isAnyCopNearPlayer(arrivalRadius) and GetGameTimer() < arrivalTimeout do
+      Wait(500)
+    end
+    if not scenarioActive then
+      dbg("startScenario: Szenario während Warten beendet")
+      return
+    end
+    dbg("startScenario: Cops angekommen, starte UI + Timer")
+
+    -- ETAPPE 2: Jetzt erst UI zeigen und Countdown starten
+    canSurrender = true
+    showScenarioUI()
+    nativeNotify("~r~POLIZEI~s~: Du bist umzingelt! Druecke ~b~[E]~s~ zum Ergeben.")
+
+    complianceCountdownThreadActive = true
     while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
       Wait(1000)
       if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
