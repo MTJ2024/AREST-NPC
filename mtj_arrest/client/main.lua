@@ -469,7 +469,7 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
 
   local jailSeconds = math.floor((tonumber(minutes) or 10) * 60)
   dbg(("Spieler wurde ins Jail teleportiert für %d Minuten!"):format(minutes))
-  nativeNotify(("~r~Inhaftiert~s~: %d Minuten in %s"):format(math.ceil(jailSeconds/60), Config.JailName or "Gefaengnis"))
+  nativeNotify(("~r~Inhaftiert~s~: %d Minuten in %s"):format(math.ceil(jailSeconds/60), Config.JailName or "Gefängnis"))
   DoScreenFadeIn(1000)
   -- Jail-Countdown-Timer UI
   CreateThread(function()
