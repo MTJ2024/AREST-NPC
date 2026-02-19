@@ -8,7 +8,7 @@ CreateThread(function()
   while true do
     Wait(1000)
     local wanted = GetPlayerWantedLevel(PlayerId())
-    if wanted >= (Config.RequiredWantedLevel or 1) then
+    if wanted >= Config.RequiredWantedLevel then
       TriggerEvent('mtj_arrest:startScenario')
     end
     Wait(2000)
