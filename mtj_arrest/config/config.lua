@@ -20,12 +20,12 @@ Config.CopsPerWantedLevel = {
     [2] = 4,   -- 2 Sterne: 4 Cops
     [3] = 6,   -- 3 Sterne: 6 Cops
     [4] = 8,   -- 4 Sterne: 8 Cops
-    [5] = 10,  -- 5 Sterne: 10 Cops
+    [5] = 20,  -- 5 Sterne: bis zu 20 Cops (verteilt, inkl. Heli-Besatzung)
 }
 Config.PoliceCount = 7 -- Fallback, falls CopsPerWantedLevel nicht definiert
 Config.PoliceSpawnRadius = 40.0 -- Entfernung um Spieler, in der gespawnt wird (Meter)
 Config.PoliceChaseWanted = true -- Wenn true: Cops spawnen und verfolgen Spieler bei Wanted automatisch
-Config.MaxActiveCops = 12
+Config.MaxActiveCops = 20
 Config.PoliceModels = {
     "s_m_y_cop_01",
     "s_f_y_cop_01",
@@ -51,7 +51,7 @@ Config.HeliModel = "polmav"             -- Polizei-Helikopter Modell
 Config.HeliCrewModel = "s_m_y_swat_01"  -- SWAT-Modell für Besatzung
 Config.HeliSpawnHeight = 80.0           -- Spawn-Höhe über dem Spieler
 Config.HeliWeapon = "WEAPON_CARBINERIFLE" -- Waffe der Heli-Besatzung
-Config.MaxHelis = 1                     -- Maximale Anzahl Helikopter gleichzeitig
+Config.MaxHelis = 2                     -- Maximale Anzahl Helikopter gleichzeitig
 
 -- Jail (realistische Koordinaten: Bolingbroke Prison Hof)
 Config.JailMinutesDefault = 1  -- <<< HIER Haftzeit zentral einstellen (in Minuten)
