@@ -430,11 +430,18 @@ local function playCuffSequence()
     TaskLookAtEntity(nearest, player, 5000, 2048, 3)
   end
   TaskPlayAnim(player, "random@arrests", "kneeling_arrest_idle", 8.0, -8.0, 4500, 49, 0, false, false, false)
-  Wait(2000)
+  Wait(3500)
   if not scenarioActive then cuffing = false; return end
+
+  -- Handschellen anlegen + Freeze
   SetEnableHandcuffs(player, true)
   FreezeEntityPosition(player, true)
   cuffed = true
+
+  -- Kurze Pause damit Handschellen-Visuals sichtbar sind
+  Wait(1000)
+
+  -- JETZT erst Festnahme-Info anzeigen (nach Animation + Handschellen)
   deescalateAllPolice()
   nativeNotify("~r~Festnahme~s~: Du wirst verhaftet!")
   TriggerEvent('mtj_arrest:nui:arrest_log', true, Config.UI.ArrestLogLines)
