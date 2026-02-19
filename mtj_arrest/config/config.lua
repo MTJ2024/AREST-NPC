@@ -38,8 +38,8 @@ Config.MaxSpawnDistance = 40.0 -- Legacy, für Kompatibilität
 Config.ComplianceWindow = 10
 Config.DisableAmbientCopsAfterSurrender = true
 
--- Helikopter ab 4 Sternen (mit bewaffneter Besatzung)
-Config.HeliWantedLevel = 4              -- Ab diesem Wanted-Level spawnen Helis
+-- Helikopter ab 3 Sternen (mit bewaffneter Besatzung)
+Config.HeliWantedLevel = 3              -- Ab diesem Wanted-Level spawnen Helis
 Config.HeliModel = "polmav"             -- Polizei-Helikopter Modell
 Config.HeliCrewModel = "s_m_y_swat_01"  -- SWAT-Modell für Besatzung
 Config.HeliSpawnHeight = 80.0           -- Spawn-Höhe über dem Spieler

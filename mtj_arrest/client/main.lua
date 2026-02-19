@@ -59,6 +59,8 @@ local complianceWindow = 0
 local complianceCountdownThreadActive = false
 local helis = {}
 local combatMaintenanceActive = false
+local lastScenarioStart = 0
+local scenarioCooldown = 5000 -- 5 seconds cooldown between scenario starts
 
 -- === HILFSFUNKTIONEN ===
 
@@ -225,7 +227,7 @@ local function startCombatMaintenance()
 
       -- Helikopter ab konfiguriertem Wanted-Level
       local wanted = GetPlayerWantedLevel(PlayerId())
-      local heliLevel = Config.HeliWantedLevel or 4
+      local heliLevel = Config.HeliWantedLevel or 3
       if wanted >= heliLevel then
         spawnPoliceHeli()
         -- Heli-Besatzung: Waffen und Kampf sicherstellen
@@ -380,8 +382,13 @@ local function playCuffSequence()
     dbg("playCuffSequence: guard (cuffing/cuffed/inJail) -> abort")
     return
   end
+  if not scenarioActive then
+    dbg("playCuffSequence: scenarioActive=false -> abort")
+    return
+  end
   cuffing = true
   forceExitVehicleIfIn()
+  if not scenarioActive then cuffing = false; return end
   local player = PlayerPedId()
   local ppos = GetEntityCoords(player)
   local nearest, bestD = nil, 9999
@@ -399,18 +406,22 @@ local function playCuffSequence()
     local timeout = GetGameTimer() + 8000
     while #(GetEntityCoords(nearest) - GetEntityCoords(player)) > 2.2 and GetGameTimer() < timeout do
       Wait(100)
+      if not scenarioActive then cuffing = false; return end
     end
   end
+  if not scenarioActive then cuffing = false; return end
   if not loadAnimDict("random@arrests") then cuffing = false return end
   if not loadAnimDict("mp_arrest_paired") then cuffing = false return end
   TaskPlayAnim(player, "random@arrests", "idle_2_hands_up", 8.0, -8.0, 2500, 49, 0, false, false, false)
   Wait(2200)
+  if not scenarioActive then cuffing = false; return end
   if nearest and DoesEntityExist(nearest) then
     TaskPlayAnim(nearest, "mp_arrest_paired", "cop_p2_back_left", 6.0, -4.0, 4500, 49, 0, false, false, false)
     TaskLookAtEntity(nearest, player, 5000, 2048, 3)
   end
   TaskPlayAnim(player, "random@arrests", "kneeling_arrest_idle", 8.0, -8.0, 4500, 49, 0, false, false, false)
   Wait(2000)
+  if not scenarioActive then cuffing = false; return end
   SetEnableHandcuffs(player, true)
   FreezeEntityPosition(player, true)
   cuffed = true
@@ -422,7 +433,7 @@ local function playCuffSequence()
   dbg("cuff sequence done")
   hideScenarioUI()
   -- Jail-Trigger immer ausführen
-  if not inJail then
+  if not inJail and scenarioActive then
     jailRequested = true
     TriggerServerEvent('mtj_arrest:serverBeginJail', Config.JailMinutesDefault)
   end
@@ -492,43 +503,49 @@ AddEventHandler('mtj_arrest:startScenario', function()
     dbg("startScenario: already active")
     return
   end
+  local now = GetGameTimer()
+  if (now - lastScenarioStart) < scenarioCooldown then
+    dbg("startScenario: cooldown active, ignoring")
+    return
+  end
   if GetPlayerWantedLevel(PlayerId()) == 0 then
     dbg("startScenario abgebrochen: Kein Wanted Level!")
     return
   end
+  lastScenarioStart = now
   scenarioActive = true
   canSurrender = true
   jailRequested = false
   surrendered = false
   cuffed = false
   cuffing = false
+  complianceCountdownThreadActive = false
+  combatMaintenanceActive = false
   complianceWindow = Config.ComplianceWindow
   clearCops()
   spawnCopsAroundPlayer()
   setAmbientCopsIgnore(true)
   showScenarioUI()
   dbg("startScenario: scenarioActive set, UI requested")
-  if not complianceCountdownThreadActive then
-    complianceCountdownThreadActive = true
-    CreateThread(function()
-      while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
-        Wait(1000)
-        if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
-          complianceWindow = complianceWindow - 1
-          TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
-          if complianceWindow <= 0 then
-            canSurrender = false
-            reactivatePolice()
-            startCombatMaintenance()
-            dbg("Surrender window abgelaufen!")
-          end
-        else
-          break
+  complianceCountdownThreadActive = true
+  CreateThread(function()
+    while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
+      Wait(1000)
+      if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
+        complianceWindow = complianceWindow - 1
+        TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
+        if complianceWindow <= 0 then
+          canSurrender = false
+          reactivatePolice()
+          startCombatMaintenance()
+          dbg("Surrender window abgelaufen!")
         end
+      else
+        break
       end
-      complianceCountdownThreadActive = false
-    end)
-  end
+    end
+    complianceCountdownThreadActive = false
+  end)
 end)
 
 RegisterNetEvent('mtj_arrest:endScenario')
@@ -540,6 +557,8 @@ AddEventHandler('mtj_arrest:endScenario', function()
   cuffing = false
   jailRequested = false
   complianceWindow = 0
+  complianceCountdownThreadActive = false
+  combatMaintenanceActive = false
   hideScenarioUI()
   clearCops()
   setAmbientCopsIgnore(false)
@@ -590,6 +609,8 @@ AddEventHandler('playerSpawned', function()
   cuffing = false
   jailRequested = false
   complianceWindow = 0
+  complianceCountdownThreadActive = false
+  combatMaintenanceActive = false
   inJail = false
   FreezeEntityPosition(PlayerPedId(), false)
   SetEnableHandcuffs(PlayerPedId(), false)
@@ -608,6 +629,8 @@ AddEventHandler('onResourceStop', function(res)
   cuffing = false
   jailRequested = false
   complianceWindow = 0
+  complianceCountdownThreadActive = false
+  combatMaintenanceActive = false
   inJail = false
   FreezeEntityPosition(PlayerPedId(), false)
   SetEnableHandcuffs(PlayerPedId(), false)
