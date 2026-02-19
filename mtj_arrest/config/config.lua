@@ -113,7 +113,7 @@ Config.GuardReleaseTime         = 8       -- Sekunden: Freigabe des Anti-Doppel-
 Config.Fluchtversuch = {
     Aktiviert           = true,     -- true = Fluchtversuch-System aktiv
     Fluchtradius        = 25.0,     -- Meter: Wenn Spieler sich SO WEIT entfernt → Flucht erkannt
-    WantedErhöhung      = 1,       -- Wanted-Level wird um diesen Wert erhöht (+1 Stern)
+    WantedErhoehung     = 1,       -- Wanted-Level wird um diesen Wert erhoeht (+1 Stern)
     ExtraCops           = 3,        -- Zusätzliche Polizisten bei Fluchtversuch
     Nachricht           = "~r~FLUCHTVERSUCH~s~: Wanted-Level erhöht! Weitere Einheiten unterwegs!",
 }

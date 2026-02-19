@@ -417,7 +417,7 @@ local function checkFluchtversuch()
     dbg("FLUCHTVERSUCH erkannt! Distanz:", dist)
     -- Wanted-Level erhöhen
     local current = GetPlayerWantedLevel(PlayerId())
-    local increase = fc.WantedErhöhung or 1
+    local increase = fc.WantedErhoehung or 1
     local newLevel = math.min(current + increase, 5)
     if newLevel > current then
       SetPlayerWantedLevel(PlayerId(), newLevel, false)
