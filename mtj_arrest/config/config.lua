@@ -1,36 +1,60 @@
 Config = {}
 
--- Steuerung & UI
-Config.Keys = { Surrender = 38 } -- [E] Taste
-Config.UI = {
-    ScenarioHint = "Du bist umzingelt! Drücke [E], um dich zu ergeben.",
-    ArrestLogLines = {
-        "Tatverdacht: Widerstand gegen die Staatsgewalt",
-        "Maßnahme: Vorläufige Festnahme und Überstellung JVA",
-        "Rechte: Aussageverweigerungsrecht, Recht auf Verteidiger"
-    },
-    JailTitle = "JVA Greenzone420",
-    JailSubtitle = "Du bist inhaftiert.",
-    SurrenderKeyText = "[E]"
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║                    STEUERUNG & TASTEN                           ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.Keys = {
+    Surrender = 38,             -- Taste zum Ergeben ([E] = 38)
 }
 
--- Polizei-Spawning bei Wanted (Fahndung) — skaliert nach Wanted-Level
-Config.CopsPerWantedLevel = {
-    [1] = 2,   -- 1 Stern: 2 Cops
-    [2] = 4,   -- 2 Sterne: 4 Cops
-    [3] = 6,   -- 3 Sterne: 6 Cops
-    [4] = 8,   -- 4 Sterne: 8 Cops
-    [5] = 20,  -- 5 Sterne: bis zu 20 Cops (verteilt, inkl. Heli-Besatzung)
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              POLIZEI-EINSATZ ANZEIGE (SZENARIO-UI)              ║
+-- ║  Wann und wie die "POLIZEI-EINSATZ" Info angezeigt wird         ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.Aktionsradius            = 10.0    -- Meter: Polizei muss SO NAH sein, bevor Info + Timer starten
+Config.AktionsradiusTimeout     = 20      -- Sekunden: Maximale Wartezeit auf Polizei-Ankunft
+Config.ComplianceWindow         = 10      -- Sekunden: Zeit zum Ergeben [E], bevor Polizei schießt
+Config.RequiredWantedLevel      = 1       -- Ab diesem Wanted-Level startet das Szenario (1-5)
+
+Config.UI = {
+    -- Texte im Szenario-Panel
+    ScenarioHint    = "Du bist umzingelt! Drücke [E], um dich zu ergeben.",
+    SurrenderKeyText = "[E]",
+
+    -- Texte im Festnahme-Protokoll
+    ArrestLogLines  = {
+        "Tatverdacht: Widerstand gegen die Staatsgewalt",
+        "Maßnahme: Vorläufige Festnahme und Überstellung JVA",
+        "Rechte: Aussageverweigerungsrecht, Recht auf Verteidiger",
+    },
+
+    -- Texte im Jail-Panel
+    JailTitle       = "JVA Greenzone420",
+    JailSubtitle    = "Du bist inhaftiert.",
 }
-Config.PoliceCount = 7 -- Fallback, falls CopsPerWantedLevel nicht definiert
-Config.PoliceSpawnRadius = 40.0 -- Entfernung um Spieler, in der gespawnt wird (Meter)
-Config.PoliceChaseWanted = true -- Wenn true: Cops spawnen und verfolgen Spieler bei Wanted automatisch
-Config.MaxActiveCops = 20
+
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              POLIZEI-SPAWNING (Anzahl pro Wanted-Level)         ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.CopsPerWantedLevel = {
+    [1] = 2,                    -- 1 Stern:  2 Polizisten
+    [2] = 4,                    -- 2 Sterne: 4 Polizisten
+    [3] = 6,                    -- 3 Sterne: 6 Polizisten
+    [4] = 8,                    -- 4 Sterne: 8 Polizisten
+    [5] = 20,                   -- 5 Sterne: bis 20 Polizisten (verteilt, inkl. Heli-Besatzung)
+}
+Config.PoliceCount              = 7       -- Fallback, falls CopsPerWantedLevel nicht greift
+Config.MaxActiveCops            = 20      -- Maximale Anzahl gleichzeitig aktiver Polizisten
+Config.PoliceSpawnRadius        = 40.0    -- Meter: Entfernung um Spieler, in der gespawnt wird
+Config.MaxSpawnDistance          = 40.0    -- Legacy-Alias für Kompatibilität
+Config.PoliceChaseWanted        = true    -- true = Cops spawnen und verfolgen bei Wanted automatisch
+Config.DisableAmbientCopsAfterSurrender = true -- Ambient-Cops ignorieren Spieler nach Ergeben
+
 Config.PoliceModels = {
     "s_m_y_cop_01",
     "s_f_y_cop_01",
     "s_m_y_sheriff_01",
-    "s_m_m_sheriff_01"
+    "s_m_m_sheriff_01",
 }
 Config.PoliceOffsets = {
     vector3(8.0, 4.0, 0.0),
@@ -39,44 +63,51 @@ Config.PoliceOffsets = {
     vector3(-8.0, -5.0, 0.0),
     vector3(12.0, 0.0, 0.0),
     vector3(-12.0, 0.0, 0.0),
-    vector3(6.0, 10.0, 0.0)
+    vector3(6.0, 10.0, 0.0),
 }
-Config.MaxSpawnDistance = 40.0 -- Legacy, für Kompatibilität
-Config.ComplianceWindow = 10
-Config.CopArrivalRadius = 10.0 -- Cops müssen auf diese Distanz (Meter) kommen, bevor Timer startet
-Config.DisableAmbientCopsAfterSurrender = true
 
--- Helikopter ab 3 Sternen (mit bewaffneter Besatzung)
-Config.HeliWantedLevel = 3              -- Ab diesem Wanted-Level spawnen Helis
-Config.HeliModel = "polmav"             -- Polizei-Helikopter Modell
-Config.HeliCrewModel = "s_m_y_swat_01"  -- SWAT-Modell für Besatzung
-Config.HeliSpawnHeight = 80.0           -- Spawn-Höhe über dem Spieler
-Config.HeliWeapon = "WEAPON_CARBINERIFLE" -- Waffe der Heli-Besatzung
-Config.MaxHelis = 2                     -- Maximale Anzahl Helikopter gleichzeitig
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              HELIKOPTER (ab 3 Sternen Wanted)                   ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.HeliWantedLevel          = 3                 -- Ab diesem Wanted-Level spawnen Helis
+Config.HeliModel                = "polmav"          -- Helikopter-Modell
+Config.HeliCrewModel            = "s_m_y_swat_01"   -- SWAT-Modell für Besatzung
+Config.HeliWeapon               = "WEAPON_CARBINERIFLE" -- Waffe der Heli-Besatzung
+Config.HeliSpawnHeight          = 80.0              -- Spawn-Höhe über dem Spieler (Meter)
+Config.MaxHelis                 = 2                 -- Maximale Anzahl Helikopter gleichzeitig
 
--- Jail (realistische Koordinaten: Bolingbroke Prison Hof)
-Config.JailMinutesDefault = 1  -- <<< HIER Haftzeit zentral einstellen (in Minuten)
-Config.JailMinutes = 10         -- <<< Alias für server/main.lua (zentral für alle, z.B. 12 für 12 Minuten)
-Config.JailPosition = vector3(460.0410, -993.4337, 24.9149)
-Config.JailHeading = 180.0
-Config.JailName = "JVA GreenZone420"
-Config.JailReason = "Du bist inhaftiert und verbüßt deine Strafe."
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              GEFÄNGNIS / JAIL                                   ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.JailMinutesDefault       = 1       -- Haftzeit in Minuten (Standard für Szenario-Arrest)
+Config.JailMinutes              = 10      -- Alias für Server (zentral für alle)
+Config.JailPosition             = vector3(460.0410, -993.4337, 24.9149)  -- Bolingbroke Prison Hof
+Config.JailHeading              = 180.0   -- Blickrichtung im Gefängnis
+Config.JailName                 = "JVA GreenZone420"
+Config.JailReason               = "Du bist inhaftiert und verbüßt deine Strafe."
 
--- Release-Position nach Ende der Haftzeit (vor dem Gefängnistor)
-Config.JailReleasePosition = vector3(444.2502, -987.4813, 30.6896) -- Vor dem Tor von Bolingbroke Prison
-Config.JailReleaseHeading = 270.0 -- Blickrichtung westlich zum Parkplatz
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              ENTLASSUNG / RELEASE                               ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.JailReleasePosition      = vector3(444.2502, -987.4813, 30.6896)  -- Vor dem Gefängnistor
+Config.JailReleaseHeading       = 270.0   -- Blickrichtung westlich zum Parkplatz
 
--- Strafe/Geldstrafe Einstellungen
-Config.JailFine = 15000                  -- Höhe der Strafe (€)
-Config.EnableJailFine = true             -- true = Strafe wird abgezogen, false = keine Abbuchung
-Config.JailFineMessage = "Dir wurden %s€ als Strafe abgezogen!"
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              GELDSTRAFE                                         ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.JailFine                 = 15000   -- Höhe der Geldstrafe (€)
+Config.EnableJailFine           = true    -- true = Strafe wird abgezogen, false = keine Abbuchung
+Config.JailFineMessage          = "Dir wurden %s€ als Strafe abgezogen!"
 
--- Sicherheit & Balancing
-Config.AntiDoubleJailTime = 5
-Config.GuardReleaseTime = 8
-Config.RequiredWantedLevel = 1
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              SICHERHEIT & BALANCING                             ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.AntiDoubleJailTime       = 5       -- Sekunden: Schutz gegen doppeltes Einsperren
+Config.GuardReleaseTime         = 8       -- Sekunden: Freigabe des Anti-Doppel-Guards
 
--- Debug
-Config.Debug = false
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              DEBUG                                              ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.Debug                    = false   -- true = Debug-Ausgaben in Konsole
 
 return Config

@@ -573,9 +573,9 @@ AddEventHandler('mtj_arrest:startScenario', function()
   setAmbientCopsIgnore(true)
   dbg("startScenario: cops spawned, warte auf Ankunft...")
 
-  -- ETAPPE 1: Warten bis mindestens ein Cop beim Spieler ist
-  local arrivalRadius = Config.CopArrivalRadius or 10.0
-  local arrivalTimeout = GetGameTimer() + 20000 -- Max 20s warten
+  -- ETAPPE 1: Warten bis mindestens ein Cop im Aktionsradius ist
+  local arrivalRadius = Config.Aktionsradius or 10.0
+  local arrivalTimeout = GetGameTimer() + ((Config.AktionsradiusTimeout or 20) * 1000)
   CreateThread(function()
     while scenarioActive and not isAnyCopNearPlayer(arrivalRadius) and GetGameTimer() < arrivalTimeout do
       Wait(500)
