@@ -45,6 +45,12 @@ local function dbg(...)
   print(("[mtj_arrest][DEBUG] %s"):format(table.concat(t, " ")))
 end
 
+local function nativeNotify(text)
+  SetNotificationTextEntry("STRING")
+  AddTextComponentSubstringPlayerName(tostring(text))
+  DrawNotification(false, true)
+end
+
 -- State
 local cops = {}
 local scenarioActive = false
@@ -426,6 +432,7 @@ local function playCuffSequence()
   FreezeEntityPosition(player, true)
   cuffed = true
   deescalateAllPolice()
+  nativeNotify("~r~Festnahme~s~: Du wirst verhaftet!")
   TriggerEvent('mtj_arrest:nui:arrest_log', true, Config.UI.ArrestLogLines)
   Wait(3000)
   TriggerEvent('mtj_arrest:nui:arrest_log', false)
@@ -462,6 +469,7 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
 
   local jailSeconds = math.floor((tonumber(minutes) or 10) * 60)
   dbg(("Spieler wurde ins Jail teleportiert für %d Minuten!"):format(minutes))
+  nativeNotify(("~r~Inhaftiert~s~: %d Minuten in %s"):format(math.ceil(jailSeconds/60), Config.JailName or "Gefaengnis"))
   DoScreenFadeIn(1000)
   -- Jail-Countdown-Timer UI
   CreateThread(function()
@@ -526,6 +534,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
   spawnCopsAroundPlayer()
   setAmbientCopsIgnore(true)
   showScenarioUI()
+  nativeNotify("~r~POLIZEI~s~: Du bist umzingelt! Druecke ~b~[E]~s~ zum Ergeben.")
   dbg("startScenario: scenarioActive set, UI requested")
   complianceCountdownThreadActive = true
   CreateThread(function()

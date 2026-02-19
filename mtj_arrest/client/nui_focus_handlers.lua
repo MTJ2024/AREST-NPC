@@ -40,7 +40,7 @@ AddEventHandler('mtj_arrest:nui:jail', function(show, seconds, title, sub)
     show = show or false,
     seconds = seconds or 0,
     title = title or "Gefängnis",
-    sub = sub or ""
+    subtitle = sub or ""
   })
   setFocusSafe()
 end)

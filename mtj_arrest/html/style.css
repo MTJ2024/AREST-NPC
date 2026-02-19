@@ -363,10 +363,9 @@ body {
              scenarioPulse 7s ease-in-out infinite;
 }
 
-/* Puls zwischen „voll sichtbar“ und „fast transparent“ (ca. 5%) */
+/* Subtiler Puls – UI bleibt immer gut sichtbar */
 @keyframes scenarioPulse {
   0%   { opacity: 1; }
-  35%  { opacity: 0.05; }
-  65%  { opacity: 0.05; }
+  50%  { opacity: 0.85; }
   100% { opacity: 1; }
 }

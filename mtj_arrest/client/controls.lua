@@ -1,26 +1,8 @@
--- mtj_arrest: Freie Bewegung im Jail, Waffen- und Kampfcontrols geblockt
+-- mtj_arrest: Waffen- und Kampfcontrols im Jail geblockt
 
 local jail_control_until = 0
 
 RegisterNetEvent('mtj_arrest:clientBeginJail', function(minutes)
-  local ped = PlayerPedId()
-  -- Nach Teleport: Charakter komplett freigeben und unbewaffnet setzen
-  CreateThread(function()
-    Wait(750)
-    ped = PlayerPedId()
-    FreezeEntityPosition(ped, false)
-    ClearPedTasksImmediately(ped)
-    ClearPedSecondaryTask(ped)
-    ResetPedMovementClipset(ped, 0.0)
-    RemoveAnimDict('mp_arresting')
-    SetEnableHandcuffs(ped, false)
-    SetPedCanPlayGestureAnims(ped, true)
-    SetPedCanPlayAmbientAnims(ped, true)
-    SetPedCanRagdoll(ped, true)
-    SetCurrentPedWeapon(ped, `WEAPON_UNARMED`, true)
-    SetNuiFocus(false, false)
-  end)
-
   minutes = tonumber(minutes) or 10
   jail_control_until = GetGameTimer() + (minutes * 60 * 1000)
 end)
