@@ -183,6 +183,63 @@ local function setAmbientCopsIgnore(toggle)
   dbg(toggle and "Ambient cops ignored" or "Ambient cops restored")
 end
 
+local function createCopAt(pos, modelName)
+  local modelHash = loadModel(modelName)
+  if not modelHash then return nil end
+  local heading = GetEntityHeading(PlayerPedId()) + 180.0
+  local ped = CreatePed(4, modelHash, pos.x, pos.y, pos.z, heading, true, true)
+  if DoesEntityExist(ped) then
+    SetEntityAsMissionEntity(ped, true, true)
+    SetBlockingOfNonTemporaryEvents(ped, true)
+    SetPedArmour(ped, 100)
+    SetPedFleeAttributes(ped, 0, false)
+    -- ARREST_COP Gruppe: HASST den Spieler (statt COP = RESPECT)
+    if ARREST_COP_GROUP then
+      SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
+    else
+      SetPedRelationshipGroupHash(ped, GetHashKey("COP"))
+    end
+    -- Waffen + Kampf-Fähigkeit SOFORT geben (aber Alertness niedrig halten für Approach-Phase)
+    GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
+    SetPedSeeingRange(ped, 80.0)
+    SetPedHearingRange(ped, 80.0)
+    SetPedAlertness(ped, 0)
+    SetPedCombatAbility(ped, 2)
+    SetPedCombatRange(ped, 2)
+    SetPedCombatMovement(ped, 2) -- Offensiv
+    SetPedAccuracy(ped, 40)
+    if SetCanAttackFriendly then SetCanAttackFriendly(ped, false, false) end
+    TaskGoToEntity(ped, PlayerPedId(), -1, 2.5, 2.0, 1073741824, 0)
+  end
+  return ped
+end
+
+local function spawnCopsAroundPlayer()
+  if not (Config and Config.PoliceOffsets and #Config.PoliceOffsets > 0) then dbg("No PoliceOffsets"); return end
+  if not (Config and Config.PoliceModels and #Config.PoliceModels > 0) then dbg("No PoliceModels"); return end
+  local maxActive = Config.MaxActiveCops or 12
+  local wanted = GetPlayerWantedLevel(PlayerId())
+  local toSpawn = Config.PoliceCount or 7
+  if Config.CopsPerWantedLevel and Config.CopsPerWantedLevel[wanted] then
+    toSpawn = Config.CopsPerWantedLevel[wanted]
+  end
+  toSpawn = math.min(toSpawn, maxActive - #cops)
+  if toSpawn <= 0 then return end
+  local ppos = GetEntityCoords(PlayerPedId())
+  for i = 1, toSpawn do
+    local off = Config.PoliceOffsets[((i - 1) % #Config.PoliceOffsets) + 1]
+    local model = Config.PoliceModels[((i - 1) % #Config.PoliceModels) + 1]
+    local pos = vector3(ppos.x + off.x, ppos.y + off.y, ppos.z + (off.z or 0))
+    if #(pos - ppos) < 30.0 then
+      pos = randomPosAroundPlayer(32.0, Config.MaxSpawnDistance)
+    end
+    local ped = createCopAt(pos, model)
+    if ped then table.insert(cops, ped) end
+    Wait(40)
+  end
+  dbg("spawned cops:", #cops)
+end
+
 local function spawnPoliceHeli()
   local maxH = Config.MaxHelis or 1
   if #helis >= maxH then return end
@@ -512,63 +569,6 @@ local function forceExitVehicleIfIn()
   end
 end
 
-local function createCopAt(pos, modelName)
-  local modelHash = loadModel(modelName)
-  if not modelHash then return nil end
-  local heading = GetEntityHeading(PlayerPedId()) + 180.0
-  local ped = CreatePed(4, modelHash, pos.x, pos.y, pos.z, heading, true, true)
-  if DoesEntityExist(ped) then
-    SetEntityAsMissionEntity(ped, true, true)
-    SetBlockingOfNonTemporaryEvents(ped, true)
-    SetPedArmour(ped, 100)
-    SetPedFleeAttributes(ped, 0, false)
-    -- ARREST_COP Gruppe: HASST den Spieler (statt COP = RESPECT)
-    if ARREST_COP_GROUP then
-      SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
-    else
-      SetPedRelationshipGroupHash(ped, GetHashKey("COP"))
-    end
-    -- Waffen + Kampf-Fähigkeit SOFORT geben (aber Alertness niedrig halten für Approach-Phase)
-    GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
-    SetPedSeeingRange(ped, 80.0)
-    SetPedHearingRange(ped, 80.0)
-    SetPedAlertness(ped, 0)
-    SetPedCombatAbility(ped, 2)
-    SetPedCombatRange(ped, 2)
-    SetPedCombatMovement(ped, 2) -- Offensiv
-    SetPedAccuracy(ped, 40)
-    if SetCanAttackFriendly then SetCanAttackFriendly(ped, false, false) end
-    TaskGoToEntity(ped, PlayerPedId(), -1, 2.5, 2.0, 1073741824, 0)
-  end
-  return ped
-end
-
-local function spawnCopsAroundPlayer()
-  if not (Config and Config.PoliceOffsets and #Config.PoliceOffsets > 0) then dbg("No PoliceOffsets"); return end
-  if not (Config and Config.PoliceModels and #Config.PoliceModels > 0) then dbg("No PoliceModels"); return end
-  local maxActive = Config.MaxActiveCops or 12
-  local wanted = GetPlayerWantedLevel(PlayerId())
-  local toSpawn = Config.PoliceCount or 7
-  if Config.CopsPerWantedLevel and Config.CopsPerWantedLevel[wanted] then
-    toSpawn = Config.CopsPerWantedLevel[wanted]
-  end
-  toSpawn = math.min(toSpawn, maxActive - #cops)
-  if toSpawn <= 0 then return end
-  local ppos = GetEntityCoords(PlayerPedId())
-  for i = 1, toSpawn do
-    local off = Config.PoliceOffsets[((i - 1) % #Config.PoliceOffsets) + 1]
-    local model = Config.PoliceModels[((i - 1) % #Config.PoliceModels) + 1]
-    local pos = vector3(ppos.x + off.x, ppos.y + off.y, ppos.z + (off.z or 0))
-    if #(pos - ppos) < 30.0 then
-      pos = randomPosAroundPlayer(32.0, Config.MaxSpawnDistance)
-    end
-    local ped = createCopAt(pos, model)
-    if ped then table.insert(cops, ped) end
-    Wait(40)
-  end
-  dbg("spawned cops:", #cops)
-end
-
 function deescalateAllPolice()
   for _, ped in ipairs(cops) do
     if DoesEntityExist(ped) then
@@ -582,6 +582,14 @@ function deescalateAllPolice()
     setAmbientCopsIgnore(true)
   end
   dbg("deescalate all police")
+end
+
+local function getScenarioHint()
+  local pa = Config.Polizeiakte
+  if pa and pa.ScenarioHintPerStatus and pa.ScenarioHintPerStatus[playerAkteStatus] then
+    return pa.ScenarioHintPerStatus[playerAkteStatus]
+  end
+  return Config.UI.ScenarioHint
 end
 
 local function showScenarioUI()
@@ -683,14 +691,6 @@ local function getArrestLogLines()
 end
 
 -- Szenario-Hint basierend auf Akte-Status
-local function getScenarioHint()
-  local pa = Config.Polizeiakte
-  if pa and pa.ScenarioHintPerStatus and pa.ScenarioHintPerStatus[playerAkteStatus] then
-    return pa.ScenarioHintPerStatus[playerAkteStatus]
-  end
-  return Config.UI.ScenarioHint
-end
-
 -- === FESTNAHME-ABLAUF ===
 local function playCuffSequence()
   if cuffing or cuffed or inJail then
