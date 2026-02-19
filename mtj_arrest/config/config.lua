@@ -131,6 +131,58 @@ Config.Strafregister = {
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              POLIZEIAKTE (Persistente NPC-Akte)                  ║
+-- ║  Dauerhafte Erfassung aller Polizei-Vorgänge pro Spieler        ║
+-- ║  Bleibt über Reconnects & Restarts gespeichert (KVP)            ║
+-- ║  Vollautomatisch — kein MySQL nötig                             ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.Polizeiakte = {
+    Aktiviert           = true,     -- true = Persistente Akte aktiv (KVP-Datenbank)
+
+    -- Straf-Stufen: Je mehr Festnahmen, desto härter die Strafe
+    -- Die höchste passende Stufe wird verwendet
+    Stufen = {
+        {   -- Stufe 1: Ersttäter (keine Erhöhung)
+            AbFestnahmen            = 0,
+            Status                  = "unbescholten",
+            HaftzeitMultiplikator   = 1.0,      -- Normale Haftzeit
+            GeldstrafeMultiplikator = 1.0,      -- Normale Geldstrafe
+        },
+        {   -- Stufe 2: Vorbestraft (ab 2 Festnahmen)
+            AbFestnahmen            = 2,
+            Status                  = "vorbestraft",
+            HaftzeitMultiplikator   = 1.5,      -- +50% Haftzeit
+            GeldstrafeMultiplikator = 1.25,     -- +25% Geldstrafe
+        },
+        {   -- Stufe 3: Mehrfach vorbestraft (ab 4 Festnahmen)
+            AbFestnahmen            = 4,
+            Status                  = "mehrfach vorbestraft",
+            HaftzeitMultiplikator   = 2.0,      -- Doppelte Haftzeit
+            GeldstrafeMultiplikator = 1.5,      -- +50% Geldstrafe
+        },
+        {   -- Stufe 4: Schwerkriminell (ab 7 Festnahmen)
+            AbFestnahmen            = 7,
+            Status                  = "schwerkriminell",
+            HaftzeitMultiplikator   = 3.0,      -- Dreifache Haftzeit
+            GeldstrafeMultiplikator = 2.0,      -- Doppelte Geldstrafe
+        },
+        {   -- Stufe 5: Staatsfeind (ab 12 Festnahmen)
+            AbFestnahmen            = 12,
+            Status                  = "Staatsfeind",
+            HaftzeitMultiplikator   = 4.0,      -- Vierfache Haftzeit
+            GeldstrafeMultiplikator = 3.0,      -- Dreifache Geldstrafe
+        },
+    },
+
+    FluchtversuchExtra  = 0.1,      -- Pro Fluchtversuch in Akte: +10% auf alles
+    MaxMultiplikator    = 5.0,      -- Absolutes Maximum (5x)
+
+    -- Nachrichten (automatisch angezeigt)
+    NachrichtAkte       = "~y~POLIZEIAKTE~s~: Status: ~r~%s~s~ | Festnahmen: %d | Fluchtversuche: %d",
+    NachrichtVorbestraft = "~o~VORBESTRAFT~s~: Aufgrund deiner Akte wird die Strafe erhöht!",
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              ENTLASSUNGSWARNUNG                                 ║
 -- ║  Spieler wird vor Ende der Haftzeit benachrichtigt              ║
 -- ╚══════════════════════════════════════════════════════════════════╝
