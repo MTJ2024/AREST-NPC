@@ -359,13 +359,39 @@ body {
 
 /* Szenario-UI: Doppelte Größe + langsamer Puls 100%→0%→100% */
 .card.scenario {
-  transform: scale(2);
-  transform-origin: center center;
+  min-width: 800px;
+  max-width: 960px;
+  padding: 76px 76px 64px 76px;
+}
+
+.card.scenario .title {
+  font-size: 4.4rem;
+}
+
+.card.scenario .chip {
+  font-size: 2.2rem;
+  padding: 12px 36px;
+}
+
+.card.scenario .hint {
+  font-size: 2.24rem;
+}
+
+.card.scenario .key {
+  font-size: 2.18rem;
+  padding: 4px 20px;
+}
+
+.card.scenario .countdown {
+  font-size: 2.5rem;
+}
+
+.card.scenario .accent-line {
+  height: 6px;
 }
 
 .card.scenario.pulse-ui {
-  animation: popIn 0.8s cubic-bezier(.22,1.1,.38,1) both,
-             scenarioPulse 7s ease-in-out infinite;
+  animation: scenarioPulse 7s ease-in-out infinite;
 }
 
 /* Langsamer Puls von 100% Sichtbarkeit bis 0% und zurück */
