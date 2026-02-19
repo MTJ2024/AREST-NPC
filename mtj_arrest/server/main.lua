@@ -105,9 +105,10 @@ local function clearAllWeaponsAndItems(src)
 end
 
 -- Strafe abziehen: erst money, dann bank (ESX & ox_inventory)
-local function takeJailFine(src)
-  if not Config.EnableJailFine or (Config.JailFine or 0) < 1 then return end
-  local fine = Config.JailFine
+local function takeJailFine(src, fineOverride)
+  if not Config.EnableJailFine then return end
+  local fine = fineOverride or Config.JailFine or 0
+  if fine < 1 then return end
   local remaining = fine
   local paid = 0
 
@@ -252,14 +253,8 @@ AddEventHandler('mtj_arrest:serverBeginJail', function(minutes)
 
   -- Strafregister: Geldstrafe erhöhen bei Wiederholungstätern
   local fineMult = getStrafregisterMultiplier(arrestCount, "GeldstrafeMultiplikator")
-  if fineMult > 1.0 then
-    local origFine = Config.JailFine or 15000
-    Config.JailFine = math.ceil(origFine * fineMult)
-    pcall(function() takeJailFine(src) end)
-    Config.JailFine = origFine -- Zurücksetzen auf Original
-  else
-    pcall(function() takeJailFine(src) end)
-  end
+  local fineAmount = math.ceil((Config.JailFine or 15000) * fineMult)
+  pcall(function() takeJailFine(src, fineAmount) end)
 
   -- Strafregister: Client über Vorstrafen informieren
   if arrestCount > 1 then

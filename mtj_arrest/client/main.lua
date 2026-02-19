@@ -68,7 +68,7 @@ local combatMaintenanceActive = false
 local lastScenarioStart = 0
 local scenarioCooldown = 5000 -- 5 seconds cooldown between scenario starts
 local scenarioStartPos = nil  -- Position bei Szenario-Start (für Fluchtversuch)
-local fluchtversionTriggered = false -- Fluchtversuch nur einmal pro Szenario
+local fluchtversuchTriggered = false -- Fluchtversuch nur einmal pro Szenario
 local releaseWarningShown = false -- Entlassungswarnung nur einmal
 
 -- === HILFSFUNKTIONEN ===
@@ -406,13 +406,13 @@ end
 local function checkFluchtversuch()
   local fc = Config.Fluchtversuch
   if not fc or not fc.Aktiviert then return end
-  if fluchtversionTriggered then return end
+  if fluchtversuchTriggered then return end
   if not scenarioStartPos then return end
   local ppos = GetEntityCoords(PlayerPedId())
   local dist = #(ppos - scenarioStartPos)
   local radius = fc.Fluchtradius or 25.0
   if dist >= radius then
-    fluchtversionTriggered = true
+    fluchtversuchTriggered = true
     dbg("FLUCHTVERSUCH erkannt! Distanz:", dist)
     -- Wanted-Level erhöhen
     local current = GetPlayerWantedLevel(PlayerId())
@@ -562,7 +562,7 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
     dbg("[Jail] Setze Wanted Level auf 0!")
   end
 
-   local jailSeconds = math.floor((tonumber(minutes) or 10) * 60)
+  local jailSeconds = math.floor((tonumber(minutes) or 10) * 60)
   dbg(("Spieler wurde ins Jail teleportiert für %d Minuten!"):format(minutes))
   nativeNotify(("~r~Inhaftiert~s~: %d Minuten in %s"):format(math.ceil(jailSeconds/60), Config.JailName or "Gefängnis"))
   DoScreenFadeIn(1000)
@@ -654,7 +654,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
   complianceCountdownThreadActive = false
   combatMaintenanceActive = false
   complianceWindow = Config.ComplianceWindow
-  fluchtversionTriggered = false
+  fluchtversuchTriggered = false
   scenarioStartPos = GetEntityCoords(PlayerPedId())
   clearCops()
   spawnCopsAroundPlayer()
@@ -713,7 +713,7 @@ AddEventHandler('mtj_arrest:endScenario', function()
   complianceWindow = 0
   complianceCountdownThreadActive = false
   combatMaintenanceActive = false
-  fluchtversionTriggered = false
+  fluchtversuchTriggered = false
   scenarioStartPos = nil
   hideScenarioUI()
   clearCops()
@@ -767,7 +767,7 @@ AddEventHandler('playerSpawned', function()
   complianceWindow = 0
   complianceCountdownThreadActive = false
   combatMaintenanceActive = false
-  fluchtversionTriggered = false
+  fluchtversuchTriggered = false
   scenarioStartPos = nil
   releaseWarningShown = false
   inJail = false
@@ -790,7 +790,7 @@ AddEventHandler('onResourceStop', function(res)
   complianceWindow = 0
   complianceCountdownThreadActive = false
   combatMaintenanceActive = false
-  fluchtversionTriggered = false
+  fluchtversuchTriggered = false
   scenarioStartPos = nil
   releaseWarningShown = false
   inJail = false
