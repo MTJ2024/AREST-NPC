@@ -239,3 +239,67 @@ RegisterNetEvent('mtj_arrest:serverClearWeapons', function()
   dbg(("[mtj_arrest] clearAllWeaponsAndItems invoked by %d (manual)"):format(src))
   pcall(function() clearAllWeaponsAndItems(src) end)
 end)
+
+-- Jail-Release: Waffen entfernen wenn kein Waffenschein
+local function playerHasWeaponLicense(src)
+  if not ESX then return false end
+  local xPlayer = ESX.GetPlayerFromId(src)
+  if not xPlayer then return false end
+
+  -- ESX Lizenzen prüfen
+  if xPlayer.getLicenses then
+    local licenses = xPlayer.getLicenses()
+    if licenses then
+      for _, lic in pairs(licenses) do
+        if lic and lic.type == "weapon" then
+          return true
+        end
+      end
+    end
+  end
+
+  return false
+end
+
+RegisterNetEvent('mtj_arrest:serverJailRelease')
+AddEventHandler('mtj_arrest:serverJailRelease', function()
+  local src = source
+  local hasLicense = playerHasWeaponLicense(src)
+  dbg(("[mtj_arrest] Jail release for %d — Waffenschein: %s"):format(src, tostring(hasLicense)))
+
+  if not hasLicense then
+    -- Waffen aus Inventar/Loadout entfernen
+    if ESX then
+      local xPlayer = ESX.GetPlayerFromId(src)
+      if xPlayer then
+        if xPlayer.getLoadout and xPlayer.removeWeapon then
+          local loadout = xPlayer.getLoadout()
+          if loadout then
+            for _, w in pairs(loadout) do
+              local wname = (w and (w.name or w.weapon)) or nil
+              if wname then
+                xPlayer.removeWeapon(wname)
+              end
+            end
+          end
+        end
+      end
+    end
+    if hasOx() then
+      pcall(function()
+        local weapons = exports.ox_inventory:GetPlayerWeapons(src)
+        if weapons then
+          for _, weapon in pairs(weapons) do
+            pcall(function() exports.ox_inventory:RemoveWeapon(src, weapon.name) end)
+          end
+        end
+      end)
+    end
+    dbg(("[mtj_arrest] Waffen entfernt (kein Waffenschein) für Spieler %d"):format(src))
+    TriggerClientEvent('chat:addMessage', src, {
+      color = {255, 165, 0},
+      multiline = true,
+      args = {"Gefängnis", "Deine Waffen wurden eingezogen (kein Waffenschein)."}
+    })
+  end
+end)

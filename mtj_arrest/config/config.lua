@@ -14,11 +14,18 @@ Config.UI = {
     SurrenderKeyText = "[E]"
 }
 
--- Polizei-Spawning bei Wanted (Fahndung)
-Config.PoliceCount = 7 -- Wie viele Cops maximal spawnen
+-- Polizei-Spawning bei Wanted (Fahndung) — skaliert nach Wanted-Level
+Config.CopsPerWantedLevel = {
+    [1] = 2,   -- 1 Stern: 2 Cops
+    [2] = 4,   -- 2 Sterne: 4 Cops
+    [3] = 6,   -- 3 Sterne: 6 Cops
+    [4] = 8,   -- 4 Sterne: 8 Cops
+    [5] = 10,  -- 5 Sterne: 10 Cops
+}
+Config.PoliceCount = 7 -- Fallback, falls CopsPerWantedLevel nicht definiert
 Config.PoliceSpawnRadius = 40.0 -- Entfernung um Spieler, in der gespawnt wird (Meter)
 Config.PoliceChaseWanted = true -- Wenn true: Cops spawnen und verfolgen Spieler bei Wanted automatisch
-Config.MaxActiveCops = 24
+Config.MaxActiveCops = 12
 Config.PoliceModels = {
     "s_m_y_cop_01",
     "s_f_y_cop_01",

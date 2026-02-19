@@ -3,7 +3,7 @@ local DEBUG = true
 local Config = Config or {}
 Config.Keys = Config.Keys or { Surrender = 38 }
 Config.PoliceCount = Config.PoliceCount or 7
-Config.MaxActiveCops = Config.MaxActiveCops or 24
+Config.MaxActiveCops = Config.MaxActiveCops or 12
 Config.PoliceOffsets = Config.PoliceOffsets or {
     vector3(8.0, 4.0, 0.0),
     vector3(-6.0, 5.0, 0.0),
@@ -338,8 +338,12 @@ end
 local function spawnCopsAroundPlayer()
   if not (Config and Config.PoliceOffsets and #Config.PoliceOffsets > 0) then dbg("No PoliceOffsets"); return end
   if not (Config and Config.PoliceModels and #Config.PoliceModels > 0) then dbg("No PoliceModels"); return end
-  local maxActive = Config.MaxActiveCops
-  local toSpawn = Config.PoliceCount
+  local maxActive = Config.MaxActiveCops or 12
+  local wanted = GetPlayerWantedLevel(PlayerId())
+  local toSpawn = Config.PoliceCount or 7
+  if Config.CopsPerWantedLevel and Config.CopsPerWantedLevel[wanted] then
+    toSpawn = Config.CopsPerWantedLevel[wanted]
+  end
   toSpawn = math.min(toSpawn, maxActive - #cops)
   if toSpawn <= 0 then return end
   local ppos = GetEntityCoords(PlayerPedId())
@@ -452,12 +456,22 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
   local jailPos = Config.JailPosition
   local jailHeading = Config.JailHeading
   local player = PlayerPedId()
+
+  -- Waffen vom Ped entfernen BEVOR Teleport (Spieler soll mit Handschellen spawnen, nicht mit Waffe)
+  RemoveAllPedWeapons(player, true)
+  SetCurrentPedWeapon(player, GetHashKey("WEAPON_UNARMED"), true)
+
   DoScreenFadeOut(1000)
   Wait(1200)
   SetEntityCoords(player, jailPos.x, jailPos.y, jailPos.z)
   SetEntityHeading(player, jailHeading)
   FreezeEntityPosition(player, true)
   SetEnableHandcuffs(player, true)
+
+  -- Nochmal Waffen entfernen nach Teleport (Sicherheit)
+  RemoveAllPedWeapons(player, true)
+  SetCurrentPedWeapon(player, GetHashKey("WEAPON_UNARMED"), true)
+
   inJail = true
 
   -- HIER: WANTED LEVEL AUF NULL SETZEN
@@ -487,6 +501,12 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
       SetEnableHandcuffs(player, false)
       inJail = false
       jailTime = 0
+
+      -- Waffen entfernen (Client-Ped) — Server prüft Waffenschein
+      RemoveAllPedWeapons(player, true)
+      SetCurrentPedWeapon(player, GetHashKey("WEAPON_UNARMED"), true)
+      TriggerServerEvent('mtj_arrest:serverJailRelease')
+
       local release = Config.JailReleasePosition
       local heading = Config.JailReleaseHeading
       DoScreenFadeOut(1000)
@@ -495,9 +515,7 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
       SetEntityHeading(player, heading)
       Wait(600)
       DoScreenFadeIn(1000)
-      if ESX and ESX.ShowNotification then
-        ESX.ShowNotification("Du bist nun wieder auf freiem Fuß!")
-      end
+      nativeNotify("~g~Entlassen~s~: Du bist nun wieder auf freiem Fuß!")
       dbg("Jailzeit vorbei, Spieler vor das Gefängnis gesetzt!")
     end
   end)

@@ -1,8 +1,6 @@
--- MTJ Arrest: Automatisches Spawnen von 2-7 Police-NPCs ab 2 Sternen im Radius um den Spieler
+-- MTJ Arrest: Automatisches Spawnen von Police-NPCs ab 2 Sternen — skaliert nach Wanted-Level
 
 local activeCops = {}
-local maxCops = 7
-local minCops = 2
 local spawnRadiusMin = 20.0
 local spawnRadiusMax = 40.0
 local policeModels = {
@@ -41,6 +39,15 @@ local function clearCops()
     activeCops = {}
 end
 
+-- Wie viele Cops für dieses Wanted-Level (aus Config oder Fallback)
+local function getMaxCopsForWanted(wanted)
+    if Config and Config.CopsPerWantedLevel and Config.CopsPerWantedLevel[wanted] then
+        return Config.CopsPerWantedLevel[wanted]
+    end
+    -- Fallback: wanted + 1, max 10
+    return math.min(wanted + 1, 10)
+end
+
 -- Haupt-Loop
 CreateThread(function()
     while true do
@@ -49,9 +56,10 @@ CreateThread(function()
         if wanted >= 2 then
             local playerPed = PlayerPedId()
             local playerCoords = GetEntityCoords(playerPed)
+            local maxCops = getMaxCopsForWanted(wanted)
             -- Falls zu wenige Cops: Nachspawnen
             if #activeCops < maxCops then
-                local toSpawn = math.max(minCops, math.min(maxCops, wanted + 1)) - #activeCops
+                local toSpawn = maxCops - #activeCops
                 for i=1, toSpawn do
                     spawnCopNearPlayer(playerCoords)
                     Wait(500)
