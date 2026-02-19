@@ -71,6 +71,28 @@ local scenarioStartPos = nil  -- Position bei Szenario-Start (für Fluchtversuch
 local fluchtversuchTriggered = false -- Fluchtversuch nur einmal pro Szenario
 local releaseWarningShown = false -- Entlassungswarnung nur einmal
 local playerAkteStatus = "unbescholten" -- Polizeiakte-Status (vom Server geladen)
+local policeVehicles = {} -- Gespawnte Polizeifahrzeuge
+
+-- === RELATIONSHIP GROUP (Cops MÜSSEN den Spieler hassen, sonst keine Interaktion) ===
+local ARREST_COP_GROUP = nil
+CreateThread(function()
+  local ok, hash = AddRelationshipGroup("ARREST_COP")
+  if ok then
+    ARREST_COP_GROUP = hash
+    SetRelationshipBetweenGroups(5, hash, GetHashKey("PLAYER")) -- 5 = HATE
+    SetRelationshipBetweenGroups(5, GetHashKey("PLAYER"), hash)
+    dbg("ARREST_COP relationship group erstellt (HATE)")
+  else
+    -- Fallback: Gruppe existiert schon
+    ARREST_COP_GROUP = GetHashKey("ARREST_COP")
+    SetRelationshipBetweenGroups(5, ARREST_COP_GROUP, GetHashKey("PLAYER"))
+    SetRelationshipBetweenGroups(5, GetHashKey("PLAYER"), ARREST_COP_GROUP)
+    dbg("ARREST_COP relationship group wiederverwendet")
+  end
+  -- Max-Wanted-Level auf 5 setzen (GTA/FiveM begrenzt sonst oft auf 3!)
+  SetMaxWantedLevel(5)
+  dbg("SetMaxWantedLevel(5) gesetzt")
+end)
 
 -- === HILFSFUNKTIONEN ===
 
@@ -123,6 +145,19 @@ local function clearHelis()
   dbg("clearHelis")
 end
 
+local function clearPoliceVehicles()
+  for _, pv in ipairs(policeVehicles) do
+    if pv.crew then
+      for _, c in ipairs(pv.crew) do
+        if DoesEntityExist(c) then DeleteEntity(c) end
+      end
+    end
+    if pv.vehicle and DoesEntityExist(pv.vehicle) then DeleteEntity(pv.vehicle) end
+  end
+  policeVehicles = {}
+  dbg("clearPoliceVehicles")
+end
+
 local function clearCops()
   for _, ped in ipairs(cops) do
     if DoesEntityExist(ped) then
@@ -134,6 +169,7 @@ local function clearCops()
   end
   cops = {}
   clearHelis()
+  clearPoliceVehicles()
   dbg("clearCops")
 end
 
@@ -175,7 +211,11 @@ local function spawnPoliceHeli()
     return
   end
   SetEntityAsMissionEntity(pilot, true, true)
-  SetPedRelationshipGroupHash(pilot, GetHashKey("COP"))
+  if ARREST_COP_GROUP then
+    SetPedRelationshipGroupHash(pilot, ARREST_COP_GROUP)
+  else
+    SetPedRelationshipGroupHash(pilot, GetHashKey("COP"))
+  end
   SetBlockingOfNonTemporaryEvents(pilot, true)
   SetPedFleeAttributes(pilot, 0, false)
   SetPedKeepTask(pilot, true)
@@ -188,7 +228,11 @@ local function spawnPoliceHeli()
     local gunner = CreatePedInsideVehicle(veh, 4, crewHash, seat, true, true)
     if DoesEntityExist(gunner) then
       SetEntityAsMissionEntity(gunner, true, true)
-      SetPedRelationshipGroupHash(gunner, GetHashKey("COP"))
+      if ARREST_COP_GROUP then
+        SetPedRelationshipGroupHash(gunner, ARREST_COP_GROUP)
+      else
+        SetPedRelationshipGroupHash(gunner, GetHashKey("COP"))
+      end
       SetBlockingOfNonTemporaryEvents(gunner, true)
       SetPedFleeAttributes(gunner, 0, false)
       SetPedCombatAbility(gunner, 2)
@@ -207,36 +251,158 @@ local function spawnPoliceHeli()
   dbg("spawned police helicopter with", #gunners, "gunners")
 end
 
+-- Polizeifahrzeug spawnen (Streifenwagen mit bewaffneter Besatzung)
+local policeVehicleModels = {"police", "police2", "police3", "policet"}
+local maxPoliceVehicles = 3
+
+local function spawnPoliceVehicle()
+  if #policeVehicles >= maxPoliceVehicles then return end
+
+  local vehModel = policeVehicleModels[math.random(1, #policeVehicleModels)]
+  local vehHash = loadModel(vehModel)
+  if not vehHash then dbg("police vehicle model load failed:", vehModel); return end
+
+  local crewModel = Config.PoliceModels and Config.PoliceModels[math.random(1, #Config.PoliceModels)] or "s_m_y_cop_01"
+  local crewHash = loadModel(crewModel)
+  if not crewHash then dbg("police vehicle crew model load failed"); return end
+
+  local ppos = GetEntityCoords(PlayerPedId())
+  local angle = math.random() * 2 * math.pi
+  local dist = 60.0 + math.random() * 30.0 -- 60-90m entfernt
+  local spawnPos = vector3(ppos.x + math.cos(angle) * dist, ppos.y + math.sin(angle) * dist, ppos.z)
+  -- Bodenhöhe finden
+  local found, gz = GetGroundZFor_3dCoord(spawnPos.x, spawnPos.y, spawnPos.z + 50.0, 0)
+  if found then spawnPos = vector3(spawnPos.x, spawnPos.y, gz + 0.5) end
+
+  local heading = math.deg(math.atan(ppos.y - spawnPos.y, ppos.x - spawnPos.x)) - 90.0
+  local veh = CreateVehicle(vehHash, spawnPos.x, spawnPos.y, spawnPos.z, heading, true, true)
+  if not DoesEntityExist(veh) then dbg("police vehicle creation failed"); return end
+  SetEntityAsMissionEntity(veh, true, true)
+  SetVehicleEngineOn(veh, true, true, false)
+  SetVehicleSiren(veh, true) -- Sirene an
+
+  local crew = {}
+  local pistolHash = GetHashKey("WEAPON_PISTOL")
+  local playerPed = PlayerPedId()
+
+  -- Fahrer (Sitz -1)
+  for seat = -1, 0 do
+    local ped = CreatePedInsideVehicle(veh, 4, crewHash, seat, true, true)
+    if DoesEntityExist(ped) then
+      SetEntityAsMissionEntity(ped, true, true)
+      if ARREST_COP_GROUP then
+        SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
+      end
+      SetPedFleeAttributes(ped, 0, false)
+      SetPedCombatAbility(ped, 2)
+      SetPedCombatRange(ped, 2)
+      SetPedCombatMovement(ped, 2)
+      SetPedAlertness(ped, 3)
+      SetPedSeeingRange(ped, 100.0)
+      SetPedHearingRange(ped, 100.0)
+      SetPedAccuracy(ped, 40)
+      GiveWeaponToPed(ped, pistolHash, 120, false, true)
+      SetPedKeepTask(ped, true)
+      if seat == -1 then
+        -- Fahrer: zum Spieler fahren
+        TaskVehicleDriveToCoordLongrange(ped, veh, ppos.x, ppos.y, ppos.z, 30.0, 262144 + 16, 5.0)
+      else
+        -- Beifahrer: schießen
+        TaskCombatPed(ped, playerPed, 0, 16)
+      end
+      table.insert(crew, ped)
+      table.insert(cops, ped) -- In cops-Liste für Reactivation
+    end
+  end
+
+  table.insert(policeVehicles, {vehicle = veh, crew = crew})
+  dbg("spawned police vehicle with", #crew, "crew:", vehModel)
+end
+
 local function startCombatMaintenance()
   if combatMaintenanceActive then return end
   combatMaintenanceActive = true
   CreateThread(function()
     local pistolHash = GetHashKey("WEAPON_PISTOL")
     local heliWeaponHash = GetHashKey(Config.HeliWeapon or "WEAPON_CARBINERIFLE")
-    while scenarioActive and not canSurrender and not surrendered and not cuffed and not inJail do
+    while scenarioActive and not surrendered and not cuffed and not inJail do
       Wait(3000)
       local playerPed = PlayerPedId()
 
-      -- Boden-Cops: Waffen und Kampf sicherstellen
+      -- Tote Cops aus Liste entfernen
       for i = #cops, 1, -1 do
         local ped = cops[i]
+        if not DoesEntityExist(ped) or IsEntityDead(ped) then
+          if DoesEntityExist(ped) then DeleteEntity(ped) end
+          table.remove(cops, i)
+        end
+      end
+
+      -- Lebende Cops: Waffen, Kampf, und Relationship sicherstellen
+      for _, ped in ipairs(cops) do
         if DoesEntityExist(ped) and not IsEntityDead(ped) then
+          if ARREST_COP_GROUP then
+            SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
+          end
           if not HasPedGotWeapon(ped, pistolHash, false) then
             GiveWeaponToPed(ped, pistolHash, 120, false, true)
             dbg("re-armed cop", ped)
           end
           if not IsPedInCombat(ped) then
+            ClearPedTasks(ped)
+            SetBlockingOfNonTemporaryEvents(ped, false)
             SetPedAlertness(ped, 3)
             SetPedSeeingRange(ped, 100.0)
             SetPedHearingRange(ped, 100.0)
+            SetPedCombatAbility(ped, 2)
+            SetPedCombatRange(ped, 2)
+            SetPedCombatMovement(ped, 2)
+            SetCurrentPedWeapon(ped, pistolHash, true)
+            SetPedKeepTask(ped, true)
             TaskCombatPed(ped, playerPed, 0, 16)
             dbg("re-engaged cop", ped)
           end
         end
       end
 
-      -- Helikopter ab konfiguriertem Wanted-Level
+      -- Verstärkung nachspawnen wenn Cops gestorben sind
       local wanted = GetPlayerWantedLevel(PlayerId())
+      local targetCount = Config.PoliceCount or 7
+      if Config.CopsPerWantedLevel and Config.CopsPerWantedLevel[wanted] then
+        targetCount = Config.CopsPerWantedLevel[wanted]
+      end
+      local maxActive = Config.MaxActiveCops or 20
+      targetCount = math.min(targetCount, maxActive)
+      local toSpawn = targetCount - #cops
+      if toSpawn > 0 then
+        dbg("Verstärkung: spawne", toSpawn, "neue Cops (von", #cops, "auf", targetCount, ")")
+        for i = 1, math.min(toSpawn, 3) do -- Max 3 pro Tick
+          local pos = randomPosAroundPlayer(25.0, Config.MaxSpawnDistance or 40.0)
+          local model = Config.PoliceModels[math.random(1, #Config.PoliceModels)]
+          local ped = createCopAt(pos, model)
+          if ped then
+            table.insert(cops, ped)
+            -- Sofort kampfbereit (Verstärkung)
+            ClearPedTasks(ped)
+            SetBlockingOfNonTemporaryEvents(ped, false)
+            SetPedAlertness(ped, 3)
+            SetPedCombatAbility(ped, 2)
+            SetPedCombatRange(ped, 2)
+            SetPedCombatMovement(ped, 2)
+            SetCurrentPedWeapon(ped, pistolHash, true)
+            SetPedKeepTask(ped, true)
+            TaskCombatPed(ped, playerPed, 0, 16)
+          end
+          Wait(200)
+        end
+      end
+
+      -- Polizeifahrzeuge spawnen (ab 2 Sterne)
+      if wanted >= 2 then
+        spawnPoliceVehicle()
+      end
+
+      -- Helikopter ab konfiguriertem Wanted-Level
       local heliLevel = Config.HeliWantedLevel or 3
       if wanted >= heliLevel then
         spawnPoliceHeli()
@@ -271,6 +437,20 @@ local function startCombatMaintenance()
           table.remove(helis, i)
         end
       end
+
+      -- Zerstörte Fahrzeuge aufräumen
+      for i = #policeVehicles, 1, -1 do
+        local pv = policeVehicles[i]
+        if not pv.vehicle or not DoesEntityExist(pv.vehicle) or IsEntityDead(pv.vehicle) then
+          if pv.crew then
+            for _, c in ipairs(pv.crew) do
+              if DoesEntityExist(c) then DeleteEntity(c) end
+            end
+          end
+          if pv.vehicle and DoesEntityExist(pv.vehicle) then DeleteEntity(pv.vehicle) end
+          table.remove(policeVehicles, i)
+        end
+      end
     end
     combatMaintenanceActive = false
     dbg("combatMaintenance ended")
@@ -278,23 +458,34 @@ local function startCombatMaintenance()
 end
 
 local function reactivatePolice()
+  local playerPed = PlayerPedId()
   for _, ped in ipairs(cops) do
     if DoesEntityExist(ped) and not IsEntityDead(ped) then
+      -- Alte Tasks löschen damit TaskCombatPed greift
+      ClearPedTasks(ped)
       SetBlockingOfNonTemporaryEvents(ped, false)
       SetPedCanRagdoll(ped, true)
       SetPedCombatAbility(ped, 2)
       SetPedCombatRange(ped, 2)
+      SetPedCombatMovement(ped, 2) -- Offensiv
       SetPedAlertness(ped, 3)
       SetPedSeeingRange(ped, 100.0)
       SetPedHearingRange(ped, 100.0)
       SetPedFleeAttributes(ped, 0, false)
-      SetPedRelationshipGroupHash(ped, GetHashKey("COP"))
-      GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
-      TaskCombatPed(ped, PlayerPedId(), 0, 16)
+      SetPedAccuracy(ped, 50)
+      if ARREST_COP_GROUP then
+        SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
+      end
+      if not HasPedGotWeapon(ped, GetHashKey("WEAPON_PISTOL"), false) then
+        GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
+      end
+      SetCurrentPedWeapon(ped, GetHashKey("WEAPON_PISTOL"), true)
+      SetPedKeepTask(ped, true)
+      TaskCombatPed(ped, playerPed, 0, 16)
     end
   end
   setAmbientCopsIgnore(false)
-  dbg("reactivatePolice: cops can shoot again")
+  dbg("reactivatePolice: cops can shoot again, count:", #cops)
 end
 
 local function forceExitVehicleIfIn()
@@ -326,13 +517,21 @@ local function createCopAt(pos, modelName)
     SetBlockingOfNonTemporaryEvents(ped, true)
     SetPedArmour(ped, 100)
     SetPedFleeAttributes(ped, 0, false)
-    SetPedRelationshipGroupHash(ped, GetHashKey("COP"))
-    RemoveAllPedWeapons(ped, true)
-    SetPedSeeingRange(ped, 5.0)
-    SetPedHearingRange(ped, 5.0)
+    -- ARREST_COP Gruppe: HASST den Spieler (statt COP = RESPECT)
+    if ARREST_COP_GROUP then
+      SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
+    else
+      SetPedRelationshipGroupHash(ped, GetHashKey("COP"))
+    end
+    -- Waffen + Kampf-Fähigkeit SOFORT geben (aber Alertness niedrig halten für Approach-Phase)
+    GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
+    SetPedSeeingRange(ped, 80.0)
+    SetPedHearingRange(ped, 80.0)
     SetPedAlertness(ped, 0)
-    SetPedCombatAbility(ped, 0)
-    SetPedCombatRange(ped, 0)
+    SetPedCombatAbility(ped, 2)
+    SetPedCombatRange(ped, 2)
+    SetPedCombatMovement(ped, 2) -- Offensiv
+    SetPedAccuracy(ped, 40)
     if SetCanAttackFriendly then SetCanAttackFriendly(ped, false, false) end
     TaskGoToEntity(ped, PlayerPedId(), -1, 2.5, 2.0, 1073741824, 0)
   end
@@ -695,6 +894,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
   end
   lastScenarioStart = now
   scenarioActive = true
+  SetMaxWantedLevel(5) -- Sicherstellen dass 4+5 Sterne möglich sind
   canSurrender = false -- Noch nicht ergeben erlaubt bis Cops da sind
   jailRequested = false
   surrendered = false
