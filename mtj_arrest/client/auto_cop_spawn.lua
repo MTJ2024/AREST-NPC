@@ -1,3 +1,8 @@
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
+-- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
+-- ║  github.com/MTJ2024/AREST-NPC                                          ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
 -- MTJ Arrest: Automatisches Spawnen von Police-NPCs ab 2 Sternen — skaliert nach Wanted-Level
 
 local activeCops = {}
@@ -21,13 +26,9 @@ local function spawnCopNearPlayer(playerCoords)
     local cop = CreatePed(6, modelHash, x, y, z, 0.0, true, true)
     SetEntityAsMissionEntity(cop, true, true)
     GiveWeaponToPed(cop, GetHashKey("WEAPON_PISTOL"), 120, false, true)
-    -- ARREST_COP Gruppe verwenden wenn verfügbar (HATE statt RESPECT)
-    local grp = GetHashKey("ARREST_COP")
-    if grp and grp ~= 0 then
-        SetPedRelationshipGroupHash(cop, grp)
-    else
-        SetPedRelationshipGroupHash(cop, GetHashKey("COP"))
-    end
+    -- ARREST_COP Gruppe verwenden (HATE statt COP=RESPECT)
+    -- Gruppe wird von main.lua erstellt, Hash ist immer gleich
+    SetPedRelationshipGroupHash(cop, GetHashKey("ARREST_COP"))
     SetPedCombatAbility(cop, 2)
     SetPedCombatRange(cop, 2)
     SetPedCombatMovement(cop, 2)

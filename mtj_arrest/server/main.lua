@@ -1,3 +1,8 @@
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
+-- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
+-- ║  github.com/MTJ2024/AREST-NPC                                          ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
 -- mtj_arrest: Server main (crashsicher für ox_inventory, Jail-Teleport läuft IMMER)
 
 local DEBUG = true

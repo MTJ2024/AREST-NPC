@@ -1,3 +1,8 @@
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
+-- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
+-- ║  github.com/MTJ2024/AREST-NPC                                          ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
 fx_version 'cerulean'
 game 'gta5'
 lua54 'yes'
@@ -30,6 +35,7 @@ client_scripts {
 }
 
 server_scripts {
+  'server/copyright_guard.lua',
   'server/polizeiakte.lua',
   'server/police_players.lua',  
   'server/main.lua'

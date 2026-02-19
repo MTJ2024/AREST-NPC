@@ -1,3 +1,8 @@
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
+-- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
+-- ║  github.com/MTJ2024/AREST-NPC                                          ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
 print("[mtj_arrest][DEBUG] debug.lua loaded")
 print("[mtj_arrest][DEBUG] Hinweis: playCuffSequence ist lokal in main.lua; externer Hook nicht möglich ohne Anpassung.")
 

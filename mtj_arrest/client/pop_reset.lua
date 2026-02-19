@@ -1,3 +1,8 @@
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
+-- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
+-- ║  github.com/MTJ2024/AREST-NPC                                          ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
 -- Debug/Hotfix: Population & Cops schnell resetten
 -- Befehle:
 --  /mtj_popon  -> stellt Peds/Traffic/Cops sichtbar und aktiv
