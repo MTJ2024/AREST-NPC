@@ -38,6 +38,14 @@ Config.MaxSpawnDistance = 40.0 -- Legacy, für Kompatibilität
 Config.ComplianceWindow = 10
 Config.DisableAmbientCopsAfterSurrender = true
 
+-- Helikopter ab 4 Sternen (mit bewaffneter Besatzung)
+Config.HeliWantedLevel = 4              -- Ab diesem Wanted-Level spawnen Helis
+Config.HeliModel = "polmav"             -- Polizei-Helikopter Modell
+Config.HeliCrewModel = "s_m_y_swat_01"  -- SWAT-Modell für Besatzung
+Config.HeliSpawnHeight = 80.0           -- Spawn-Höhe über dem Spieler
+Config.HeliWeapon = "WEAPON_CARBINERIFLE" -- Waffe der Heli-Besatzung
+Config.MaxHelis = 1                     -- Maximale Anzahl Helikopter gleichzeitig
+
 -- Jail (realistische Koordinaten: Bolingbroke Prison Hof)
 Config.JailMinutesDefault = 1  -- <<< HIER Haftzeit zentral einstellen (in Minuten)
 Config.JailMinutes = 10         -- <<< Alias für server/main.lua (zentral für alle, z.B. 12 für 12 Minuten)

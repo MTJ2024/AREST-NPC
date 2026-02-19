@@ -57,6 +57,8 @@ local jailTime = 0
 local jailRequested = false
 local complianceWindow = 0
 local complianceCountdownThreadActive = false
+local helis = {}
+local combatMaintenanceActive = false
 
 -- === HILFSFUNKTIONEN ===
 
@@ -95,6 +97,20 @@ local function randomPosAroundPlayer(minDist, maxDist)
   return vector3(nx, ny, nz)
 end
 
+local function clearHelis()
+  for _, heli in ipairs(helis) do
+    if heli.gunners then
+      for _, g in ipairs(heli.gunners) do
+        if DoesEntityExist(g) then DeleteEntity(g) end
+      end
+    end
+    if heli.pilot and DoesEntityExist(heli.pilot) then DeleteEntity(heli.pilot) end
+    if heli.vehicle and DoesEntityExist(heli.vehicle) then DeleteEntity(heli.vehicle) end
+  end
+  helis = {}
+  dbg("clearHelis")
+end
+
 local function clearCops()
   for _, ped in ipairs(cops) do
     if DoesEntityExist(ped) then
@@ -105,12 +121,148 @@ local function clearCops()
     end
   end
   cops = {}
+  clearHelis()
   dbg("clearCops")
 end
 
 local function setAmbientCopsIgnore(toggle)
   SetPoliceIgnorePlayer(PlayerId(), toggle)
   dbg(toggle and "Ambient cops ignored" or "Ambient cops restored")
+end
+
+local function spawnPoliceHeli()
+  local maxH = Config.MaxHelis or 1
+  if #helis >= maxH then return end
+
+  local heliModelName = Config.HeliModel or "polmav"
+  local crewModelName = Config.HeliCrewModel or "s_m_y_swat_01"
+  local heliWeaponName = Config.HeliWeapon or "WEAPON_CARBINERIFLE"
+  local spawnH = Config.HeliSpawnHeight or 80.0
+
+  local heliHash = loadModel(heliModelName)
+  if not heliHash then dbg("heli model load failed"); return end
+  local crewHash = loadModel(crewModelName)
+  if not crewHash then dbg("crew model load failed"); return end
+
+  local ppos = GetEntityCoords(PlayerPedId())
+  local ox = math.random(-40, 40)
+  local oy = math.random(-40, 40)
+  local spawnPos = vector3(ppos.x + ox, ppos.y + oy, ppos.z + spawnH)
+
+  local veh = CreateVehicle(heliHash, spawnPos.x, spawnPos.y, spawnPos.z, math.random(0, 360) + 0.0, true, true)
+  if not DoesEntityExist(veh) then dbg("heli vehicle creation failed"); return end
+  SetEntityAsMissionEntity(veh, true, true)
+  SetVehicleEngineOn(veh, true, true, false)
+  SetHeliBladesFullSpeed(veh)
+
+  -- Pilot erstellen
+  local pilot = CreatePedInsideVehicle(veh, 4, crewHash, -1, true, true)
+  if not DoesEntityExist(pilot) then
+    DeleteEntity(veh)
+    dbg("heli pilot creation failed")
+    return
+  end
+  SetEntityAsMissionEntity(pilot, true, true)
+  SetPedRelationshipGroupHash(pilot, GetHashKey("COP"))
+  SetBlockingOfNonTemporaryEvents(pilot, true)
+  SetPedFleeAttributes(pilot, 0, false)
+  SetPedKeepTask(pilot, true)
+  TaskHeliMission(pilot, veh, 0, PlayerPedId(), 0.0, 0.0, 0.0, 9, 50.0, 40.0, -1.0, 0, 10, -1.0, 0)
+
+  -- Bewaffnete Besatzung erstellen (Sitze 1 und 2)
+  local gunners = {}
+  local weaponHash = GetHashKey(heliWeaponName)
+  for seat = 1, 2 do
+    local gunner = CreatePedInsideVehicle(veh, 4, crewHash, seat, true, true)
+    if DoesEntityExist(gunner) then
+      SetEntityAsMissionEntity(gunner, true, true)
+      SetPedRelationshipGroupHash(gunner, GetHashKey("COP"))
+      SetBlockingOfNonTemporaryEvents(gunner, true)
+      SetPedFleeAttributes(gunner, 0, false)
+      SetPedCombatAbility(gunner, 2)
+      SetPedCombatRange(gunner, 2)
+      SetPedAlertness(gunner, 3)
+      SetPedSeeingRange(gunner, 200.0)
+      SetPedHearingRange(gunner, 200.0)
+      SetPedKeepTask(gunner, true)
+      GiveWeaponToPed(gunner, weaponHash, 999, false, true)
+      TaskCombatPed(gunner, PlayerPedId(), 0, 16)
+      table.insert(gunners, gunner)
+    end
+  end
+
+  table.insert(helis, {vehicle = veh, pilot = pilot, gunners = gunners})
+  dbg("spawned police helicopter with", #gunners, "gunners")
+end
+
+local function startCombatMaintenance()
+  if combatMaintenanceActive then return end
+  combatMaintenanceActive = true
+  CreateThread(function()
+    local pistolHash = GetHashKey("WEAPON_PISTOL")
+    local heliWeaponHash = GetHashKey(Config.HeliWeapon or "WEAPON_CARBINERIFLE")
+    while scenarioActive and not canSurrender and not surrendered and not cuffed and not inJail do
+      Wait(3000)
+      local playerPed = PlayerPedId()
+
+      -- Boden-Cops: Waffen und Kampf sicherstellen
+      for i = #cops, 1, -1 do
+        local ped = cops[i]
+        if DoesEntityExist(ped) and not IsEntityDead(ped) then
+          if not HasPedGotWeapon(ped, pistolHash, false) then
+            GiveWeaponToPed(ped, pistolHash, 120, false, true)
+            dbg("re-armed cop", ped)
+          end
+          if not IsPedInCombat(ped) then
+            SetPedAlertness(ped, 3)
+            SetPedSeeingRange(ped, 100.0)
+            SetPedHearingRange(ped, 100.0)
+            TaskCombatPed(ped, playerPed, 0, 16)
+            dbg("re-engaged cop", ped)
+          end
+        end
+      end
+
+      -- Helikopter ab konfiguriertem Wanted-Level
+      local wanted = GetPlayerWantedLevel(PlayerId())
+      local heliLevel = Config.HeliWantedLevel or 4
+      if wanted >= heliLevel then
+        spawnPoliceHeli()
+        -- Heli-Besatzung: Waffen und Kampf sicherstellen
+        for _, heli in ipairs(helis) do
+          if heli.gunners then
+            for _, g in ipairs(heli.gunners) do
+              if DoesEntityExist(g) and not IsEntityDead(g) then
+                if not HasPedGotWeapon(g, heliWeaponHash, false) then
+                  GiveWeaponToPed(g, heliWeaponHash, 999, false, true)
+                end
+                if not IsPedInCombat(g) then
+                  TaskCombatPed(g, playerPed, 0, 16)
+                end
+              end
+            end
+          end
+        end
+      end
+
+      -- Zerstörte Helis aufräumen
+      for i = #helis, 1, -1 do
+        local h = helis[i]
+        if not h.vehicle or not DoesEntityExist(h.vehicle) or IsEntityDead(h.vehicle) then
+          if h.gunners then
+            for _, g in ipairs(h.gunners) do
+              if DoesEntityExist(g) then DeleteEntity(g) end
+            end
+          end
+          if h.pilot and DoesEntityExist(h.pilot) then DeleteEntity(h.pilot) end
+          if h.vehicle and DoesEntityExist(h.vehicle) then DeleteEntity(h.vehicle) end
+          table.remove(helis, i)
+        end
+      end
+    end
+    combatMaintenanceActive = false
+    dbg("combatMaintenance ended")
+  end)
 end
 
 local function reactivatePolice()
@@ -121,6 +273,8 @@ local function reactivatePolice()
       SetPedCombatAbility(ped, 2)
       SetPedCombatRange(ped, 2)
       SetPedAlertness(ped, 3)
+      SetPedSeeingRange(ped, 100.0)
+      SetPedHearingRange(ped, 100.0)
       SetPedFleeAttributes(ped, 0, false)
       SetPedRelationshipGroupHash(ped, GetHashKey("COP"))
       GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
@@ -365,6 +519,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
           if complianceWindow <= 0 then
             canSurrender = false
             reactivatePolice()
+            startCombatMaintenance()
             dbg("Surrender window abgelaufen!")
           end
         else

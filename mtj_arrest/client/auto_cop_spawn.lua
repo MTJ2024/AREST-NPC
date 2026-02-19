@@ -63,6 +63,18 @@ CreateThread(function()
                     table.remove(activeCops, i)
                 end
             end
+            -- Bestehende Cops neu bewaffnen und Kampf sicherstellen
+            local pistolHash = GetHashKey("WEAPON_PISTOL")
+            for _, cop in ipairs(activeCops) do
+                if DoesEntityExist(cop) and not IsEntityDead(cop) then
+                    if not HasPedGotWeapon(cop, pistolHash, false) then
+                        GiveWeaponToPed(cop, pistolHash, 120, false, true)
+                    end
+                    if not IsPedInCombat(cop) then
+                        TaskCombatPed(cop, PlayerPedId(), 0, 16)
+                    end
+                end
+            end
         else
             -- Wanted-Level < 2: Alle Cops despawnen
             if #activeCops > 0 then
