@@ -30,6 +30,7 @@ client_scripts {
 }
 
 server_scripts {
+  'server/polizeiakte.lua',
   'server/police_players.lua',  
   'server/main.lua'
 }

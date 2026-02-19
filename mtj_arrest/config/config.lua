@@ -180,6 +180,94 @@ Config.Polizeiakte = {
     -- Nachrichten (automatisch angezeigt)
     NachrichtAkte       = "~y~POLIZEIAKTE~s~: Status: ~r~%s~s~ | Festnahmen: %d | Fluchtversuche: %d",
     NachrichtVorbestraft = "~o~VORBESTRAFT~s~: Aufgrund deiner Akte wird die Strafe erhöht!",
+
+    -- ── NPC-Cop Sprüche je nach Akte-Status ──
+    -- GTA V Native Speech Contexts (was die Cops rufen)
+    -- Jede Stufe hat eigene Sprach-Befehle für mehr Immersion
+    CopSpeech = {
+        unbescholten = {                        -- Ersttäter: normaler Ton
+            "ARREST_PLAYER",
+            "DRAW_GUN",
+            "CHALLENGE_THREATEN",
+        },
+        vorbestraft = {                         -- Vorbestraft: aggressiver
+            "ARREST_PLAYER",
+            "DRAW_GUN",
+            "CHALLENGE_THREATEN",
+            "FOOT_CHASE",
+            "PROVOKE_TRESPASS",
+        },
+        ["mehrfach vorbestraft"] = {            -- Mehrfachtäter: sehr aggressiv
+            "CHALLENGE_THREATEN",
+            "DRAW_GUN",
+            "FOOT_CHASE",
+            "FOOT_CHASE_LOSING",
+            "PROVOKE_TRESPASS",
+        },
+        schwerkriminell = {                     -- Schwerkriminell: feindlich
+            "CHALLENGE_THREATEN",
+            "FOOT_CHASE",
+            "FOOT_CHASE_LOSING",
+            "PROVOKE_TRESPASS",
+            "DRAW_GUN",
+        },
+        Staatsfeind = {                         -- Staatsfeind: maximale Aggression
+            "CHALLENGE_THREATEN",
+            "FOOT_CHASE_LOSING",
+            "PROVOKE_TRESPASS",
+            "DRAW_GUN",
+            "FOOT_CHASE",
+        },
+    },
+
+    -- ── Festnahme-Protokoll Texte je nach Akte-Status ──
+    -- Diese Texte erscheinen im Arrest-Log UI statt der Standard-Texte
+    ArrestLogPerStatus = {
+        unbescholten = {
+            "Tatverdacht: Widerstand gegen die Staatsgewalt",
+            "Maßnahme: Vorläufige Festnahme",
+            "Rechte: Aussageverweigerungsrecht, Recht auf Verteidiger",
+        },
+        vorbestraft = {
+            "ACHTUNG: Person ist vorbestraft!",
+            "Tatverdacht: Wiederholte Straftaten",
+            "Maßnahme: Sofortige Festnahme und verschärfte Überstellung",
+            "Rechte: Aussageverweigerungsrecht, Pflichtverteidiger wird bestellt",
+            "Vermerk: Erhöhtes Strafmaß aufgrund Vorstrafen",
+        },
+        ["mehrfach vorbestraft"] = {
+            "⚠ WARNUNG: Mehrfach vorbestrafte Person!",
+            "Tatverdacht: Serientäter — wiederholter Gesetzesbruch",
+            "Maßnahme: Sofortige Festnahme unter erhöhter Sicherheit",
+            "Anordnung: Verschärfte Haftbedingungen",
+            "Vermerk: Maximales Strafmaß empfohlen",
+        },
+        schwerkriminell = {
+            "🚨 SCHWERKRIMINELL — Höchste Sicherheitsstufe!",
+            "Tatverdacht: Schwere wiederholte Straftaten",
+            "Maßnahme: Sofortige Festnahme — Sondereinheit",
+            "Anordnung: Isolationshaft und Sicherheitsverwahrung",
+            "Vermerk: Antrag auf Höchststrafe wird gestellt",
+        },
+        Staatsfeind = {
+            "🔴 STAATSFEIND — Allerhöchste Priorität!",
+            "Tatverdacht: Schwerstverbrechen, Gefährdung der öffentlichen Sicherheit",
+            "Maßnahme: Sofortige Festnahme mit Spezialeinheit",
+            "Anordnung: Hochsicherheitstrakt, keine Besuchserlaubnis",
+            "Warnung: Person gilt als extrem gefährlich",
+            "Vermerk: Staatsanwaltschaft ist informiert",
+        },
+    },
+
+    -- ── Szenario-Hint je nach Akte-Status ──
+    -- Was der Spieler sieht wenn Polizei ankommt
+    ScenarioHintPerStatus = {
+        unbescholten        = "Du bist umzingelt! Drücke [E], um dich zu ergeben.",
+        vorbestraft         = "POLIZEI! Du bist VORBESTRAFT! Sofort ergeben mit [E]!",
+        ["mehrfach vorbestraft"] = "ACHTUNG WIEDERHOLUNGSTÄTER! Hände hoch! [E] zum Ergeben!",
+        schwerkriminell     = "SCHWERKRIMINELLER! Letzte Warnung! [E] oder wir schießen!",
+        Staatsfeind         = "STAATSFEIND ERKANNT! Sofort aufgeben [E] — KEINE weitere Warnung!",
+    },
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗

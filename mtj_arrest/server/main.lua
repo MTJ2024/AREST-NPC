@@ -234,36 +234,59 @@ AddEventHandler('mtj_arrest:serverBeginJail', function(minutes)
   end
   activeJails[src] = now
 
-  -- Strafregister: Festnahme zählen
+  -- Strafregister (Session): Festnahme zählen
   local arrestCount = incrementArrestCount(src)
   dbg(("[mtj_arrest] Strafregister: Spieler %d — Festnahme Nr. %d"):format(src, arrestCount))
 
   minutes = tonumber(minutes) or 10
+  local baseFine = Config.JailFine or 15000
 
-  -- Strafregister: Haftzeit erhöhen bei Wiederholungstätern
-  local jailMult = getStrafregisterMultiplier(arrestCount, "HaftzeitMultiplikator")
-  if jailMult > 1.0 then
-    local origMinutes = minutes
-    minutes = math.ceil(minutes * jailMult)
-    dbg(("[mtj_arrest] Strafregister: Haftzeit %d → %d Min (x%.1f, %d Vorstrafen)"):format(origMinutes, minutes, jailMult, arrestCount - 1))
+  -- Polizeiakte (Persistent): Multiplikatoren aus DB-Akte holen
+  local haftMult, geldMult = 1.0, 1.0
+  if PolizeiakteMultiplier then
+    haftMult, geldMult = PolizeiakteMultiplier(src)
+    dbg(("[mtj_arrest] Polizeiakte-Multiplikator: Haft x%.1f, Geld x%.1f"):format(haftMult, geldMult))
   end
+
+  -- Session-Strafregister obendrauf (für Wiederholung in gleicher Session)
+  local sessionJailMult = getStrafregisterMultiplier(arrestCount, "HaftzeitMultiplikator")
+  local sessionFineMult = getStrafregisterMultiplier(arrestCount, "GeldstrafeMultiplikator")
+
+  -- Gesamtmultiplikator = Akte × Session (max von Config)
+  local totalJailMult = haftMult * sessionJailMult
+  local totalFineMult = geldMult * sessionFineMult
+  local maxMult = (Config.Polizeiakte and Config.Polizeiakte.MaxMultiplikator) or 5.0
+  totalJailMult = math.min(totalJailMult, maxMult)
+  totalFineMult = math.min(totalFineMult, maxMult)
+
+  -- Haftzeit anpassen
+  if totalJailMult > 1.0 then
+    local origMinutes = minutes
+    minutes = math.ceil(minutes * totalJailMult)
+    dbg(("[mtj_arrest] Strafe erhöht: Haftzeit %d → %d Min (x%.1f)"):format(origMinutes, minutes, totalJailMult))
+  end
+
+  -- Geldstrafe anpassen
+  local fineAmount = math.ceil(baseFine * totalFineMult)
 
   dbg(("[mtj_arrest] clearAllWeaponsAndItems invoked by %d"):format(src))
   pcall(function() clearAllWeaponsAndItems(src) end)
-
-  -- Strafregister: Geldstrafe erhöhen bei Wiederholungstätern
-  local fineMult = getStrafregisterMultiplier(arrestCount, "GeldstrafeMultiplikator")
-  local fineAmount = math.ceil((Config.JailFine or 15000) * fineMult)
   pcall(function() takeJailFine(src, fineAmount) end)
 
-  -- Strafregister: Client über Vorstrafen informieren
+  -- Polizeiakte (Persistent): Festnahme eintragen
+  if PolizeiakteRecord then
+    local count, status = PolizeiakteRecord(src, minutes, fineAmount)
+    dbg(("[mtj_arrest] Polizeiakte: Festnahme #%d, Status: %s"):format(count or 0, status or "?"))
+  end
+
+  -- Session-Strafregister: Client über Vorstrafen informieren
   if arrestCount > 1 then
     TriggerClientEvent('mtj_arrest:clientVorstrafeInfo', src, arrestCount)
   end
 
   -- Teleport & Timer auf Client (immer ausführen)
   TriggerClientEvent('mtj_arrest:clientBeginJail', src, minutes)
-  dbg(("[mtj_arrest] Player %d jailed for %d minutes (Arrest #%d)"):format(src, minutes, arrestCount))
+  dbg(("[mtj_arrest] Player %d jailed for %d minutes (Arrest #%d, Mult x%.1f)"):format(src, minutes, arrestCount, totalJailMult))
 
   -- Optional: nochmalige Waffenbereinigung nach 1s
   SetTimeout(1000, function()

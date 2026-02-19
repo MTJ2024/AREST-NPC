@@ -70,6 +70,7 @@ local scenarioCooldown = 5000 -- 5 seconds cooldown between scenario starts
 local scenarioStartPos = nil  -- Position bei Szenario-Start (für Fluchtversuch)
 local fluchtversuchTriggered = false -- Fluchtversuch nur einmal pro Szenario
 local releaseWarningShown = false -- Entlassungswarnung nur einmal
+local playerAkteStatus = "unbescholten" -- Polizeiakte-Status (vom Server geladen)
 
 -- === HILFSFUNKTIONEN ===
 
@@ -380,8 +381,8 @@ function deescalateAllPolice()
 end
 
 local function showScenarioUI()
-  TriggerEvent('mtj_arrest:nui:scenario', true, Config.UI.ScenarioHint, Config.ComplianceWindow)
-  dbg("SendNUIMessage: scenarioToggle via event")
+  TriggerEvent('mtj_arrest:nui:scenario', true, getScenarioHint(), Config.ComplianceWindow)
+  dbg("SendNUIMessage: scenarioToggle via event, Status:", playerAkteStatus)
 end
 
 local function hideScenarioUI()
@@ -434,6 +435,8 @@ local function checkFluchtversuch()
     -- Sofort alle Cops scharf schalten
     reactivatePolice()
     startCombatMaintenance()
+    -- Fluchtversuch in Polizeiakte eintragen (persistent)
+    TriggerServerEvent('mtj_arrest:serverFluchtversuch')
     -- Benachrichtigung
     nativeNotify(fc.Nachricht or "~r~FLUCHTVERSUCH~s~: Wanted-Level erhöht!")
     -- Surrender nicht mehr möglich
@@ -442,8 +445,8 @@ local function checkFluchtversuch()
   end
 end
 
--- NPC-Cops rufen Befehle (RP-Immersion, vollautomatisch)
-local copSpeechLines = {
+-- NPC-Cops rufen Befehle basierend auf Polizeiakte-Status (RP-Immersion)
+local copSpeechDefaults = {
   "ARREST_PLAYER",
   "DRAW_GUN",
   "CHALLENGE_THREATEN",
@@ -451,13 +454,37 @@ local copSpeechLines = {
   "FOOT_CHASE_LOSING",
 }
 local function makeCopsShout()
+  -- Speech-Lines aus Config basierend auf Akte-Status
+  local lines = copSpeechDefaults
+  local pa = Config.Polizeiakte
+  if pa and pa.CopSpeech and pa.CopSpeech[playerAkteStatus] then
+    lines = pa.CopSpeech[playerAkteStatus]
+  end
   for i, ped in ipairs(cops) do
     if DoesEntityExist(ped) and not IsEntityDead(ped) then
-      local speech = copSpeechLines[((i - 1) % #copSpeechLines) + 1]
+      local speech = lines[((i - 1) % #lines) + 1]
       PlayPedAmbientSpeechNative(ped, speech, "SPEECH_PARAMS_FORCE_SHOUTED_CRITICAL")
       if i >= 3 then break end -- Max 3 Cops rufen gleichzeitig
     end
   end
+end
+
+-- Festnahme-Protokoll Texte basierend auf Akte-Status
+local function getArrestLogLines()
+  local pa = Config.Polizeiakte
+  if pa and pa.ArrestLogPerStatus and pa.ArrestLogPerStatus[playerAkteStatus] then
+    return pa.ArrestLogPerStatus[playerAkteStatus]
+  end
+  return Config.UI.ArrestLogLines
+end
+
+-- Szenario-Hint basierend auf Akte-Status
+local function getScenarioHint()
+  local pa = Config.Polizeiakte
+  if pa and pa.ScenarioHintPerStatus and pa.ScenarioHintPerStatus[playerAkteStatus] then
+    return pa.ScenarioHintPerStatus[playerAkteStatus]
+  end
+  return Config.UI.ScenarioHint
 end
 
 -- === FESTNAHME-ABLAUF ===
@@ -517,8 +544,13 @@ local function playCuffSequence()
 
   -- JETZT erst Festnahme-Info anzeigen (nach Animation + Handschellen)
   deescalateAllPolice()
-  nativeNotify("~r~Festnahme~s~: Du wirst verhaftet!")
-  TriggerEvent('mtj_arrest:nui:arrest_log', true, Config.UI.ArrestLogLines)
+  -- Status-basierte Festnahme-Texte
+  if playerAkteStatus ~= "unbescholten" then
+    nativeNotify("~r~Festnahme~s~: " .. playerAkteStatus .. " — verschärftes Verfahren!")
+  else
+    nativeNotify("~r~Festnahme~s~: Du wirst verhaftet!")
+  end
+  TriggerEvent('mtj_arrest:nui:arrest_log', true, getArrestLogLines())
   Wait(3000)
   TriggerEvent('mtj_arrest:nui:arrest_log', false)
   cuffing = false
@@ -615,6 +647,21 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
   end)
 end)
 
+-- === POLIZEIAKTE BENACHRICHTIGUNG (vom Server) ===
+RegisterNetEvent('mtj_arrest:clientAkteInfo')
+AddEventHandler('mtj_arrest:clientAkteInfo', function(akte)
+  if not akte then return end
+  playerAkteStatus = akte.status or "unbescholten"
+  dbg("Polizeiakte empfangen: Status =", playerAkteStatus, "Festnahmen =", akte.festnahmen or 0)
+  -- Akte-Notification anzeigen wenn vorbestraft
+  if playerAkteStatus ~= "unbescholten" then
+    local pa = Config.Polizeiakte
+    if pa and pa.NachrichtAkte then
+      nativeNotify(pa.NachrichtAkte:format(playerAkteStatus, akte.festnahmen or 0, akte.fluchtversuche or 0))
+    end
+  end
+end)
+
 -- === STRAFREGISTER BENACHRICHTIGUNG ===
 RegisterNetEvent('mtj_arrest:clientVorstrafeInfo')
 AddEventHandler('mtj_arrest:clientVorstrafeInfo', function(arrestCount)
@@ -659,6 +706,8 @@ AddEventHandler('mtj_arrest:startScenario', function()
   clearCops()
   spawnCopsAroundPlayer()
   setAmbientCopsIgnore(true)
+  -- Polizeiakte vom Server laden (für status-basierte Texte)
+  TriggerServerEvent('mtj_arrest:requestAkte')
   dbg("startScenario: cops spawned, warte auf Ankunft...")
 
   -- ETAPPE 1: Warten bis mindestens ein Cop im Aktionsradius ist
@@ -678,7 +727,12 @@ AddEventHandler('mtj_arrest:startScenario', function()
     canSurrender = true
     showScenarioUI()
     makeCopsShout()
-    nativeNotify("~r~POLIZEI~s~: Du bist umzingelt! Druecke ~b~[E]~s~ zum Ergeben.")
+    -- Status-basierte Ansage
+    if playerAkteStatus ~= "unbescholten" then
+      nativeNotify("~r~POLIZEI~s~: " .. string.upper(playerAkteStatus) .. "! Sofort ~b~[E]~s~ zum Ergeben!")
+    else
+      nativeNotify("~r~POLIZEI~s~: Du bist umzingelt! Druecke ~b~[E]~s~ zum Ergeben.")
+    end
 
     complianceCountdownThreadActive = true
     while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
