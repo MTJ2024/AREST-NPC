@@ -106,6 +106,41 @@ Config.AntiDoubleJailTime       = 5       -- Sekunden: Schutz gegen doppeltes Ei
 Config.GuardReleaseTime         = 8       -- Sekunden: Freigabe des Anti-Doppel-Guards
 
 -- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              FLUCHTVERSUCH                                      ║
+-- ║  Was passiert, wenn der Spieler während der Ergeben-Phase       ║
+-- ║  wegrennt statt [E] zu drücken                                  ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.Fluchtversuch = {
+    Aktiviert           = true,     -- true = Fluchtversuch-System aktiv
+    Fluchtradius        = 25.0,     -- Meter: Wenn Spieler sich SO WEIT entfernt → Flucht erkannt
+    WantedErhöhung      = 1,       -- Wanted-Level wird um diesen Wert erhöht (+1 Stern)
+    ExtraCops           = 3,        -- Zusätzliche Polizisten bei Fluchtversuch
+    Nachricht           = "~r~FLUCHTVERSUCH~s~: Wanted-Level erhöht! Weitere Einheiten unterwegs!",
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              STRAFREGISTER (Wiederholungstäter)                  ║
+-- ║  Mehrfach verhaftete Spieler bekommen härtere Strafen           ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.Strafregister = {
+    Aktiviert           = true,     -- true = Strafregister aktiv
+    HaftzeitMultiplikator = 0.5,   -- Pro Vorstrafe: +50% Haftzeit (z.B. 3. Arrest = +100%)
+    GeldstrafeMultiplikator = 0.25, -- Pro Vorstrafe: +25% Geldstrafe
+    MaxMultiplikator    = 3.0,      -- Maximaler Gesamtmultiplikator (3x = dreifache Strafe)
+    NachrichtVorstrafe  = "~o~Strafregister~s~: %d Vorstrafe(n) — Strafe erhöht!",
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              ENTLASSUNGSWARNUNG                                 ║
+-- ║  Spieler wird vor Ende der Haftzeit benachrichtigt              ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.Entlassungswarnung = {
+    Aktiviert           = true,     -- true = Warnung vor Entlassung aktiv
+    SekundenVorher      = 30,       -- Sekunden vor Entlassung: Warnung anzeigen
+    Nachricht           = "~g~Entlassung~s~: Du wirst in %d Sekunden freigelassen!",
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              DEBUG                                              ║
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.Debug                    = false   -- true = Debug-Ausgaben in Konsole

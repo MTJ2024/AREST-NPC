@@ -192,10 +192,35 @@ end
 -- Anti-Doppel-Guard für Jail
 local activeJails = {}
 
+-- Strafregister: Festnahmen pro Spieler (Session-basiert)
+local arrestHistory = {}
+
 AddEventHandler('playerDropped', function()
   local src = source
   activeJails[src] = nil
+  arrestHistory[src] = nil
 end)
+
+-- Strafregister: Anzahl der Festnahmen für Spieler
+local function getArrestCount(src)
+  return arrestHistory[src] or 0
+end
+
+local function incrementArrestCount(src)
+  arrestHistory[src] = (arrestHistory[src] or 0) + 1
+  return arrestHistory[src]
+end
+
+-- Strafregister: Multiplikator berechnen
+local function getStrafregisterMultiplier(arrestCount, configKey)
+  local sr = Config.Strafregister
+  if not sr or not sr.Aktiviert or arrestCount <= 1 then return 1.0 end
+  local vorstrafen = arrestCount - 1
+  local perVorstrafe = sr[configKey] or 0.5
+  local maxMult = sr.MaxMultiplikator or 3.0
+  local mult = 1.0 + (vorstrafen * perVorstrafe)
+  return math.min(mult, maxMult)
+end
 
 -- Public: von Client aufgerufen
 RegisterNetEvent('mtj_arrest:serverBeginJail')
@@ -208,16 +233,42 @@ AddEventHandler('mtj_arrest:serverBeginJail', function(minutes)
   end
   activeJails[src] = now
 
+  -- Strafregister: Festnahme zählen
+  local arrestCount = incrementArrestCount(src)
+  dbg(("[mtj_arrest] Strafregister: Spieler %d — Festnahme Nr. %d"):format(src, arrestCount))
+
   minutes = tonumber(minutes) or 10
+
+  -- Strafregister: Haftzeit erhöhen bei Wiederholungstätern
+  local jailMult = getStrafregisterMultiplier(arrestCount, "HaftzeitMultiplikator")
+  if jailMult > 1.0 then
+    local origMinutes = minutes
+    minutes = math.ceil(minutes * jailMult)
+    dbg(("[mtj_arrest] Strafregister: Haftzeit %d → %d Min (x%.1f, %d Vorstrafen)"):format(origMinutes, minutes, jailMult, arrestCount - 1))
+  end
+
   dbg(("[mtj_arrest] clearAllWeaponsAndItems invoked by %d"):format(src))
   pcall(function() clearAllWeaponsAndItems(src) end)
 
-  -- Strafe abziehen (money, dann bank)
-  pcall(function() takeJailFine(src) end)
+  -- Strafregister: Geldstrafe erhöhen bei Wiederholungstätern
+  local fineMult = getStrafregisterMultiplier(arrestCount, "GeldstrafeMultiplikator")
+  if fineMult > 1.0 then
+    local origFine = Config.JailFine or 15000
+    Config.JailFine = math.ceil(origFine * fineMult)
+    pcall(function() takeJailFine(src) end)
+    Config.JailFine = origFine -- Zurücksetzen auf Original
+  else
+    pcall(function() takeJailFine(src) end)
+  end
+
+  -- Strafregister: Client über Vorstrafen informieren
+  if arrestCount > 1 then
+    TriggerClientEvent('mtj_arrest:clientVorstrafeInfo', src, arrestCount)
+  end
 
   -- Teleport & Timer auf Client (immer ausführen)
   TriggerClientEvent('mtj_arrest:clientBeginJail', src, minutes)
-  dbg(("[mtj_arrest] Player %d jailed for %d minutes"):format(src, minutes))
+  dbg(("[mtj_arrest] Player %d jailed for %d minutes (Arrest #%d)"):format(src, minutes, arrestCount))
 
   -- Optional: nochmalige Waffenbereinigung nach 1s
   SetTimeout(1000, function()
