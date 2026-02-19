@@ -362,6 +362,7 @@ body {
   min-width: 800px;
   max-width: 960px;
   padding: 76px 76px 64px 76px;
+  animation: none; /* popIn Override entfernen, damit Puls funktioniert */
 }
 
 .card.scenario .title {
@@ -391,7 +392,36 @@ body {
 }
 
 .card.scenario.pulse-ui {
-  animation: scenarioPulse 7s ease-in-out infinite;
+  animation: scenarioPulse 7s ease-in-out infinite !important;
+}
+
+/* Jail-UI: Doppelte Größe + gleicher Puls wie Szenario */
+.card.jail {
+  min-width: 800px;
+  max-width: 960px;
+  padding: 76px 76px 64px 76px;
+  animation: none; /* popIn Override entfernen, damit Puls funktioniert */
+}
+
+.card.jail .title {
+  font-size: 4.4rem;
+}
+
+.card.jail .chip {
+  font-size: 2.2rem;
+  padding: 12px 36px;
+}
+
+.card.jail .subtitle {
+  font-size: 2.3rem;
+}
+
+.card.jail .accent-line {
+  height: 6px;
+}
+
+.card.jail.pulse-ui {
+  animation: scenarioPulse 7s ease-in-out infinite !important;
 }
 
 /* Langsamer Puls von 100% Sichtbarkeit bis 0% und zurück */

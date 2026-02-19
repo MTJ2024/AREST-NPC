@@ -175,8 +175,10 @@
       safeText(el.jTimer, fmt(state.jailTotal));
       if (el.jBar) el.jBar.style.width = '0%';
       setHidden(el.jail, false);
+      if (el.jail) el.jail.classList.add('pulse-ui');
     } else {
       setHidden(el.jail, true);
+      if (el.jail) el.jail.classList.remove('pulse-ui');
     }
     evaluateUiVisibility();
   }
