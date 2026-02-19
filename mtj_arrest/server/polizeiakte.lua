@@ -25,13 +25,9 @@ local function kvpKey(identifier, field)
 end
 
 local function kvpGetInt(identifier, field, default)
-  local val = GetResourceKvpInt(kvpKey(identifier, field))
-  if val == 0 then
-    -- KVP returns 0 for missing keys — check if it was explicitly set
-    local str = GetResourceKvpString(kvpKey(identifier, field))
-    if not str or str == "" then return default or 0 end
-  end
-  return val
+  local str = GetResourceKvpString(kvpKey(identifier, field))
+  if not str or str == "" then return default or 0 end
+  return GetResourceKvpInt(kvpKey(identifier, field))
 end
 
 local function kvpSetInt(identifier, field, value)
@@ -108,7 +104,7 @@ local function recordArrest(src, haftMinuten, geldstrafe)
   kvpSetInt(id, "festnahmen", festnahmen)
   kvpSetInt(id, "gesamt_haftzeit", gesamtHaft)
   kvpSetInt(id, "gesamt_geldstrafe", gesamtGeld)
-  kvpSetString(id, "letzte_festnahme", os.date("%Y-%m-%d %H:%M"))
+  kvpSetString(id, "letzte_festnahme", os.date("!%Y-%m-%d %H:%M"))
 
   -- Status automatisch berechnen
   local cfg = Config.Polizeiakte or {}

@@ -546,7 +546,9 @@ local function playCuffSequence()
   deescalateAllPolice()
   -- Status-basierte Festnahme-Texte
   if playerAkteStatus ~= "unbescholten" then
-    nativeNotify("~r~Festnahme~s~: " .. playerAkteStatus .. " — verschärftes Verfahren!")
+    local pa = Config.Polizeiakte
+    local msg = (pa and pa.NachrichtVorbestraft) or ("~r~Festnahme~s~: " .. playerAkteStatus .. " — verschärftes Verfahren!")
+    nativeNotify(msg)
   else
     nativeNotify("~r~Festnahme~s~: Du wirst verhaftet!")
   end
@@ -727,12 +729,8 @@ AddEventHandler('mtj_arrest:startScenario', function()
     canSurrender = true
     showScenarioUI()
     makeCopsShout()
-    -- Status-basierte Ansage
-    if playerAkteStatus ~= "unbescholten" then
-      nativeNotify("~r~POLIZEI~s~: " .. string.upper(playerAkteStatus) .. "! Sofort ~b~[E]~s~ zum Ergeben!")
-    else
-      nativeNotify("~r~POLIZEI~s~: Du bist umzingelt! Druecke ~b~[E]~s~ zum Ergeben.")
-    end
+    -- Native Notify als Fallback (nutzt gleichen Status-Text wie UI)
+    nativeNotify("~r~POLIZEI~s~: " .. getScenarioHint())
 
     complianceCountdownThreadActive = true
     while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
