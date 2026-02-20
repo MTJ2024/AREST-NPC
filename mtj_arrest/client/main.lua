@@ -908,6 +908,16 @@ local function getScenarioHint()
   return Config.UI.ScenarioHint
 end
 
+-- Alle Panels verstecken (gegenseitige Ausschliessung, nur 1 Panel gleichzeitig)
+local function hideAllUI()
+  TriggerEvent('mtj_arrest:nui:vorwarnung', false)
+  TriggerEvent('mtj_arrest:nui:scenario', false)
+  TriggerEvent('mtj_arrest:nui:jail', false)
+  TriggerEvent('mtj_arrest:nui:arrest_log', false)
+  nativeHudClear()
+  dbg("hideAllUI: alle Panels versteckt")
+end
+
 local function showScenarioUI()
   hideAllUI() -- Alle anderen Panels ausblenden
   TriggerEvent('mtj_arrest:nui:scenario', true, getScenarioHint(), Config.ComplianceWindow)
@@ -942,16 +952,6 @@ local function hideVorwarnungUI()
   nativeHudSet("vorwarnung", nil)
   nativeHudSet("vorwarnung_cd", nil)
   dbg("hideVorwarnungUI")
-end
-
--- Alle Panels verstecken (gegenseitige Ausschliessung, nur 1 Panel gleichzeitig)
-local function hideAllUI()
-  TriggerEvent('mtj_arrest:nui:vorwarnung', false)
-  TriggerEvent('mtj_arrest:nui:scenario', false)
-  TriggerEvent('mtj_arrest:nui:jail', false)
-  TriggerEvent('mtj_arrest:nui:arrest_log', false)
-  nativeHudClear()
-  dbg("hideAllUI: alle Panels versteckt")
 end
 
 -- Prüft ob mindestens ein Cop innerhalb des Radius ist
