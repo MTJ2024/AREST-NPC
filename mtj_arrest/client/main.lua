@@ -116,6 +116,10 @@ function IsVorwarnungActive()
   return vorwarnungActive
 end
 
+function IsCombatPhaseActive()
+  return combatMaintenanceActive
+end
+
 -- === RELATIONSHIP GROUP (Cops MÜSSEN den Spieler hassen, sonst keine Interaktion) ===
 local ARREST_COP_GROUP = nil
 CreateThread(function()
@@ -277,19 +281,19 @@ local function createCopAt(pos, modelName)
     SetBlockingOfNonTemporaryEvents(ped, true)
     SetPedArmour(ped, 100)
     SetPedFleeAttributes(ped, 0, false)
-    -- Approach-Phase: COP-Gruppe (RESPECT) — KEINE Waffen, friedlich annaehern
-    -- Erst bei reactivatePolice() → ARREST_COP_GROUP (HATE) + Waffen + Kampf
+    -- Approach-Phase: COP-Gruppe (RESPECT) — Waffe gezogen aber KEIN Kampf
+    -- Erst bei reactivatePolice() → ARREST_COP_GROUP (HATE) + aktiver Kampf
     SetPedRelationshipGroupHash(ped, GetHashKey("COP"))
-    RemoveAllPedWeapons(ped, true)
+    GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
+    SetCurrentPedWeapon(ped, GetHashKey("WEAPON_PISTOL"), true)
     SetPedSeeingRange(ped, 80.0)
     SetPedHearingRange(ped, 80.0)
-    SetPedAlertness(ped, 0)
+    SetPedAlertness(ped, 3)       -- Voll aufmerksam (sichtbar aktiv)
     SetPedCombatAbility(ped, 0)   -- Kein Kampf waehrend Approach
     SetPedCombatRange(ped, 0)
-    SetPedCombatMovement(ped, 0)  -- Stationaer (kein Angriff)
+    SetPedCombatMovement(ped, 0)  -- Kein Kampf-Bewegen (nur laufen)
     SetPedAccuracy(ped, 0)
-    if SetCanAttackFriendly then SetCanAttackFriendly(ped, false, false) end
-    TaskGoToEntity(ped, PlayerPedId(), -1, 2.5, 2.0, 1073741824, 0)
+    TaskGoToEntity(ped, PlayerPedId(), -1, 3.0, 3.0, 1073741824, 0)
   end
   return ped
 end
