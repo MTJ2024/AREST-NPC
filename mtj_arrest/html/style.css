@@ -367,42 +367,72 @@ body {
   .timer { font-size: 2.0rem; padding: 10px 8vw 8px 8vw;}
 }
 
-/* Szenario-UI: Mittelgross + sanfter Puls (nie unsichtbar) */
+/* Szenario-UI: GROSS + starker Puls (100% bis 0%) */
 .card.scenario {
-  min-width: 440px;
-  max-width: 560px;
-  padding: 28px 36px 24px 36px;
+  min-width: 540px;
+  max-width: 700px;
+  padding: 38px 48px 32px 48px;
   animation: none;
 }
 
 .card.scenario .title {
-  font-size: 2.4rem;
+  font-size: 3.2rem;
+  letter-spacing: 0.10em;
 }
 
 .card.scenario .chip {
-  font-size: 1.25rem;
-  padding: 7px 20px;
+  font-size: 1.4rem;
+  padding: 9px 24px;
 }
 
 .card.scenario .hint {
-  font-size: 1.2rem;
+  font-size: 1.4rem;
+  margin: 14px 0 22px 0;
 }
 
 .card.scenario .key {
-  font-size: 1.15rem;
-  padding: 3px 12px;
+  font-size: 1.3rem;
+  padding: 4px 14px;
 }
 
 .card.scenario .countdown {
-  font-size: 1.45rem;
+  font-size: 1.7rem;
 }
 
 .card.scenario .accent-line {
   height: 4px;
 }
 
+/* Fortschrittsbalken im Szenario-Panel (100% → 0%) */
+.scenario-progress-wrap {
+  width: 100%;
+  height: 18px;
+  border-radius: 12px;
+  background: #1c234088;
+  overflow: hidden;
+  position: relative;
+  margin: 0 0 10px 0;
+  box-shadow: 0 0 12px 0 rgba(33,122,255,0.15);
+}
+.scenario-progress-bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--accent), var(--accent3), var(--accent));
+  border-radius: 12px;
+  box-shadow: 0 0 20px 0 var(--accent2-glow), 0 0 10px var(--accent-glow);
+  transition: width 1s linear;
+}
+
+/* Starker Puls: 100% bis 0% Sichtbarkeit (voll pulsierend) */
 .card.scenario.pulse-ui {
-  animation: scenarioPulse 5s ease-in-out infinite !important;
+  animation: scenarioPulseStrong 2.2s ease-in-out infinite !important;
+}
+@keyframes scenarioPulseStrong {
+  0%   { opacity: 1; }
+  50%  { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 /* Jail-UI: Gleiche Groesse wie Szenario + sanfter Puls */

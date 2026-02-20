@@ -72,7 +72,7 @@ Config.Verhandlung = {
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.Aktionsradius            = 40.0    -- Meter: Polizei muss SO NAH sein, bevor Info + Timer starten
 Config.AktionsradiusTimeout     = 20      -- Sekunden: Maximale Wartezeit auf Polizei-Ankunft
-Config.ComplianceWindow         = 15      -- Sekunden: Zeit zum Ergeben [E], bevor Polizei schiesst
+Config.ComplianceWindow         = 11      -- Sekunden: Zeit zum Ergeben [E], bevor Polizei schiesst
 Config.RequiredWantedLevel      = 2       -- Ab diesem Wanted-Level startet das Szenario (1-5)
 
 Config.UI = {

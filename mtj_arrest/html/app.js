@@ -9,6 +9,7 @@
   let el = {};
   const state = {
     jailTotal: 0,
+    scenarioTotal: 11,
     countdownLabel: 'Letzte Chance: ',
     toastQueue: [],
     toastShowing: false,
@@ -329,11 +330,15 @@
       hideAllPanels();
       safeText(el.sTitle, d.title || 'Polizei-Einsatz');
       safeText(el.sHint, d.hint || '');
+      state.scenarioTotal = Number(d.countdown) || 11;
       if (d.countdown) {
         safeText(el.sCountdown, `${state.countdownLabel}${Number(d.countdown)}s`);
       } else {
         safeText(el.sCountdown, '');
       }
+      // Progress bar auf 100% setzen
+      const bar = $('#scenario .scenario-progress-bar');
+      if (bar) bar.style.width = '100%';
       setHidden(el.scenario, false);
       if (el.scenario) el.scenario.classList.add('pulse-ui');
     } else {
@@ -346,6 +351,12 @@
   function handleScenarioCountdown(d) {
     const v = Number(d.value);
     safeText(el.sCountdown, `${state.countdownLabel}${isFinite(v) ? v : 0}s`);
+    // Progress bar aktualisieren (100% → 0%)
+    const bar = $('#scenario .scenario-progress-bar');
+    if (bar && state.scenarioTotal > 0) {
+      const pct = Math.max(0, Math.min(100, (v / state.scenarioTotal) * 100));
+      bar.style.width = pct.toFixed(1) + '%';
+    }
   }
 
   function handleArrestLog(d) {
