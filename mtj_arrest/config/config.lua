@@ -13,10 +13,33 @@ Config.Keys = {
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              VORWARNUNG (vor Polizei-Einsatz)                   ║
+-- ║  Grosse Warnung BEVOR Polizei spawnt:                           ║
+-- ║  "Hoer auf zu schiessen, sonst Gegenwehr!"                     ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.Vorwarnung = {
+    Aktiviert           = true,     -- true = Vorwarnung wird angezeigt
+    Dauer               = 5,        -- Sekunden: Wie lange die Warnung angezeigt wird
+    Titel               = "POLIZEI-WARNUNG",
+    Text                = "Stellen Sie sofort Ihre Waffen ab!\nBei Widerstand wird mit Gegenwehr gerechnet!",
+    TextKurz            = "Waffen ablegen oder Konsequenzen!",
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              WAFFEN BEI TOD ENTFERNEN                           ║
+-- ║  Beim Tod werden alle Waffen aus dem Inventar geloescht         ║
+-- ║  um Missbrauch (sterben = Flucht mit Waffen) zu verhindern      ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.WaffenBeiTod = {
+    Aktiviert           = true,     -- true = Waffen werden bei Tod entfernt
+    Nachricht           = "Deine Waffen wurden nach deinem Tod sichergestellt!",
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              POLIZEI-EINSATZ ANZEIGE (SZENARIO-UI)              ║
 -- ║  Wann und wie die "POLIZEI-EINSATZ" Info angezeigt wird         ║
 -- ╚══════════════════════════════════════════════════════════════════╝
-Config.Aktionsradius            = 10.0    -- Meter: Polizei muss SO NAH sein, bevor Info + Timer starten
+Config.Aktionsradius            = 25.0    -- Meter: Polizei muss SO NAH sein, bevor Info + Timer starten
 Config.AktionsradiusTimeout     = 20      -- Sekunden: Maximale Wartezeit auf Polizei-Ankunft
 Config.ComplianceWindow         = 10      -- Sekunden: Zeit zum Ergeben [E], bevor Polizei schießt
 Config.RequiredWantedLevel      = 1       -- Ab diesem Wanted-Level startet das Szenario (1-5)

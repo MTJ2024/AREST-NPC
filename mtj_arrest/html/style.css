@@ -439,6 +439,59 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════
+   Vorwarnung-Panel (gleiche Groesse wie Szenario, Puls)
+   ═══════════════════════════════════════════════════════ */
+.card.vorwarnung {
+  min-width: 800px;
+  max-width: 960px;
+  padding: 76px 76px 64px 76px;
+  animation: none;
+}
+
+.card.vorwarnung .title {
+  font-size: 4.4rem;
+  color: #f39c12;
+  text-shadow: 0 0 20px #f39c1299, 0 0 8px #ff2a2a99, 0 0 2px #fff8;
+}
+
+.card.vorwarnung .warn-chip {
+  color: #f39c12;
+  background: #2b2214;
+  box-shadow: 0 0 16px 0 #f39c1299;
+  font-size: 2.2rem;
+  padding: 12px 36px;
+  text-shadow: 0 0 8px #f39c1299, 0 0 2px #fff4;
+}
+
+.vorwarnung-text {
+  font-size: 2.1rem;
+  color: #ffe0b2;
+  text-align: center;
+  margin: 10px 0 18px 0;
+  line-height: 1.5;
+  text-shadow: 0 0 12px #f39c1266;
+}
+
+.vorwarnung-countdown {
+  font-family: var(--font-digi);
+  font-size: 2.5rem;
+  margin-top: 6px;
+  color: #f39c12;
+  text-shadow: 0 0 8px #f39c1299;
+  letter-spacing: 0.06em;
+  animation: pulseGlow 1.2s infinite alternate;
+}
+
+.warn-line {
+  background: linear-gradient(90deg, #f39c12, #ff2a2a, #f39c12);
+  box-shadow: 0 0 18px 0 #f39c1299, 0 0 8px #ff2a2a99;
+}
+
+.card.vorwarnung.pulse-ui {
+  animation: scenarioPulse 7s ease-in-out infinite !important;
+}
+
+/* ═══════════════════════════════════════════════════════
    Custom Notification — links mittig (über Minimap)
    ═══════════════════════════════════════════════════════ */
 .notify-stack {

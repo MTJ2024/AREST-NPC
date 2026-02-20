@@ -23,6 +23,23 @@ AddEventHandler('mtj_arrest:nui:scenario', function(show, hint, countdown)
   setFocusSafe()
 end)
 
+RegisterNetEvent('mtj_arrest:nui:vorwarnung')
+AddEventHandler('mtj_arrest:nui:vorwarnung', function(show, title, text, countdown)
+  SendNUIMessage({
+    action = "vorwarnungToggle",
+    show = show or false,
+    title = title or "POLIZEI-WARNUNG",
+    text = text or "",
+    countdown = countdown
+  })
+  setFocusSafe()
+end)
+
+RegisterNetEvent('mtj_arrest:nui:vorwarnung_tick')
+AddEventHandler('mtj_arrest:nui:vorwarnung_tick', function(value)
+  SendNUIMessage({ action = "vorwarnungCountdown", value = value })
+end)
+
 RegisterNetEvent('mtj_arrest:nui:scenario_tick')
 AddEventHandler('mtj_arrest:nui:scenario_tick', function(value)
   SendNUIMessage({ action = "scenarioCountdown", value = value })

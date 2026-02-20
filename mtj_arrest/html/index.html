@@ -21,6 +21,17 @@
   </head>
   <body>
     <div id="mtj-root">
+      <!-- Vorwarnung-Panel (vor Polizei-Einsatz, gleiche Groesse wie Szenario) -->
+      <section id="vorwarnung" class="card vorwarnung hidden" aria-live="polite">
+        <div class="card-header">
+          <div class="chip neon warn-chip">&#x26A0; WARNUNG</div>
+          <h1 class="title neon-glow">POLIZEI-WARNUNG</h1>
+        </div>
+        <p class="vorwarnung-text">Stellen Sie sofort Ihre Waffen ab!<br>Bei Widerstand wird mit Gegenwehr gerechnet!</p>
+        <div class="vorwarnung-countdown neon-glow"></div>
+        <div class="accent-line warn-line"></div>
+      </section>
+
       <!-- Szenario-Panel -->
       <section id="scenario" class="card scenario hidden" aria-live="polite">
         <div class="card-header">

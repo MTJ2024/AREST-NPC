@@ -651,6 +651,17 @@ local function hideScenarioUI()
   dbg("SendNUIMessage: scenarioToggle hide via event")
 end
 
+-- Vorwarnung UI
+local function showVorwarnungUI(titel, text, countdown)
+  TriggerEvent('mtj_arrest:nui:vorwarnung', true, titel, text, countdown)
+  dbg("Vorwarnung UI angezeigt")
+end
+
+local function hideVorwarnungUI()
+  TriggerEvent('mtj_arrest:nui:vorwarnung', false)
+  dbg("Vorwarnung UI versteckt")
+end
+
 -- Prüft ob mindestens ein Cop innerhalb des Radius ist
 local function isAnyCopNearPlayer(radius)
   local ppos = GetEntityCoords(PlayerPedId())
@@ -959,53 +970,123 @@ AddEventHandler('mtj_arrest:startScenario', function()
   complianceWindow = Config.ComplianceWindow
   fluchtversuchTriggered = false
   scenarioStartPos = GetEntityCoords(PlayerPedId())
-  clearCops()
-  spawnCopsAroundPlayer()
-  setAmbientCopsIgnore(true)
-  -- Polizeiakte vom Server laden (für status-basierte Texte)
+
+  -- Polizeiakte vom Server laden (fuer status-basierte Texte)
   TriggerServerEvent('mtj_arrest:requestAkte')
-  dbg("startScenario: cops spawned, warte auf Ankunft...")
 
-  -- ETAPPE 1: Warten bis mindestens ein Cop im Aktionsradius ist
-  local arrivalRadius = Config.Aktionsradius or 10.0
-  local arrivalTimeout = GetGameTimer() + ((Config.AktionsradiusTimeout or 20) * 1000)
-  CreateThread(function()
-    while scenarioActive and not isAnyCopNearPlayer(arrivalRadius) and GetGameTimer() < arrivalTimeout do
-      Wait(500)
-    end
-    if not scenarioActive then
-      dbg("startScenario: Szenario während Warten beendet")
-      return
-    end
-    dbg("startScenario: Cops angekommen, starte UI + Timer")
+  -- ETAPPE 0: VORWARNUNG (grosse Anzeige BEVOR Polizei spawnt)
+  local vw = Config.Vorwarnung
+  if vw and vw.Aktiviert then
+    local vwDauer = vw.Dauer or 5
+    local vwTitel = vw.Titel or "POLIZEI-WARNUNG"
+    local vwText = vw.Text or "Stellen Sie sofort Ihre Waffen ab!"
+    showVorwarnungUI(vwTitel, vwText, vwDauer)
+    nativeNotify("~o~WARNUNG~s~: " .. (vw.TextKurz or vwText), "warnung")
+    dbg("startScenario: Vorwarnung angezeigt fuer", vwDauer, "Sekunden")
 
-    -- ETAPPE 2: Jetzt erst UI zeigen und Countdown starten
-    canSurrender = true
-    showScenarioUI()
-    makeCopsShout()
-    -- Native Notify als Fallback (nutzt gleichen Status-Text wie UI)
-    nativeNotify("~r~POLIZEI~s~: " .. getScenarioHint(), "polizei")
-
-    complianceCountdownThreadActive = true
-    while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
-      Wait(1000)
-      if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
-        complianceWindow = complianceWindow - 1
-        TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
-        -- Fluchtversuch-Prüfung während Countdown
-        checkFluchtversuch()
-        if complianceWindow <= 0 then
-          canSurrender = false
-          reactivatePolice()
-          startCombatMaintenance()
-          dbg("Surrender window abgelaufen!")
+    CreateThread(function()
+      local remaining = vwDauer
+      while scenarioActive and remaining > 0 do
+        Wait(1000)
+        remaining = remaining - 1
+        if scenarioActive then
+          TriggerEvent('mtj_arrest:nui:vorwarnung_tick', remaining)
         end
-      else
-        break
       end
-    end
-    complianceCountdownThreadActive = false
-  end)
+      hideVorwarnungUI()
+
+      if not scenarioActive then
+        dbg("startScenario: Szenario waehrend Vorwarnung beendet")
+        return
+      end
+
+      -- ETAPPE 1: Jetzt Polizei spawnen
+      clearCops()
+      spawnCopsAroundPlayer()
+      setAmbientCopsIgnore(true)
+      dbg("startScenario: cops spawned nach Vorwarnung, warte auf Ankunft...")
+
+      -- ETAPPE 2: Warten bis mindestens ein Cop im Aktionsradius ist
+      local arrivalRadius = Config.Aktionsradius or 25.0
+      local arrivalTimeout = GetGameTimer() + ((Config.AktionsradiusTimeout or 20) * 1000)
+      while scenarioActive and not isAnyCopNearPlayer(arrivalRadius) and GetGameTimer() < arrivalTimeout do
+        Wait(500)
+      end
+      if not scenarioActive then
+        dbg("startScenario: Szenario waehrend Warten beendet")
+        return
+      end
+      dbg("startScenario: Cops angekommen, starte UI + Timer")
+
+      -- ETAPPE 3: Jetzt erst UI zeigen und Countdown starten
+      canSurrender = true
+      showScenarioUI()
+      makeCopsShout()
+      nativeNotify("~r~POLIZEI~s~: " .. getScenarioHint(), "polizei")
+
+      complianceCountdownThreadActive = true
+      while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
+        Wait(1000)
+        if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
+          complianceWindow = complianceWindow - 1
+          TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
+          checkFluchtversuch()
+          if complianceWindow <= 0 then
+            canSurrender = false
+            reactivatePolice()
+            startCombatMaintenance()
+            dbg("Surrender window abgelaufen!")
+          end
+        else
+          break
+        end
+      end
+      complianceCountdownThreadActive = false
+    end)
+  else
+    -- Keine Vorwarnung: direkt Polizei spawnen (alter Ablauf)
+    clearCops()
+    spawnCopsAroundPlayer()
+    setAmbientCopsIgnore(true)
+    dbg("startScenario: cops spawned (ohne Vorwarnung), warte auf Ankunft...")
+
+    local arrivalRadius = Config.Aktionsradius or 25.0
+    local arrivalTimeout = GetGameTimer() + ((Config.AktionsradiusTimeout or 20) * 1000)
+    CreateThread(function()
+      while scenarioActive and not isAnyCopNearPlayer(arrivalRadius) and GetGameTimer() < arrivalTimeout do
+        Wait(500)
+      end
+      if not scenarioActive then
+        dbg("startScenario: Szenario waehrend Warten beendet")
+        return
+      end
+      dbg("startScenario: Cops angekommen, starte UI + Timer")
+
+      canSurrender = true
+      showScenarioUI()
+      makeCopsShout()
+      nativeNotify("~r~POLIZEI~s~: " .. getScenarioHint(), "polizei")
+
+      complianceCountdownThreadActive = true
+      while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
+        Wait(1000)
+        if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
+          complianceWindow = complianceWindow - 1
+          TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
+          checkFluchtversuch()
+          if complianceWindow <= 0 then
+            canSurrender = false
+            reactivatePolice()
+            startCombatMaintenance()
+            dbg("Surrender window abgelaufen!")
+          end
+        else
+          break
+        end
+      end
+      complianceCountdownThreadActive = false
+    end)
+  end
 end)
 
 RegisterNetEvent('mtj_arrest:endScenario')
@@ -1022,6 +1103,7 @@ AddEventHandler('mtj_arrest:endScenario', function()
   fluchtversuchTriggered = false
   scenarioStartPos = nil
   hideScenarioUI()
+  hideVorwarnungUI()
   clearCops()
   setAmbientCopsIgnore(false)
   dbg("endScenario: scenario ended")
@@ -1085,11 +1167,21 @@ AddEventHandler('playerSpawned', function()
   SetPlayerWantedLevelNow(PlayerId(), false)
   ClearPlayerWantedLevel(PlayerId())
   hideScenarioUI()
+  hideVorwarnungUI()
   TriggerEvent('mtj_arrest:nui:jail', false)
   clearCops()
   clearHelis()
   clearPoliceVehicles()
   setAmbientCopsIgnore(false)
+  -- Waffen bei Tod entfernen (Server-seitig aus Inventar)
+  local wbt = Config.WaffenBeiTod
+  if wbt and wbt.Aktiviert then
+    RemoveAllPedWeapons(PlayerPedId(), true)
+    SetCurrentPedWeapon(PlayerPedId(), GetHashKey("WEAPON_UNARMED"), true)
+    TriggerServerEvent('mtj_arrest:serverClearWeapons')
+    nativeNotify(wbt.Nachricht or "Deine Waffen wurden sichergestellt!", "warnung")
+    dbg("playerSpawned: Waffen bei Tod entfernt (Client + Server)")
+  end
   dbg("playerSpawned: reset scenario state + wanted level auf 0")
 end)
 
@@ -1115,6 +1207,7 @@ AddEventHandler('onResourceStop', function(res)
   SetPlayerWantedLevelNow(PlayerId(), false)
   ClearPlayerWantedLevel(PlayerId())
   hideScenarioUI()
+  hideVorwarnungUI()
   TriggerEvent('mtj_arrest:nui:jail', false)
   clearCops()
   clearHelis()
