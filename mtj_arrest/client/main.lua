@@ -277,21 +277,17 @@ local function createCopAt(pos, modelName)
     SetBlockingOfNonTemporaryEvents(ped, true)
     SetPedArmour(ped, 100)
     SetPedFleeAttributes(ped, 0, false)
-    -- ARREST_COP Gruppe: HASST den Spieler (statt COP = RESPECT)
-    if ARREST_COP_GROUP then
-      SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
-    else
-      SetPedRelationshipGroupHash(ped, GetHashKey("COP"))
-    end
-    -- Waffen + Kampf-Fähigkeit SOFORT geben (aber Alertness niedrig halten für Approach-Phase)
-    GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
+    -- Approach-Phase: COP-Gruppe (RESPECT) — KEINE Waffen, friedlich annaehern
+    -- Erst bei reactivatePolice() → ARREST_COP_GROUP (HATE) + Waffen + Kampf
+    SetPedRelationshipGroupHash(ped, GetHashKey("COP"))
+    RemoveAllPedWeapons(ped, true)
     SetPedSeeingRange(ped, 80.0)
     SetPedHearingRange(ped, 80.0)
     SetPedAlertness(ped, 0)
-    SetPedCombatAbility(ped, 2)
-    SetPedCombatRange(ped, 2)
-    SetPedCombatMovement(ped, 2) -- Offensiv
-    SetPedAccuracy(ped, 40)
+    SetPedCombatAbility(ped, 0)   -- Kein Kampf waehrend Approach
+    SetPedCombatRange(ped, 0)
+    SetPedCombatMovement(ped, 0)  -- Stationaer (kein Angriff)
+    SetPedAccuracy(ped, 0)
     if SetCanAttackFriendly then SetCanAttackFriendly(ped, false, false) end
     TaskGoToEntity(ped, PlayerPedId(), -1, 2.5, 2.0, 1073741824, 0)
   end
@@ -539,13 +535,20 @@ local function startCombatMaintenance()
           local ped = createCopAt(pos, model)
           if ped then
             table.insert(cops, ped)
-            -- Sofort kampfbereit (Verstärkung)
+            -- Sofort kampfbereit (Verstärkung) — createCopAt spawnt unbewaffnet
             ClearPedTasks(ped)
             SetBlockingOfNonTemporaryEvents(ped, false)
+            if ARREST_COP_GROUP then
+              SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
+            end
+            GiveWeaponToPed(ped, pistolHash, 120, false, true)
             SetPedAlertness(ped, 3)
+            SetPedSeeingRange(ped, 100.0)
+            SetPedHearingRange(ped, 100.0)
             SetPedCombatAbility(ped, 2)
             SetPedCombatRange(ped, 2)
             SetPedCombatMovement(ped, 2)
+            SetPedAccuracy(ped, 50)
             SetCurrentPedWeapon(ped, pistolHash, true)
             SetPedKeepTask(ped, true)
             TaskCombatPed(ped, playerPed, 0, 16)
@@ -640,12 +643,11 @@ local function reactivatePolice()
       SetPedHearingRange(ped, 100.0)
       SetPedFleeAttributes(ped, 0, false)
       SetPedAccuracy(ped, 50)
+      -- Von COP (RESPECT) → ARREST_COP (HATE) umschalten + bewaffnen
       if ARREST_COP_GROUP then
         SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
       end
-      if not HasPedGotWeapon(ped, GetHashKey("WEAPON_PISTOL"), false) then
-        GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
-      end
+      GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
       SetCurrentPedWeapon(ped, GetHashKey("WEAPON_PISTOL"), true)
       SetPedKeepTask(ped, true)
       TaskCombatPed(ped, playerPed, 0, 16)
