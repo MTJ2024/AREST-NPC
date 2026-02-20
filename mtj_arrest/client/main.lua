@@ -535,7 +535,7 @@ local function startCombatMaintenance()
           local ped = createCopAt(pos, model)
           if ped then
             table.insert(cops, ped)
-            -- Sofort kampfbereit (Verstärkung) — createCopAt spawnt unbewaffnet
+            -- Sofort kampfbereit (Verstarkung, wird direkt nach createCopAt bewaffnet)
             ClearPedTasks(ped)
             SetBlockingOfNonTemporaryEvents(ped, false)
             if ARREST_COP_GROUP then
