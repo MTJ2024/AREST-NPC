@@ -96,13 +96,27 @@ Config.UI = {
 -- ║              POLIZEI-SPAWNING (Anzahl pro Wanted-Level)         ║
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.CopsPerWantedLevel = {
-    [1] = 2,                    -- 1 Stern:  2 Polizisten (unterhalb RequiredWantedLevel, nur Ambient)
-    [2] = 2,                    -- 2 Sterne: 2 Polizisten
-    [3] = 3,                    -- 3 Sterne: 3 Polizisten
-    [4] = 8,                    -- 4 Sterne: 8 Polizisten (grosse Einsatzkraefte)
+    [1] = 0,                    -- 1 Stern:  kein Einsatz (unterhalb RequiredWantedLevel)
+    [2] = 4,                    -- 2 Sterne: 4 Polizisten
+    [3] = 6,                    -- 3 Sterne: 6 Polizisten
+    [4] = 10,                   -- 4 Sterne: 10 Polizisten (grosse Einsatzkraefte)
     [5] = 15,                   -- 5 Sterne: bis 15 Polizisten (verteilt, inkl. Heli-Besatzung)
 }
-Config.PoliceCount              = 2       -- Fallback, falls CopsPerWantedLevel nicht greift
+Config.HelisPerWantedLevel = {
+    [1] = 0,                    -- 1 Stern:  kein Heli
+    [2] = 0,                    -- 2 Sterne: kein Heli
+    [3] = 1,                    -- 3 Sterne: 1 Helikopter
+    [4] = 1,                    -- 4 Sterne: 1 Helikopter
+    [5] = 2,                    -- 5 Sterne: 2 Helikopter
+}
+Config.FahrzeugePerWantedLevel = {
+    [1] = 0,                    -- 1 Stern:  kein Fahrzeug
+    [2] = 1,                    -- 2 Sterne: 1 Polizeifahrzeug
+    [3] = 2,                    -- 3 Sterne: 2 Polizeifahrzeuge
+    [4] = 3,                    -- 4 Sterne: 3 Polizeifahrzeuge
+    [5] = 4,                    -- 5 Sterne: 4 Polizeifahrzeuge
+}
+Config.PoliceCount              = 4       -- Fallback, falls CopsPerWantedLevel nicht greift
 Config.MaxActiveCops            = 15      -- Maximale Anzahl gleichzeitig aktiver Polizisten
 Config.PoliceSpawnRadius        = 40.0    -- Meter: Entfernung um Spieler, in der gespawnt wird
 Config.MaxSpawnDistance          = 40.0    -- Legacy-Alias für Kompatibilität
@@ -133,7 +147,8 @@ Config.HeliModel                = "polmav"          -- Helikopter-Modell
 Config.HeliCrewModel            = "s_m_y_swat_01"   -- SWAT-Modell für Besatzung
 Config.HeliWeapon               = "WEAPON_CARBINERIFLE" -- Waffe der Heli-Besatzung
 Config.HeliSpawnHeight          = 80.0              -- Spawn-Höhe über dem Spieler (Meter)
-Config.MaxHelis                 = 2                 -- Maximale Anzahl Helikopter gleichzeitig
+Config.MaxHelis                 = 2                 -- Maximale Anzahl Helikopter (Fallback)
+-- Hinweis: HelisPerWantedLevel (oben) steuert Helis pro Wanted-Stufe
 
 -- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              GEFÄNGNIS / JAIL                                   ║

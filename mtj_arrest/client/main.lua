@@ -472,7 +472,9 @@ local function spawnCopsAroundPlayer()
 end
 
 local function spawnPoliceHeli()
-  local maxH = Config.MaxHelis or 1
+  local w = GetPlayerWantedLevel(PlayerId())
+  local ht = Config.HelisPerWantedLevel
+  local maxH = (ht and ht[w]) or Config.MaxHelis or 1
   if #helis >= maxH then return end
 
   local heliModelName = Config.HeliModel or "polmav"
@@ -546,10 +548,15 @@ end
 
 -- Polizeifahrzeug spawnen (Streifenwagen mit bewaffneter Besatzung)
 local policeVehicleModels = {"police", "police2", "police3", "policet"}
-local maxPoliceVehicles = 3
+local function getMaxVehiclesForWanted()
+  local w = GetPlayerWantedLevel(PlayerId())
+  local ft = Config.FahrzeugePerWantedLevel
+  if ft and ft[w] then return ft[w] end
+  return 2
+end
 
 local function spawnPoliceVehicle()
-  if #policeVehicles >= maxPoliceVehicles then return end
+  if #policeVehicles >= getMaxVehiclesForWanted() then return end
 
   local vehModel = policeVehicleModels[math.random(1, #policeVehicleModels)]
   local vehHash = loadModel(vehModel)
