@@ -654,6 +654,9 @@ local function startCombatMaintenance()
   CreateThread(function()
     local pistolHash = GetHashKey("WEAPON_PISTOL")
     local heliWeaponHash = GetHashKey(Config.HeliWeapon or "WEAPON_CARBINERIFLE")
+    -- Letzten bekannten Wanted-Level speichern fuer Wiederherstellung
+    local lastKnownWanted = GetPlayerWantedLevel(PlayerId())
+    if lastKnownWanted < 2 then lastKnownWanted = 2 end
     -- Laufe solange Szenario aktiv UND Spieler nicht verhaftet/ergeben
     -- AUCH weiterlaufen solange Wanted > 0 (Endlos-Verfolgung)
     while scenarioActive and not surrendered and not cuffed and not inJail do
@@ -665,15 +668,15 @@ local function startCombatMaintenance()
       -- GTA V resettet Wanted wenn keine Cops in Sichtlinie sind.
       -- Ohne dies: Spieler toetet alle Cops → Wanted faellt auf 0 → keine neuen Cops!
       if wanted > 0 then
+        lastKnownWanted = wanted
         SetPlayerWantedLevel(PlayerId(), wanted, false)
         SetPlayerWantedLevelNow(PlayerId(), false)
-      end
-
-      -- Wenn Wanted auf 0 gefallen (trotz Schutz): Szenario beenden
-      if wanted == 0 then
-        dbg("combatMaintenance: Wanted = 0, beende Szenario")
-        TriggerEvent('mtj_arrest:endScenario')
-        break
+      elseif lastKnownWanted > 0 then
+        -- GTA hat Wanted zurueckgesetzt (keine Cops sichtbar) → Wiederherstellen
+        dbg("combatMaintenance: Wanted von GTA auf 0 gesetzt, stelle wieder her:", lastKnownWanted)
+        SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
+        SetPlayerWantedLevelNow(PlayerId(), false)
+        wanted = lastKnownWanted
       end
 
       -- Tote und zu weit entfernte Cops aus Liste entfernen (200m Radius)
@@ -1456,8 +1459,14 @@ CreateThread(function()
     Wait(1000)
     if scenarioActive then
       if GetPlayerWantedLevel(PlayerId()) == 0 then
-        dbg("Wanted Level = 0, beende Szenario!")
-        TriggerEvent('mtj_arrest:endScenario')
+        if combatMaintenanceActive then
+          -- Waehrend Kampfphase: Wanted wird von startCombatMaintenance wiederhergestellt
+          -- Szenario NICHT beenden, damit Nachschub-Spawns weiterlaufen
+          dbg("Wanted=0 aber Kampfphase aktiv, ueberspringe endScenario (combatMaintenance stellt wieder her)")
+        else
+          dbg("Wanted Level = 0, beende Szenario!")
+          TriggerEvent('mtj_arrest:endScenario')
+        end
       end
     else
       Wait(2000)
