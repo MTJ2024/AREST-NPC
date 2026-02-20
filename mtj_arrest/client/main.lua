@@ -228,7 +228,7 @@ local fluchtversuchTriggered = false -- Fluchtversuch nur einmal pro Szenario
 local releaseWarningShown = false -- Entlassungswarnung nur einmal
 local playerAkteStatus = "unbescholten" -- Polizeiakte-Status (vom Server geladen)
 local policeVehicles = {} -- Gespawnte Polizeifahrzeuge
-local RESPAWN_RADIUS = 100.0 -- Cops zaehlen nur im 100m Radius
+local RESPAWN_RADIUS = 200.0 -- Cops zaehlen und verwalten im 200m Radius
 local vorwarnungActive = false -- Vorwarnung gerade aktiv (auto_cop_spawn muss warten)
 local diedDuringScenario = false -- Spieler ist waehrend Polizeieinsatz gestorben
 
@@ -654,7 +654,7 @@ local function startCombatMaintenance()
         break
       end
 
-      -- Tote und zu weit entfernte Cops aus Liste entfernen (100m Radius)
+      -- Tote und zu weit entfernte Cops aus Liste entfernen (200m Radius)
       local ppos = GetEntityCoords(playerPed)
       for i = #cops, 1, -1 do
         local ped = cops[i]
@@ -664,7 +664,7 @@ local function startCombatMaintenance()
         elseif #(GetEntityCoords(ped) - ppos) > RESPAWN_RADIUS then
           DeleteEntity(ped)
           table.remove(cops, i)
-          dbg("Cop zu weit entfernt, entfernt (>100m)")
+          dbg("Cop zu weit entfernt, entfernt (>200m)")
         end
       end
 
@@ -708,7 +708,7 @@ local function startCombatMaintenance()
       if toSpawn > 0 then
         dbg("Verstärkung: spawne", math.min(toSpawn, 4), "neue Cops (alive:", aliveCops, "target:", targetCount, "max:", maxActive, ")")
         for i = 1, math.min(toSpawn, 4) do -- Max 4 pro Tick (alle 1.5s)
-          local pos = randomPosAroundPlayer(25.0, Config.MaxSpawnDistance or 40.0)
+          local pos = randomPosAroundPlayer(40.0, Config.MaxSpawnDistance or 200.0)
           local model = Config.PoliceModels[math.random(1, #Config.PoliceModels)]
           local ped = createCopAt(pos, model)
           if ped then
