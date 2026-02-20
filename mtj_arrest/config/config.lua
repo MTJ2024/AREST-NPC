@@ -96,14 +96,14 @@ Config.UI = {
 -- ║              POLIZEI-SPAWNING (Anzahl pro Wanted-Level)         ║
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.CopsPerWantedLevel = {
-    [1] = 2,                    -- 1 Stern:  2 Polizisten
-    [2] = 4,                    -- 2 Sterne: 4 Polizisten
-    [3] = 6,                    -- 3 Sterne: 6 Polizisten
-    [4] = 8,                    -- 4 Sterne: 8 Polizisten
-    [5] = 20,                   -- 5 Sterne: bis 20 Polizisten (verteilt, inkl. Heli-Besatzung)
+    [1] = 2,                    -- 1 Stern:  2 Polizisten (unterhalb RequiredWantedLevel, nur Ambient)
+    [2] = 2,                    -- 2 Sterne: 2 Polizisten
+    [3] = 3,                    -- 3 Sterne: 3 Polizisten
+    [4] = 8,                    -- 4 Sterne: 8 Polizisten (grosse Einsatzkraefte)
+    [5] = 15,                   -- 5 Sterne: bis 15 Polizisten (verteilt, inkl. Heli-Besatzung)
 }
-Config.PoliceCount              = 7       -- Fallback, falls CopsPerWantedLevel nicht greift
-Config.MaxActiveCops            = 20      -- Maximale Anzahl gleichzeitig aktiver Polizisten
+Config.PoliceCount              = 2       -- Fallback, falls CopsPerWantedLevel nicht greift
+Config.MaxActiveCops            = 15      -- Maximale Anzahl gleichzeitig aktiver Polizisten
 Config.PoliceSpawnRadius        = 40.0    -- Meter: Entfernung um Spieler, in der gespawnt wird
 Config.MaxSpawnDistance          = 40.0    -- Legacy-Alias für Kompatibilität
 Config.PoliceChaseWanted        = true    -- true = Cops spawnen und verfolgen bei Wanted automatisch
