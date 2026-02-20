@@ -196,16 +196,39 @@
     setUiVisible(true);
   }
 
-  function closePolizeiakte() {
-    var overlay = byId('akte-overlay');
-    if (overlay) overlay.classList.add('hidden');
-    evaluateUiVisibility();
-    // NUI Callback
+  var akteClosing = false;
+
+  function sendCloseRequest(attempt) {
+    attempt = attempt || 1;
     fetch('https://mtj_arrest/closePolizeiakte', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({})
-    }).catch(function() {});
+    }).then(function() {
+      akteClosing = false;
+    }).catch(function() {
+      if (attempt < 3) {
+        setTimeout(function() { sendCloseRequest(attempt + 1); }, 200 * attempt);
+      } else {
+        akteClosing = false;
+      }
+    });
+  }
+
+  function closePolizeiakte() {
+    if (akteClosing) return;
+    akteClosing = true;
+    var overlay = byId('akte-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    evaluateUiVisibility();
+    sendCloseRequest(1);
+  }
+
+  function forceHideAkte() {
+    var overlay = byId('akte-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    akteClosing = false;
+    evaluateUiVisibility();
   }
 
   // Close-Button & ESC
@@ -449,6 +472,9 @@
         break;
       case 'polizeiakteOpen':
         handlePolizeiakteOpen(d.akte || {});
+        break;
+      case 'polizeiakteClose':
+        forceHideAkte();
         break;
       case 'mtj_debug_state':
       case 'mtj_debug_log':

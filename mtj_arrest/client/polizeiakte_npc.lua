@@ -123,32 +123,69 @@ function DrawText3D(x, y, z, text)
   end
 end
 
--- Akte-Daten vom Server empfangen → UI öffnen
+-- Akte-Daten vom Server empfangen -> UI oeffnen
+local akteOpenTime = 0
+local AKTE_TIMEOUT = 30000 -- 30 Sekunden max offen
+
+local function forceCloseAkte()
+  if not akteOpen then return end
+  akteOpen = false
+  akteOpenTime = 0
+  SetNuiFocus(false, false)
+  SendNUIMessage({ action = "polizeiakteClose" })
+  print("[mtj_arrest] Polizeiakte zwangsgeschlossen (Fallback)")
+end
+
 RegisterNetEvent('mtj_arrest:clientFullAkte')
 AddEventHandler('mtj_arrest:clientFullAkte', function(akte)
   if not akte then
-    akteOpen = false
+    forceCloseAkte()
     return
   end
-  -- NUI öffnen mit Akte-Daten
   SendNUIMessage({
     action = "polizeiakteOpen",
     akte = akte
   })
   SetNuiFocus(true, true)
+  akteOpenTime = GetGameTimer()
 end)
 
--- NUI Callback: Akte schließen
+-- NUI Callback: Akte schliessen
 RegisterNUICallback('closePolizeiakte', function(data, cb)
   akteOpen = false
+  akteOpenTime = 0
   SetNuiFocus(false, false)
   cb('ok')
+end)
+
+-- Fallback: ESC-Taste + Timeout-Sicherung
+CreateThread(function()
+  while true do
+    if akteOpen then
+      Wait(0)
+      -- ESC auf Lua-Seite: sofort schliessen falls NUI-Callback fehlschlaegt
+      if IsControlJustPressed(0, 200) or IsDisabledControlJustPressed(0, 200) then
+        forceCloseAkte()
+      end
+      -- Timeout: nach 30s automatisch schliessen
+      if akteOpenTime > 0 and (GetGameTimer() - akteOpenTime) >= AKTE_TIMEOUT then
+        print("[mtj_arrest] Polizeiakte Timeout (" .. AKTE_TIMEOUT .. "ms) - zwangsgeschlossen")
+        forceCloseAkte()
+      end
+    else
+      Wait(500)
+    end
+  end
 end)
 
 -- Cleanup
 AddEventHandler('onResourceStop', function(res)
   if res ~= GetCurrentResourceName() then return end
+  if akteOpen then forceCloseAkte() end
   if akteNpc and DoesEntityExist(akteNpc) then DeleteEntity(akteNpc) end
   if akteBlip and DoesBlipExist(akteBlip) then RemoveBlip(akteBlip) end
-  akteOpen = false
+end)
+
+AddEventHandler('playerSpawned', function()
+  if akteOpen then forceCloseAkte() end
 end)
