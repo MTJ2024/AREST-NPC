@@ -26,13 +26,45 @@ Config.Vorwarnung = {
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗
--- ║              WAFFEN BEI TOD ENTFERNEN                           ║
--- ║  Beim Tod werden alle Waffen aus dem Inventar geloescht         ║
--- ║  um Missbrauch (sterben = Flucht mit Waffen) zu verhindern      ║
+-- ║              WAFFEN BEI TOD IM POLIZEI-EINSATZ                  ║
+-- ║  NUR wenn der Spieler waehrend eines aktiven Polizei-Einsatzes  ║
+-- ║  stirbt, werden alle Waffen entfernt. Normaler Tod = KEINE      ║
+-- ║  Waffenentfernung (dieses Script hat damit nichts zu tun!)      ║
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.WaffenBeiTod = {
-    Aktiviert           = true,     -- true = Waffen werden bei Tod entfernt
-    Nachricht           = "Deine Waffen wurden nach deinem Tod sichergestellt!",
+    Aktiviert           = true,     -- true = Waffen NUR bei Tod im Polizeieinsatz entfernt
+    NurBeiEinsatz       = true,     -- true = NUR waehrend aktivem Polizei-Einsatz (EMPFOHLEN!)
+    Nachricht           = "Deine Waffen wurden nach dem Polizeieinsatz sichergestellt!",
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              KI-VERHANDLUNG (Negotiation vor Zugriff)           ║
+-- ║  Mehrstufige Verhandlung BEVOR Polizei schiesst:                ║
+-- ║  Stufe 1: Aufforderung — Stufe 2: Warnung — Stufe 3: Zugriff   ║
+-- ║  Spieler kann jederzeit [E] zum Ergeben druecken                ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.Verhandlung = {
+    Aktiviert           = true,     -- true = KI-Verhandlung aktiv
+    Stufen = {
+        {   -- Stufe 1: Aufforderung (ruhiger Ton)
+            Dauer   = 5,            -- Sekunden
+            Text    = "POLIZEI! Legen Sie sofort Ihre Waffen ab!",
+            Farbe   = {255, 200, 50},   -- Gelb/Orange
+            Speech  = "ARREST_PLAYER",  -- GTA Speech Kontext
+        },
+        {   -- Stufe 2: Warnung (aggressiver)
+            Dauer   = 5,
+            Text    = "LETZTE WARNUNG! Ergeben Sie sich SOFORT oder wir schiessen!",
+            Farbe   = {255, 100, 30},   -- Orange/Rot
+            Speech  = "CHALLENGE_THREATEN",
+        },
+        {   -- Stufe 3: Zugriff (Cops schiessen)
+            Dauer   = 0,            -- 0 = Sofort Zugriff, kein weiteres Warten
+            Text    = "ZUGRIFF! Feuer frei!",
+            Farbe   = {255, 30, 30},    -- Rot
+            Speech  = "DRAW_GUN",
+        },
+    },
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗

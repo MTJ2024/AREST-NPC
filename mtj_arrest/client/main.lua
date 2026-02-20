@@ -133,6 +133,86 @@ local canSurrender = false
 local surrendered = false
 local cuffed = false
 local cuffing = false
+
+-- === VOLLSTAENDIGE GTA V WAFFEN-HASHLISTE ===
+-- Entfernt ALLE Waffen vom Ped (Client-seitig), nicht nur was ESX/ox kennt
+local ALL_WEAPON_HASHES = {
+  -- Nahkampf
+  "WEAPON_DAGGER", "WEAPON_BAT", "WEAPON_BOTTLE", "WEAPON_CROWBAR",
+  "WEAPON_UNARMED", "WEAPON_FLASHLIGHT", "WEAPON_GOLFCLUB", "WEAPON_HAMMER",
+  "WEAPON_HATCHET", "WEAPON_KNUCKLE", "WEAPON_KNIFE", "WEAPON_MACHETE",
+  "WEAPON_SWITCHBLADE", "WEAPON_NIGHTSTICK", "WEAPON_WRENCH", "WEAPON_BATTLEAXE",
+  "WEAPON_POOLCUE", "WEAPON_STONE_HATCHET", "WEAPON_CANDYCANE",
+  -- Pistolen
+  "WEAPON_PISTOL", "WEAPON_PISTOL_MK2", "WEAPON_COMBATPISTOL", "WEAPON_APPISTOL",
+  "WEAPON_STUNGUN", "WEAPON_PISTOL50", "WEAPON_SNSPISTOL", "WEAPON_SNSPISTOL_MK2",
+  "WEAPON_HEAVYPISTOL", "WEAPON_VINTAGEPISTOL", "WEAPON_FLAREGUN", "WEAPON_MARKSMANPISTOL",
+  "WEAPON_REVOLVER", "WEAPON_REVOLVER_MK2", "WEAPON_DOUBLEACTION", "WEAPON_RAYPISTOL",
+  "WEAPON_CERAMICPISTOL", "WEAPON_NAVYREVOLVER", "WEAPON_GADGETPISTOL",
+  "WEAPON_STUNGUN_MP", "WEAPON_PISTOLXM3", "WEAPON_TECPISTOL",
+  -- SMGs
+  "WEAPON_MICROSMG", "WEAPON_SMG", "WEAPON_SMG_MK2", "WEAPON_ASSAULTSMG",
+  "WEAPON_COMBATPDW", "WEAPON_MACHINEPISTOL", "WEAPON_MINISMG", "WEAPON_RAYCARBINE",
+  -- Schrotflinten
+  "WEAPON_PUMPSHOTGUN", "WEAPON_PUMPSHOTGUN_MK2", "WEAPON_SAWNOFFSHOTGUN",
+  "WEAPON_ASSAULTSHOTGUN", "WEAPON_BULLPUPSHOTGUN", "WEAPON_MUSKET",
+  "WEAPON_HEAVYSHOTGUN", "WEAPON_DBSHOTGUN", "WEAPON_AUTOSHOTGUN",
+  "WEAPON_COMBATSHOTGUN",
+  -- Sturmgewehre
+  "WEAPON_ASSAULTRIFLE", "WEAPON_ASSAULTRIFLE_MK2", "WEAPON_CARBINERIFLE",
+  "WEAPON_CARBINERIFLE_MK2", "WEAPON_ADVANCEDRIFLE", "WEAPON_SPECIALCARBINE",
+  "WEAPON_SPECIALCARBINE_MK2", "WEAPON_BULLPUPRIFLE", "WEAPON_BULLPUPRIFLE_MK2",
+  "WEAPON_COMPACTRIFLE", "WEAPON_MILITARYRIFLE", "WEAPON_HEAVYRIFLE",
+  "WEAPON_TACTICALRIFLE", "WEAPON_SERVICE_CARBINE",
+  -- MGs
+  "WEAPON_MG", "WEAPON_COMBATMG", "WEAPON_COMBATMG_MK2", "WEAPON_GUSENBERG",
+  -- Sniper
+  "WEAPON_SNIPERRIFLE", "WEAPON_HEAVYSNIPER", "WEAPON_HEAVYSNIPER_MK2",
+  "WEAPON_MARKSMANRIFLE", "WEAPON_MARKSMANRIFLE_MK2", "WEAPON_PRECISIONRIFLE",
+  -- Schwere Waffen
+  "WEAPON_RPG", "WEAPON_GRENADELAUNCHER", "WEAPON_GRENADELAUNCHER_SMOKE",
+  "WEAPON_MINIGUN", "WEAPON_FIREWORK", "WEAPON_RAILGUN", "WEAPON_HOMINGLAUNCHER",
+  "WEAPON_COMPACTLAUNCHER", "WEAPON_RAYMINIGUN", "WEAPON_EMPLAUNCHER",
+  "WEAPON_RAILGUNXM3",
+  -- Wurfwaffen
+  "WEAPON_GRENADE", "WEAPON_BZGAS", "WEAPON_SMOKEGRENADE", "WEAPON_FLARE",
+  "WEAPON_MOLOTOV", "WEAPON_STICKYBOMB", "WEAPON_PROXMINE", "WEAPON_SNOWBALL",
+  "WEAPON_PIPEBOMB", "WEAPON_BALL", "WEAPON_ACIDPACKAGE",
+  -- Sonstige
+  "WEAPON_PETROLCAN", "WEAPON_FIREEXTINGUISHER", "WEAPON_PARACHUTE",
+  "WEAPON_HAZARDCAN", "WEAPON_FERTILIZERCAN",
+}
+
+local function removeAllWeaponsComplete(ped)
+  -- Zuerst GTA-Native: entfernt alles auf einmal
+  RemoveAllPedWeapons(ped, true)
+  -- Dann einzeln: fuer den Fall dass RemoveAllPedWeapons etwas uebersieht
+  for _, wname in ipairs(ALL_WEAPON_HASHES) do
+    local hash = GetHashKey(wname)
+    if HasPedGotWeapon(ped, hash, false) then
+      RemoveWeaponFromPed(ped, hash)
+    end
+  end
+  SetCurrentPedWeapon(ped, GetHashKey("WEAPON_UNARMED"), true)
+end
+
+-- Tod-Erkennung: Setzt diedDuringScenario wenn Spieler waehrend Einsatz stirbt
+CreateThread(function()
+  local wasDead = false
+  while true do
+    Wait(200)
+    local ped = PlayerPedId()
+    local isDead = IsEntityDead(ped)
+    if isDead and not wasDead then
+      -- Spieler ist gerade gestorben
+      if scenarioActive then
+        diedDuringScenario = true
+        dbg("Spieler waehrend Polizeieinsatz gestorben! diedDuringScenario=true")
+      end
+    end
+    wasDead = isDead
+  end
+end)
 local inJail = false
 local jailTime = 0
 local jailRequested = false
@@ -148,6 +228,7 @@ local releaseWarningShown = false -- Entlassungswarnung nur einmal
 local playerAkteStatus = "unbescholten" -- Polizeiakte-Status (vom Server geladen)
 local policeVehicles = {} -- Gespawnte Polizeifahrzeuge
 local vorwarnungActive = false -- Vorwarnung gerade aktiv (auto_cop_spawn muss warten)
+local diedDuringScenario = false -- Spieler ist waehrend Polizeieinsatz gestorben
 
 -- === GLOBALER COP-ZAEHLER (fuer auto_cop_spawn.lua Koordination) ===
 -- Zaehlt nur LEBENDE Cops aus main.lua (cops + policeVehicles + heli crews)
@@ -828,16 +909,14 @@ local function checkFluchtversuch()
   if dist >= radius then
     fluchtversuchTriggered = true
     dbg("FLUCHTVERSUCH erkannt! Distanz:", dist)
-    -- Wanted-Level erhöhen
     local current = GetPlayerWantedLevel(PlayerId())
     local increase = fc.WantedErhoehung or 1
     local newLevel = math.min(current + increase, 5)
     if newLevel > current then
       SetPlayerWantedLevel(PlayerId(), newLevel, false)
       SetPlayerWantedLevelNow(PlayerId(), false)
-      dbg("Wanted-Level erhöht:", current, "->", newLevel)
+      dbg("Wanted-Level erhoeht:", current, "->", newLevel)
     end
-    -- Extra-Cops spawnen
     local extraCops = fc.ExtraCops or 3
     for i = 1, extraCops do
       local model = Config.PoliceModels[((i - 1) % #Config.PoliceModels) + 1]
@@ -845,14 +924,10 @@ local function checkFluchtversuch()
       local ped = createCopAt(pos, model)
       if ped then table.insert(cops, ped) end
     end
-    -- Sofort alle Cops scharf schalten
     reactivatePolice()
     startCombatMaintenance()
-    -- Fluchtversuch in Polizeiakte eintragen (persistent)
     TriggerServerEvent('mtj_arrest:serverFluchtversuch')
-    -- Benachrichtigung
-    nativeNotify(fc.Nachricht or "~r~FLUCHTVERSUCH~s~: Wanted-Level erhöht!", "warnung")
-    -- Surrender nicht mehr möglich
+    nativeNotify(fc.Nachricht or "~r~FLUCHTVERSUCH~s~: Wanted-Level erhoeht!", "warnung")
     canSurrender = false
     hideScenarioUI()
   end
@@ -867,7 +942,6 @@ local copSpeechDefaults = {
   "FOOT_CHASE_LOSING",
 }
 local function makeCopsShout()
-  -- Speech-Lines aus Config basierend auf Akte-Status
   local lines = copSpeechDefaults
   local pa = Config.Polizeiakte
   if pa and pa.CopSpeech and pa.CopSpeech[playerAkteStatus] then
@@ -877,10 +951,104 @@ local function makeCopsShout()
     if DoesEntityExist(ped) and not IsEntityDead(ped) then
       local speech = lines[((i - 1) % #lines) + 1]
       PlayPedAmbientSpeechNative(ped, speech, "SPEECH_PARAMS_FORCE_SHOUTED_CRITICAL")
-      if i >= 3 then break end -- Max 3 Cops rufen gleichzeitig
+      if i >= 3 then break end
     end
   end
 end
+
+-- === KI-VERHANDLUNG (Mehrstufige Verhandlung vor Zugriff) ===
+-- Ersetzt den simplen ComplianceWindow-Countdown mit Verhandlungsstufen
+local function runNegotiationAndCompliance()
+  canSurrender = true
+  showScenarioUI()
+  makeCopsShout()
+  nativeNotify("~r~POLIZEI~s~: " .. getScenarioHint(), "polizei")
+
+  local vh = Config.Verhandlung
+  if vh and vh.Aktiviert and vh.Stufen then
+    -- Mehrstufige KI-Verhandlung
+    dbg("KI-Verhandlung gestartet mit", #vh.Stufen, "Stufen")
+    complianceCountdownThreadActive = true
+    for si, stufe in ipairs(vh.Stufen) do
+      if not scenarioActive or not canSurrender or surrendered or cuffing or cuffed or inJail then
+        break
+      end
+      local text = stufe.Text or "Ergeben Sie sich!"
+      local farbe = stufe.Farbe or {255, 255, 255}
+      local speech = stufe.Speech
+      local dauer = stufe.Dauer or 5
+
+      -- Stufe anzeigen
+      nativeHudSet("scenario", text, farbe[1], farbe[2], farbe[3])
+      nativeNotify(text, "polizei")
+      nativeHudSet("scenario_cd", "Verhandlung Stufe " .. si .. "/" .. #vh.Stufen .. " — [E] Ergeben", farbe[1], farbe[2], farbe[3])
+      dbg("Verhandlung Stufe", si, ":", text)
+
+      -- Cops rufen passend
+      if speech then
+        for _, ped in pairs(cops) do
+          if DoesEntityExist(ped) and not IsEntityDead(ped) then
+            pcall(function()
+              PlayPedAmbientSpeechNative(ped, speech, "SPEECH_PARAMS_FORCE_SHOUTED_CRITICAL")
+            end)
+            break -- Nur ein Cop ruft pro Stufe
+          end
+        end
+      end
+
+      -- Countdown dieser Stufe (letzte Stufe = 0 = sofort Zugriff)
+      if dauer > 0 then
+        local remaining = dauer
+        while remaining > 0 and scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail do
+          Wait(1000)
+          remaining = remaining - 1
+          complianceWindow = complianceWindow - 1
+          if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
+            TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
+            nativeHudSet("scenario_cd", "Stufe " .. si .. ": " .. remaining .. "s — [E] Ergeben", farbe[1], farbe[2], farbe[3])
+            checkFluchtversuch()
+          end
+        end
+      end
+    end
+
+    -- Nach allen Stufen: Zugriff (falls nicht ergeben)
+    if scenarioActive and not surrendered and not cuffing and not cuffed and not inJail then
+      canSurrender = false
+      nativeHudSet("scenario", "ZUGRIFF! Feuer frei!", 255, 30, 30)
+      nativeHudSet("scenario_cd", nil)
+      nativeNotify("~r~ZUGRIFF~s~: Verhandlung gescheitert!", "polizei")
+      reactivatePolice()
+      startCombatMaintenance()
+      dbg("KI-Verhandlung gescheitert → Zugriff!")
+    end
+    complianceCountdownThreadActive = false
+  else
+    -- Fallback: einfacher Countdown ohne Verhandlungsstufen
+    complianceCountdownThreadActive = true
+    while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
+      Wait(1000)
+      if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
+        complianceWindow = complianceWindow - 1
+        TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
+        nativeHudSet("scenario_cd", "Letzte Chance: " .. complianceWindow .. "s — [E] Ergeben", 100, 180, 255)
+        checkFluchtversuch()
+        if complianceWindow <= 0 then
+          canSurrender = false
+          nativeHudSet("scenario", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
+          nativeHudSet("scenario_cd", nil)
+          reactivatePolice()
+          startCombatMaintenance()
+          dbg("Surrender window abgelaufen!")
+        end
+      else
+        break
+      end
+    end
+    complianceCountdownThreadActive = false
+  end
+end
+
 
 -- Festnahme-Protokoll Texte basierend auf Akte-Status
 local function getArrestLogLines()
@@ -1126,18 +1294,18 @@ AddEventHandler('mtj_arrest:startScenario', function()
   -- Polizeiakte vom Server laden (fuer status-basierte Texte)
   TriggerServerEvent('mtj_arrest:requestAkte')
 
-  -- ETAPPE 0: VORWARNUNG (grosse Anzeige BEVOR Polizei spawnt)
-  local vw = Config.Vorwarnung
-  if vw and vw.Aktiviert then
-    local vwDauer = vw.Dauer or 5
-    local vwTitel = vw.Titel or "POLIZEI-WARNUNG"
-    local vwText = vw.Text or "Stellen Sie sofort Ihre Waffen ab!"
-    showVorwarnungUI(vwTitel, vwText, vwDauer)
-    nativeNotify("~o~WARNUNG~s~: " .. (vw.TextKurz or vwText), "warnung")
-    vorwarnungActive = true
-    dbg("startScenario: Vorwarnung angezeigt fuer", vwDauer, "Sekunden")
+  CreateThread(function()
+    -- ETAPPE 0: VORWARNUNG (grosse Anzeige BEVOR Polizei spawnt)
+    local vw = Config.Vorwarnung
+    if vw and vw.Aktiviert then
+      local vwDauer = vw.Dauer or 5
+      local vwTitel = vw.Titel or "POLIZEI-WARNUNG"
+      local vwText = vw.Text or "Stellen Sie sofort Ihre Waffen ab!"
+      showVorwarnungUI(vwTitel, vwText, vwDauer)
+      nativeNotify("~o~WARNUNG~s~: " .. (vw.TextKurz or vwText), "warnung")
+      vorwarnungActive = true
+      dbg("startScenario: Vorwarnung angezeigt fuer", vwDauer, "Sekunden")
 
-    CreateThread(function()
       local remaining = vwDauer
       while scenarioActive and remaining > 0 do
         Wait(1000)
@@ -1154,94 +1322,29 @@ AddEventHandler('mtj_arrest:startScenario', function()
         dbg("startScenario: Szenario waehrend Vorwarnung beendet")
         return
       end
+    end
 
-      -- ETAPPE 1: Jetzt Polizei spawnen
-      clearCops()
-      spawnCopsAroundPlayer()
-      setAmbientCopsIgnore(true)
-      dbg("startScenario: cops spawned nach Vorwarnung, warte auf Ankunft...")
-
-      -- ETAPPE 2: Warten bis mindestens ein Cop im Aktionsradius ist
-      local arrivalRadius = Config.Aktionsradius
-      local arrivalTimeout = GetGameTimer() + ((Config.AktionsradiusTimeout or 20) * 1000)
-      while scenarioActive and not isAnyCopNearPlayer(arrivalRadius) and GetGameTimer() < arrivalTimeout do
-        Wait(500)
-      end
-      if not scenarioActive then
-        dbg("startScenario: Szenario waehrend Warten beendet")
-        return
-      end
-      dbg("startScenario: Cops angekommen, starte UI + Timer")
-
-      -- ETAPPE 3: Jetzt erst UI zeigen und Countdown starten
-      canSurrender = true
-      showScenarioUI()
-      makeCopsShout()
-      nativeNotify("~r~POLIZEI~s~: " .. getScenarioHint(), "polizei")
-
-      complianceCountdownThreadActive = true
-      while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
-        Wait(1000)
-        if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
-          complianceWindow = complianceWindow - 1
-          TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
-          nativeHudSet("scenario_cd", "Letzte Chance: " .. complianceWindow .. "s — [E] Ergeben", 100, 180, 255)
-          checkFluchtversuch()
-          if complianceWindow <= 0 then
-            canSurrender = false
-            nativeHudSet("scenario", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
-            nativeHudSet("scenario_cd", nil)
-            reactivatePolice()
-            startCombatMaintenance()
-            dbg("Surrender window abgelaufen!")
-          end
-        else
-    -- Keine Vorwarnung: direkt Polizei spawnen (alter Ablauf)
+    -- ETAPPE 1: Polizei spawnen
     clearCops()
     spawnCopsAroundPlayer()
     setAmbientCopsIgnore(true)
-    dbg("startScenario: cops spawned (ohne Vorwarnung), warte auf Ankunft...")
+    dbg("startScenario: cops spawned, warte auf Ankunft...")
 
+    -- ETAPPE 2: Warten bis mindestens ein Cop im Aktionsradius ist
     local arrivalRadius = Config.Aktionsradius
     local arrivalTimeout = GetGameTimer() + ((Config.AktionsradiusTimeout or 20) * 1000)
-    CreateThread(function()
-      while scenarioActive and not isAnyCopNearPlayer(arrivalRadius) and GetGameTimer() < arrivalTimeout do
-        Wait(500)
-      end
-      if not scenarioActive then
-        dbg("startScenario: Szenario waehrend Warten beendet")
-        return
-      end
-      dbg("startScenario: Cops angekommen, starte UI + Timer")
+    while scenarioActive and not isAnyCopNearPlayer(arrivalRadius) and GetGameTimer() < arrivalTimeout do
+      Wait(500)
+    end
+    if not scenarioActive then
+      dbg("startScenario: Szenario waehrend Warten beendet")
+      return
+    end
+    dbg("startScenario: Cops angekommen, starte Verhandlung + Timer")
 
-      canSurrender = true
-      showScenarioUI()
-      makeCopsShout()
-      nativeNotify("~r~POLIZEI~s~: " .. getScenarioHint(), "polizei")
-
-      complianceCountdownThreadActive = true
-      while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
-        Wait(1000)
-        if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
-          complianceWindow = complianceWindow - 1
-          TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
-          nativeHudSet("scenario_cd", "Letzte Chance: " .. complianceWindow .. "s — [E] Ergeben", 100, 180, 255)
-          checkFluchtversuch()
-          if complianceWindow <= 0 then
-            canSurrender = false
-            nativeHudSet("scenario", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
-            nativeHudSet("scenario_cd", nil)
-            reactivatePolice()
-            startCombatMaintenance()
-            dbg("Surrender window abgelaufen!")
-          end
-        else
-          break
-        end
-      end
-      complianceCountdownThreadActive = false
-    end)
-  end
+    -- ETAPPE 3: KI-Verhandlung und Compliance-Countdown
+    runNegotiationAndCompliance()
+  end)
 end)
 
 RegisterNetEvent('mtj_arrest:endScenario')
@@ -1332,15 +1435,15 @@ AddEventHandler('playerSpawned', function()
   clearHelis()
   clearPoliceVehicles()
   setAmbientCopsIgnore(false)
-  -- Waffen bei Tod entfernen (Server-seitig aus Inventar)
+  -- Waffen NUR entfernen wenn Spieler waehrend Polizeieinsatz gestorben ist
   local wbt = Config.WaffenBeiTod
-  if wbt and wbt.Aktiviert then
-    RemoveAllPedWeapons(PlayerPedId(), true)
-    SetCurrentPedWeapon(PlayerPedId(), GetHashKey("WEAPON_UNARMED"), true)
+  if wbt and wbt.Aktiviert and diedDuringScenario then
+    removeAllWeaponsComplete(PlayerPedId())
     TriggerServerEvent('mtj_arrest:serverClearWeapons')
-    nativeNotify(wbt.Nachricht or "Deine Waffen wurden sichergestellt!", "warnung")
-    dbg("playerSpawned: Waffen bei Tod entfernt (Client + Server)")
+    nativeNotify(wbt.Nachricht or "Deine Waffen wurden nach dem Polizeieinsatz sichergestellt!", "warnung")
+    dbg("playerSpawned: Waffen bei Einsatz-Tod entfernt (Client + Server)")
   end
+  diedDuringScenario = false -- Flag zuruecksetzen
   dbg("playerSpawned: reset scenario state + wanted level auf 0")
 end)
 
