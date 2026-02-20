@@ -231,6 +231,7 @@ local policeVehicles = {} -- Gespawnte Polizeifahrzeuge
 local RESPAWN_RADIUS = 100.0 -- Cops zaehlen und verwalten im 100m Radius
 local vorwarnungActive = false -- Vorwarnung gerade aktiv (auto_cop_spawn muss warten)
 local diedDuringScenario = false -- Spieler ist waehrend Polizeieinsatz gestorben
+local lastKnownWanted = 0 -- Letzter bekannter Wanted-Level (fuer Wiederherstellung bei GTA-Reset)
 
 -- === GLOBALER COP-ZAEHLER (fuer auto_cop_spawn.lua Koordination) ===
 -- Zaehlt nur LEBENDE Cops im Radius von 100m um den Spieler
@@ -293,6 +294,29 @@ CreateThread(function()
   -- Max-Wanted-Level auf 5 setzen (GTA/FiveM begrenzt sonst oft auf 3!)
   SetMaxWantedLevel(5)
   dbg("SetMaxWantedLevel(5) gesetzt")
+end)
+
+-- === WANTED-LEVEL WARTUNG (haelt Wanted-Level aktiv solange Szenario laeuft) ===
+-- GTA V setzt Wanted auf 0 wenn keine Cops in Sichtlinie — dieses Thread verhindert das.
+-- Prinzip: "Solange Sterne, solange Aktion" — Wanted bleibt aktiv ab Szenario-Start.
+CreateThread(function()
+  while true do
+    Wait(500)
+    if scenarioActive and not surrendered and not cuffed and not inJail then
+      local wanted = GetPlayerWantedLevel(PlayerId())
+      if wanted > 0 then
+        lastKnownWanted = wanted
+        -- Wanted aktiv halten (GTA vergisst es sonst)
+        SetPlayerWantedLevel(PlayerId(), wanted, false)
+        SetPlayerWantedLevelNow(PlayerId(), false)
+      elseif lastKnownWanted > 0 then
+        -- GTA hat Wanted zurueckgesetzt (keine Cops sichtbar) → Wiederherstellen
+        dbg("WantedMaintenance: GTA hat Wanted auf 0 gesetzt, stelle wieder her:", lastKnownWanted)
+        SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
+        SetPlayerWantedLevelNow(PlayerId(), false)
+      end
+    end
+  end
 end)
 
 -- === TOTE NPC LEICHEN-CLEANUP (nach 3 Sekunden verschwinden) ===
@@ -654,30 +678,12 @@ local function startCombatMaintenance()
   CreateThread(function()
     local pistolHash = GetHashKey("WEAPON_PISTOL")
     local heliWeaponHash = GetHashKey(Config.HeliWeapon or "WEAPON_CARBINERIFLE")
-    -- Letzten bekannten Wanted-Level speichern fuer Wiederherstellung
-    local lastKnownWanted = GetPlayerWantedLevel(PlayerId())
-    if lastKnownWanted < 2 then lastKnownWanted = 2 end
     -- Laufe solange Szenario aktiv UND Spieler nicht verhaftet/ergeben
-    -- AUCH weiterlaufen solange Wanted > 0 (Endlos-Verfolgung)
+    -- Wanted-Level wird vom globalen WantedMaintenance-Thread aktiv gehalten
     while scenarioActive and not surrendered and not cuffed and not inJail do
       Wait(1500) -- 1.5s statt 3s fuer schnellere Verstaerkung
       local playerPed = PlayerPedId()
       local wanted = GetPlayerWantedLevel(PlayerId())
-
-      -- WICHTIG: Wanted-Level aktiv halten solange Szenario laeuft!
-      -- GTA V resettet Wanted wenn keine Cops in Sichtlinie sind.
-      -- Ohne dies: Spieler toetet alle Cops → Wanted faellt auf 0 → keine neuen Cops!
-      if wanted > 0 then
-        lastKnownWanted = wanted
-        SetPlayerWantedLevel(PlayerId(), wanted, false)
-        SetPlayerWantedLevelNow(PlayerId(), false)
-      elseif lastKnownWanted > 0 then
-        -- GTA hat Wanted zurueckgesetzt (keine Cops sichtbar) → Wiederherstellen
-        dbg("combatMaintenance: Wanted von GTA auf 0 gesetzt, stelle wieder her:", lastKnownWanted)
-        SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
-        SetPlayerWantedLevelNow(PlayerId(), false)
-        wanted = lastKnownWanted
-      end
 
       -- Tote und zu weit entfernte Cops aus Liste entfernen (200m Radius)
       local ppos = GetEntityCoords(playerPed)
@@ -1355,6 +1361,9 @@ AddEventHandler('mtj_arrest:startScenario', function()
   complianceWindow = Config.ComplianceWindow
   fluchtversuchTriggered = false
   scenarioStartPos = GetEntityCoords(PlayerPedId())
+  -- Wanted-Level sofort speichern fuer WantedMaintenance-Thread
+  lastKnownWanted = GetPlayerWantedLevel(PlayerId())
+  if lastKnownWanted < 1 then lastKnownWanted = Config.RequiredWantedLevel or 2 end
 
   -- Polizeiakte vom Server laden (fuer status-basierte Texte)
   TriggerServerEvent('mtj_arrest:requestAkte')
@@ -1426,6 +1435,7 @@ AddEventHandler('mtj_arrest:endScenario', function()
   fluchtversuchTriggered = false
   vorwarnungActive = false
   scenarioStartPos = nil
+  lastKnownWanted = 0
   hideScenarioUI()
   hideVorwarnungUI()
   nativeHudClear()
@@ -1459,12 +1469,12 @@ CreateThread(function()
     Wait(1000)
     if scenarioActive then
       if GetPlayerWantedLevel(PlayerId()) == 0 then
-        if combatMaintenanceActive then
-          -- Waehrend Kampfphase: Wanted wird von startCombatMaintenance wiederhergestellt
-          -- Szenario NICHT beenden, damit Nachschub-Spawns weiterlaufen
-          dbg("Wanted=0 aber Kampfphase aktiv, ueberspringe endScenario (combatMaintenance stellt wieder her)")
-        else
-          dbg("Wanted Level = 0, beende Szenario!")
+        -- Wanted-Level wird vom WantedMaintenance-Thread aktiv gehalten.
+        -- Wenn es trotzdem 0 ist, warte kurz und pruefe erneut
+        -- (WantedMaintenance laeuft alle 500ms, 1500ms reicht fuer mindestens 2 Zyklen)
+        Wait(1500)
+        if GetPlayerWantedLevel(PlayerId()) == 0 and scenarioActive then
+          dbg("Wanted Level = 0 (auch nach Wartung), beende Szenario!")
           TriggerEvent('mtj_arrest:endScenario')
         end
       end
@@ -1489,6 +1499,7 @@ AddEventHandler('playerSpawned', function()
   fluchtversuchTriggered = false
   vorwarnungActive = false
   scenarioStartPos = nil
+  lastKnownWanted = 0
   releaseWarningShown = false
   inJail = false
   deadBodies = {} -- Leichen-Cleanup zurücksetzen
@@ -1533,6 +1544,7 @@ AddEventHandler('onResourceStop', function(res)
   fluchtversuchTriggered = false
   vorwarnungActive = false
   scenarioStartPos = nil
+  lastKnownWanted = 0
   releaseWarningShown = false
   inJail = false
   deadBodies = {}
