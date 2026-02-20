@@ -90,12 +90,12 @@ CreateThread(function()
             local playerPed = PlayerPedId()
             local playerCoords = GetEntityCoords(playerPed)
 
-            -- Tote und zu weit entfernte Cops entfernen (200m Radius)
+            -- Tote und zu weit entfernte Cops entfernen (100m Radius)
             for i = #activeCops, 1, -1 do
                 local cop = activeCops[i]
                 if not DoesEntityExist(cop) or IsEntityDead(cop) then
                     table.remove(activeCops, i)
-                elseif #(GetEntityCoords(cop) - playerCoords) > 200.0 then
+                elseif #(GetEntityCoords(cop) - playerCoords) > 100.0 then
                     DeleteEntity(cop)
                     table.remove(activeCops, i)
                 end

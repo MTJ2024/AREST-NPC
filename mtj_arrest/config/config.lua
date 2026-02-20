@@ -118,8 +118,8 @@ Config.FahrzeugePerWantedLevel = {
 }
 Config.PoliceCount              = 4       -- Fallback, falls CopsPerWantedLevel nicht greift
 Config.MaxActiveCops            = 15      -- Maximale Anzahl gleichzeitig aktiver Polizisten
-Config.PoliceSpawnRadius        = 200.0   -- Meter: Entfernung um Spieler, in der gespawnt wird
-Config.MaxSpawnDistance          = 200.0   -- Legacy-Alias fuer Kompatibilitaet
+Config.PoliceSpawnRadius        = 60.0    -- Meter: Spawn-Radius um Spieler (max 60m wegen Kollisionsdaten)
+Config.MaxSpawnDistance          = 60.0    -- Legacy-Alias fuer Kompatibilitaet
 Config.PoliceChaseWanted        = true    -- true = Cops spawnen und verfolgen bei Wanted automatisch
 Config.DisableAmbientCopsAfterSurrender = true -- Ambient-Cops ignorieren Spieler nach Ergeben
 

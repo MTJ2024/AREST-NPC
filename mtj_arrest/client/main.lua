@@ -228,7 +228,7 @@ local fluchtversuchTriggered = false -- Fluchtversuch nur einmal pro Szenario
 local releaseWarningShown = false -- Entlassungswarnung nur einmal
 local playerAkteStatus = "unbescholten" -- Polizeiakte-Status (vom Server geladen)
 local policeVehicles = {} -- Gespawnte Polizeifahrzeuge
-local RESPAWN_RADIUS = 200.0 -- Cops zaehlen und verwalten im 200m Radius
+local RESPAWN_RADIUS = 100.0 -- Cops zaehlen und verwalten im 100m Radius
 local vorwarnungActive = false -- Vorwarnung gerade aktiv (auto_cop_spawn muss warten)
 local diedDuringScenario = false -- Spieler ist waehrend Polizeieinsatz gestorben
 
@@ -368,14 +368,36 @@ end
 local function randomPosAroundPlayer(minDist, maxDist)
   local ped = PlayerPedId()
   local p = GetEntityCoords(ped)
-  local angle = math.random() * math.pi * 2
-  local dist = math.random() * (maxDist - minDist) + minDist
-  local nx = p.x + math.cos(angle) * dist
-  local ny = p.y + math.sin(angle) * dist
-  local nz = p.z
-  local found, gz = GetGroundZFor_3dCoord(nx, ny, nz + 50.0, 0)
-  if found then nz = gz end
-  return vector3(nx, ny, nz)
+  -- Versuche bis zu 5x eine gueltige Position zu finden
+  for attempt = 1, 5 do
+    local angle = math.random() * math.pi * 2
+    -- Bei jedem Fehlversuch naeher spawnen (garantiert Sichtbarkeit)
+    local effectiveMax = maxDist - (attempt - 1) * 10.0
+    if effectiveMax < minDist then effectiveMax = minDist + 5.0 end
+    local dist = math.random() * (effectiveMax - minDist) + minDist
+    local nx = p.x + math.cos(angle) * dist
+    local ny = p.y + math.sin(angle) * dist
+    -- Methode 1: GetSafeCoordForPed (GTA sucht begehbare Position)
+    local safeFound, sx, sy, sz = GetSafeCoordForPed(nx, ny, p.z, true, 16)
+    if safeFound then
+      dbg("randomPos: SafeCoord gefunden bei Versuch", attempt, "dist:", dist)
+      return vector3(sx, sy, sz)
+    end
+    -- Methode 2: GetGroundZFor_3dCoord mit mehreren Hoehen
+    for _, zOff in ipairs({0.0, 10.0, 20.0, 50.0}) do
+      local gFound, gz = GetGroundZFor_3dCoord(nx, ny, p.z + zOff, false)
+      if gFound then
+        dbg("randomPos: GroundZ gefunden bei Versuch", attempt, "zOff:", zOff, "dist:", dist)
+        return vector3(nx, ny, gz)
+      end
+    end
+  end
+  -- Fallback: Spawne direkt hinter dem Spieler (15-25m, garantiert sichtbar)
+  dbg("randomPos: ALLE Versuche fehlgeschlagen, spawne nahe am Spieler")
+  local heading = GetEntityHeading(ped)
+  local rad = math.rad(heading + 180.0 + math.random(-45, 45))
+  local fallbackDist = 15.0 + math.random() * 10.0
+  return vector3(p.x + math.cos(rad) * fallbackDist, p.y + math.sin(rad) * fallbackDist, p.z)
 end
 
 local function clearHelis()
@@ -469,7 +491,7 @@ local function spawnCopsAroundPlayer()
     local model = Config.PoliceModels[((i - 1) % #Config.PoliceModels) + 1]
     local pos = vector3(ppos.x + off.x, ppos.y + off.y, ppos.z + (off.z or 0))
     if #(pos - ppos) < 30.0 then
-      pos = randomPosAroundPlayer(32.0, Config.MaxSpawnDistance)
+      pos = randomPosAroundPlayer(25.0, 50.0)
     end
     local ped = createCopAt(pos, model)
     if ped then table.insert(cops, ped) end
@@ -708,7 +730,7 @@ local function startCombatMaintenance()
       if toSpawn > 0 then
         dbg("Verstärkung: spawne", math.min(toSpawn, 4), "neue Cops (alive:", aliveCops, "target:", targetCount, "max:", maxActive, ")")
         for i = 1, math.min(toSpawn, 4) do -- Max 4 pro Tick (alle 1.5s)
-          local pos = randomPosAroundPlayer(40.0, Config.MaxSpawnDistance or 200.0)
+          local pos = randomPosAroundPlayer(20.0, 60.0)
           local model = Config.PoliceModels[math.random(1, #Config.PoliceModels)]
           local ped = createCopAt(pos, model)
           if ped then
