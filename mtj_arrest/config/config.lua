@@ -292,8 +292,8 @@ Config.Entlassungswarnung = {
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.PolizeiakteNPC = {
     Aktiviert           = true,                                    -- true = NPC wird gespawnt
-    Position            = vector3(441.4, -979.5, 30.69),           -- Vor dem Polizeirevier (Mission Row PD)
-    Heading             = 180.0,                                   -- Blickrichtung des NPC
+    Position            = vector3(441.6784, -978.5231, 30.6896),    -- Vor dem Polizeirevier (Mission Row PD)
+    Heading             = 149.8703,                                -- Blickrichtung des NPC
     Model               = "s_m_y_cop_01",                          -- NPC-Modell (Polizist)
     Scenario            = "WORLD_HUMAN_CLIPBOARD",                 -- Animation (Clipboard halten)
     Interaktionsradius  = 2.5,                                     -- Meter: wie nah der Spieler sein muss
