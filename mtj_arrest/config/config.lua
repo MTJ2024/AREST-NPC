@@ -70,10 +70,10 @@ Config.Verhandlung = {
 -- ║              POLIZEI-EINSATZ ANZEIGE (SZENARIO-UI)              ║
 -- ║  Wann und wie die "POLIZEI-EINSATZ" Info angezeigt wird         ║
 -- ╚══════════════════════════════════════════════════════════════════╝
-Config.Aktionsradius            = 25.0    -- Meter: Polizei muss SO NAH sein, bevor Info + Timer starten
+Config.Aktionsradius            = 40.0    -- Meter: Polizei muss SO NAH sein, bevor Info + Timer starten
 Config.AktionsradiusTimeout     = 20      -- Sekunden: Maximale Wartezeit auf Polizei-Ankunft
 Config.ComplianceWindow         = 15      -- Sekunden: Zeit zum Ergeben [E], bevor Polizei schiesst
-Config.RequiredWantedLevel      = 1       -- Ab diesem Wanted-Level startet das Szenario (1-5)
+Config.RequiredWantedLevel      = 2       -- Ab diesem Wanted-Level startet das Szenario (1-5)
 
 Config.UI = {
     -- Texte im Szenario-Panel

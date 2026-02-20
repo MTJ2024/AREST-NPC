@@ -851,6 +851,7 @@ local function getScenarioHint()
 end
 
 local function showScenarioUI()
+  hideAllUI() -- Alle anderen Panels ausblenden
   TriggerEvent('mtj_arrest:nui:scenario', true, getScenarioHint(), Config.ComplianceWindow)
   -- GTA Native Fallback
   local hint = getScenarioHint() or ""
@@ -870,6 +871,7 @@ end
 
 -- Vorwarnung UI
 local function showVorwarnungUI(titel, text, countdown)
+  hideAllUI() -- Alle anderen Panels ausblenden
   TriggerEvent('mtj_arrest:nui:vorwarnung', true, titel, text, countdown)
   -- GTA Native Fallback
   nativeHudSet("vorwarnung", (titel or "WARNUNG") .. ": " .. (text or ""):gsub("\n", " "), 243, 156, 18)
@@ -882,6 +884,16 @@ local function hideVorwarnungUI()
   nativeHudSet("vorwarnung", nil)
   nativeHudSet("vorwarnung_cd", nil)
   dbg("hideVorwarnungUI")
+end
+
+-- Alle Panels verstecken (gegenseitige Ausschliessung, nur 1 Panel gleichzeitig)
+local function hideAllUI()
+  TriggerEvent('mtj_arrest:nui:vorwarnung', false)
+  TriggerEvent('mtj_arrest:nui:scenario', false)
+  TriggerEvent('mtj_arrest:nui:jail', false)
+  TriggerEvent('mtj_arrest:nui:arrest_log', false)
+  nativeHudClear()
+  dbg("hideAllUI: alle Panels versteckt")
 end
 
 -- Prüft ob mindestens ein Cop innerhalb des Radius ist
@@ -1118,8 +1130,7 @@ local function playCuffSequence()
 
   -- JETZT erst Festnahme-Info anzeigen (nach Animation + Handschellen)
   deescalateAllPolice()
-  nativeHudSet("scenario", nil)
-  nativeHudSet("scenario_cd", nil)
+  hideAllUI() -- Alle vorherigen Panels ausblenden
   nativeHudSet("arrest", "FESTNAHME: Du wirst verhaftet!", 255, 50, 50)
   -- Status-basierte Festnahme-Texte
   if playerAkteStatus ~= "unbescholten" then
@@ -1176,6 +1187,7 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
 
   local jailSeconds = math.floor((tonumber(minutes) or 10) * 60)
   dbg(("Spieler wurde ins Jail teleportiert für %d Minuten!"):format(minutes))
+  hideAllUI() -- Alle vorherigen Panels ausblenden vor Jail
   nativeNotify(("~r~Inhaftiert~s~: %d Minuten in %s"):format(math.ceil(jailSeconds/60), Config.JailName or "Gefaengnis"), "polizei")
   nativeHudSet("jail", "GEFAENGNIS: " .. (Config.JailName or "JVA"), 255, 50, 50)
   nativeHudSet("jail_timer", "Verbleibend: " .. math.ceil(jailSeconds/60) .. " Min", 100, 180, 255)

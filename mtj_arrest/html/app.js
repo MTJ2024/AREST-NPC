@@ -284,9 +284,21 @@
     setUiVisible(anyVisible);
   }
 
+  /* ═══ Gegenseitige Panel-Ausschliessung: nur 1 Panel gleichzeitig ═══ */
+  function hideAllPanels() {
+    setHidden(el.vorwarnung, true);
+    if (el.vorwarnung) el.vorwarnung.classList.remove('pulse-ui');
+    setHidden(el.scenario, true);
+    if (el.scenario) el.scenario.classList.remove('pulse-ui');
+    setHidden(el.jail, true);
+    if (el.jail) el.jail.classList.remove('pulse-ui');
+    setHidden(el.aLog, true);
+  }
+
   /* ═══ Vorwarnung (grosse Warnung vor Polizei-Einsatz) ═══ */
   function handleVorwarnungToggle(d) {
     if (d.show) {
+      hideAllPanels();
       safeText(el.vwTitle, d.title || 'POLIZEI-WARNUNG');
       if (el.vwText) {
         el.vwText.innerHTML = '';
@@ -314,6 +326,7 @@
   function handleScenarioToggle(d) {
     state.countdownLabel = (d.countdownLabel && String(d.countdownLabel)) || state.countdownLabel || 'Letzte Chance: ';
     if (d.show) {
+      hideAllPanels();
       safeText(el.sTitle, d.title || 'Polizei-Einsatz');
       safeText(el.sHint, d.hint || '');
       if (d.countdown) {
@@ -322,7 +335,6 @@
         safeText(el.sCountdown, '');
       }
       setHidden(el.scenario, false);
-      // GANZES UI pulsiert langsam (sicht <-> transparent)
       if (el.scenario) el.scenario.classList.add('pulse-ui');
     } else {
       setHidden(el.scenario, true);
@@ -338,6 +350,7 @@
 
   function handleArrestLog(d) {
     if (d.show) {
+      hideAllPanels();
       safeText(el.aLogTitle, d.title || 'Festnahmeprotokoll');
       if (el.aLogLines) {
         el.aLogLines.innerHTML = '';
@@ -357,6 +370,7 @@
 
   function handleJailToggle(d) {
     if (d.show) {
+      hideAllPanels();
       state.jailTotal = Number(d.seconds) || 0;
       safeText(el.jTitle, d.title || 'Gefängnis');
       safeText(el.jSub, d.subtitle || '');
