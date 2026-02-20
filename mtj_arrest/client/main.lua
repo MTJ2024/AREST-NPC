@@ -436,9 +436,19 @@ local function startCombatMaintenance()
   CreateThread(function()
     local pistolHash = GetHashKey("WEAPON_PISTOL")
     local heliWeaponHash = GetHashKey(Config.HeliWeapon or "WEAPON_CARBINERIFLE")
+    -- Laufe solange Szenario aktiv UND Spieler nicht verhaftet/ergeben
+    -- AUCH weiterlaufen solange Wanted > 0 (Endlos-Verfolgung)
     while scenarioActive and not surrendered and not cuffed and not inJail do
       Wait(3000)
       local playerPed = PlayerPedId()
+      local wanted = GetPlayerWantedLevel(PlayerId())
+
+      -- Wenn Wanted auf 0 gefallen: Szenario beenden
+      if wanted == 0 then
+        dbg("combatMaintenance: Wanted = 0, beende Szenario")
+        TriggerEvent('mtj_arrest:endScenario')
+        break
+      end
 
       -- Tote Cops aus Liste entfernen
       for i = #cops, 1, -1 do
@@ -476,8 +486,7 @@ local function startCombatMaintenance()
         end
       end
 
-      -- Verstärkung nachspawnen wenn Cops gestorben sind
-      local wanted = GetPlayerWantedLevel(PlayerId())
+      -- Verstaerkung nachspawnen wenn Cops gestorben sind
       local targetCount = Config.PoliceCount or 7
       if Config.CopsPerWantedLevel and Config.CopsPerWantedLevel[wanted] then
         targetCount = Config.CopsPerWantedLevel[wanted]
@@ -565,6 +574,16 @@ local function startCombatMaintenance()
     end
     combatMaintenanceActive = false
     dbg("combatMaintenance ended")
+    -- Wenn Szenario noch aktiv aber Loop beendet (z.B. durch Verhaftung),
+    -- nichts tun. Aber wenn Wanted > 0 und Szenario irgendwie haengt,
+    -- endScenario triggern damit wanted_level.lua neu starten kann.
+    if scenarioActive and not surrendered and not cuffed and not inJail then
+      local wanted = GetPlayerWantedLevel(PlayerId())
+      if wanted > 0 then
+        dbg("combatMaintenance: Loop beendet aber Wanted > 0, resette Szenario fuer Neustart")
+        TriggerEvent('mtj_arrest:endScenario')
+      end
+    end
   end)
 end
 
