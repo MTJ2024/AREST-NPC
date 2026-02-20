@@ -127,6 +127,7 @@ CreateThread(function()
 end)
 
 -- State
+local playerName = GetPlayerName(PlayerId()) or "Unbekannt"
 local cops = {}
 local scenarioActive = false
 local canSurrender = false
@@ -227,15 +228,19 @@ local fluchtversuchTriggered = false -- Fluchtversuch nur einmal pro Szenario
 local releaseWarningShown = false -- Entlassungswarnung nur einmal
 local playerAkteStatus = "unbescholten" -- Polizeiakte-Status (vom Server geladen)
 local policeVehicles = {} -- Gespawnte Polizeifahrzeuge
+local RESPAWN_RADIUS = 100.0 -- Cops zaehlen nur im 100m Radius
 local vorwarnungActive = false -- Vorwarnung gerade aktiv (auto_cop_spawn muss warten)
 local diedDuringScenario = false -- Spieler ist waehrend Polizeieinsatz gestorben
 
 -- === GLOBALER COP-ZAEHLER (fuer auto_cop_spawn.lua Koordination) ===
--- Zaehlt nur LEBENDE Cops aus main.lua (cops + policeVehicles + heli crews)
+-- Zaehlt nur LEBENDE Cops im Radius von 100m um den Spieler
 function GetMainLuaAliveCopCount()
   local count = 0
+  local ppos = GetEntityCoords(PlayerPedId())
   for _, ped in ipairs(cops) do
-    if DoesEntityExist(ped) and not IsEntityDead(ped) then count = count + 1 end
+    if DoesEntityExist(ped) and not IsEntityDead(ped) then
+      if #(GetEntityCoords(ped) - ppos) <= RESPAWN_RADIUS then count = count + 1 end
+    end
   end
   for _, h in ipairs(helis) do
     if h.gunners then
@@ -248,7 +253,9 @@ function GetMainLuaAliveCopCount()
   for _, pv in ipairs(policeVehicles) do
     if pv.crew then
       for _, c in ipairs(pv.crew) do
-        if DoesEntityExist(c) and not IsEntityDead(c) then count = count + 1 end
+        if DoesEntityExist(c) and not IsEntityDead(c) then
+          if #(GetEntityCoords(c) - ppos) <= RESPAWN_RADIUS then count = count + 1 end
+        end
       end
     end
   end
@@ -639,12 +646,17 @@ local function startCombatMaintenance()
         break
       end
 
-      -- Tote Cops aus Liste entfernen
+      -- Tote und zu weit entfernte Cops aus Liste entfernen (100m Radius)
+      local ppos = GetEntityCoords(playerPed)
       for i = #cops, 1, -1 do
         local ped = cops[i]
         if not DoesEntityExist(ped) or IsEntityDead(ped) then
           if DoesEntityExist(ped) then DeleteEntity(ped) end
           table.remove(cops, i)
+        elseif #(GetEntityCoords(ped) - ppos) > RESPAWN_RADIUS then
+          DeleteEntity(ped)
+          table.remove(cops, i)
+          dbg("Cop zu weit entfernt, entfernt (>100m)")
         end
       end
 
@@ -946,7 +958,7 @@ local function checkFluchtversuch()
     reactivatePolice()
     startCombatMaintenance()
     TriggerServerEvent('mtj_arrest:serverFluchtversuch')
-    nativeNotify(fc.Nachricht or "~r~FLUCHTVERSUCH~s~: Wanted-Level erhoeht!", "warnung")
+    nativeNotify(fc.Nachricht or ("~r~FLUCHTVERSUCH~s~: " .. playerName .. " — Wanted-Level erhoeht!"), "warnung")
     canSurrender = false
     hideScenarioUI()
   end
@@ -981,7 +993,7 @@ local function runNegotiationAndCompliance()
   canSurrender = true
   showScenarioUI()
   makeCopsShout()
-  nativeNotify("~r~POLIZEI~s~: " .. getScenarioHint(), "polizei")
+  nativeNotify("~r~POLIZEI~s~ an " .. playerName .. ": " .. getScenarioHint(), "polizei")
 
   local vh = Config.Verhandlung
   if vh and vh.Aktiviert and vh.Stufen then
@@ -1037,7 +1049,7 @@ local function runNegotiationAndCompliance()
       canSurrender = false
       nativeHudSet("scenario", "ZUGRIFF! Feuer frei!", 255, 30, 30)
       nativeHudSet("scenario_cd", nil)
-      nativeNotify("~r~ZUGRIFF~s~: Verhandlung gescheitert!", "polizei")
+      nativeNotify("~r~ZUGRIFF~s~: Verhandlung mit " .. playerName .. " gescheitert!", "polizei")
       reactivatePolice()
       startCombatMaintenance()
       dbg("KI-Verhandlung gescheitert → Zugriff!")
@@ -1138,14 +1150,14 @@ local function playCuffSequence()
   -- JETZT erst Festnahme-Info anzeigen (nach Animation + Handschellen)
   deescalateAllPolice()
   hideAllUI() -- Alle vorherigen Panels ausblenden
-  nativeHudSet("arrest", "FESTNAHME: Du wirst verhaftet!", 255, 50, 50)
+  nativeHudSet("arrest", "FESTNAHME: " .. playerName .. " wird verhaftet!", 255, 50, 50)
   -- Status-basierte Festnahme-Texte
   if playerAkteStatus ~= "unbescholten" then
     local pa = Config.Polizeiakte
-    local msg = (pa and pa.NachrichtVorbestraft) or ("~r~Festnahme~s~: " .. playerAkteStatus .. " — verschärftes Verfahren!")
+    local msg = (pa and pa.NachrichtVorbestraft) or ("~r~Festnahme~s~: " .. playerName .. " (" .. playerAkteStatus .. ") — verschaerftes Verfahren!")
     nativeNotify(msg, "polizei")
   else
-    nativeNotify("~r~Festnahme~s~: Du wirst verhaftet!", "polizei")
+    nativeNotify("~r~Festnahme~s~: " .. playerName .. " wird verhaftet!", "polizei")
   end
   TriggerEvent('mtj_arrest:nui:arrest_log', true, getArrestLogLines())
   Wait(3000)
@@ -1195,8 +1207,8 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
   local jailSeconds = math.floor((tonumber(minutes) or 10) * 60)
   dbg(("Spieler wurde ins Jail teleportiert für %d Minuten!"):format(minutes))
   hideAllUI() -- Alle vorherigen Panels ausblenden vor Jail
-  nativeNotify(("~r~Inhaftiert~s~: %d Minuten in %s"):format(math.ceil(jailSeconds/60), Config.JailName or "Gefaengnis"), "polizei")
-  nativeHudSet("jail", "GEFAENGNIS: " .. (Config.JailName or "JVA"), 255, 50, 50)
+  nativeNotify(("~r~Inhaftiert~s~: " .. playerName .. " — %d Minuten in %s"):format(math.ceil(jailSeconds/60), Config.JailName or "Gefaengnis"), "polizei")
+  nativeHudSet("jail", "GEFAENGNIS: " .. playerName .. " — " .. (Config.JailName or "JVA"), 255, 50, 50)
   nativeHudSet("jail_timer", "Verbleibend: " .. math.ceil(jailSeconds/60) .. " Min", 100, 180, 255)
   DoScreenFadeIn(1000)
   releaseWarningShown = false
@@ -1247,7 +1259,7 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
       SetEntityHeading(player, heading)
       Wait(600)
       DoScreenFadeIn(1000)
-      nativeNotify("~g~Entlassen~s~: Du bist nun wieder auf freiem Fuß!", "erfolg")
+      nativeNotify("~g~Entlassen~s~: " .. playerName .. " ist nun wieder auf freiem Fuss!", "erfolg")
       dbg("Jailzeit vorbei, Spieler vor das Gefängnis gesetzt!")
     end
   end)
@@ -1322,7 +1334,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
       local vwTitel = vw.Titel or "POLIZEI-WARNUNG"
       local vwText = vw.Text or "Stellen Sie sofort Ihre Waffen ab!"
       showVorwarnungUI(vwTitel, vwText, vwDauer)
-      nativeNotify("~o~WARNUNG~s~: " .. (vw.TextKurz or vwText), "warnung")
+      nativeNotify("~o~WARNUNG~s~ an " .. playerName .. ": " .. (vw.TextKurz or vwText), "warnung")
       vorwarnungActive = true
       dbg("startScenario: Vorwarnung angezeigt fuer", vwDauer, "Sekunden")
 
@@ -1460,10 +1472,11 @@ AddEventHandler('playerSpawned', function()
   if wbt and wbt.Aktiviert and diedDuringScenario then
     removeAllWeaponsComplete(PlayerPedId())
     TriggerServerEvent('mtj_arrest:serverClearWeapons')
-    nativeNotify(wbt.Nachricht or "Deine Waffen wurden nach dem Polizeieinsatz sichergestellt!", "warnung")
+    nativeNotify(wbt.Nachricht or ("Waffen von " .. playerName .. " nach dem Polizeieinsatz sichergestellt!"), "warnung")
     dbg("playerSpawned: Waffen bei Einsatz-Tod entfernt (Client + Server)")
   end
   diedDuringScenario = false -- Flag zuruecksetzen
+  playerName = GetPlayerName(PlayerId()) or "Unbekannt"
   dbg("playerSpawned: reset scenario state + wanted level auf 0")
 end)
 
