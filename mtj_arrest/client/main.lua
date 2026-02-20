@@ -69,7 +69,7 @@ local nativeHudPersist = {} -- { key = {text=, r=, g=, b=} } (dauerhaft bis entf
 local function nativeHudShow(text, durationSec, r, g, b)
   table.insert(nativeHudLines, {
     text = tostring(text or ""),
-    expire = GetGameTimer() + ((durationSec or 5) * 1000),
+    expire = GetGameTimer() + ((durationSec or 8) * 1000),
     r = r or 255, g = g or 255, b = b or 255
   })
 end

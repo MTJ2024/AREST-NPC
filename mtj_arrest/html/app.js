@@ -103,7 +103,7 @@
     el.toast.classList.add('show');
     setHidden(el.toast, false);
 
-    const DURATION = 2400;
+    const DURATION = 6000;
     setTimeout(() => {
       el.toast.classList.remove('show');
       setHidden(el.toast, true);
@@ -121,7 +121,7 @@
     warnung: '⚠️',
     info:    'ℹ️',
   };
-  const NOTIFY_DURATION = 4000;
+  const NOTIFY_DURATION = 8000;
   const NOTIFY_MAX = 5;
 
   function showNotify(text, type) {
