@@ -133,14 +133,16 @@ body {
 .subtitle {
   font-size: 1.15rem;
   margin: 7px 0 20px 0;
-  color: var(--accent3);
+  color: #ffffff;
   letter-spacing: 0.02em;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
 }
 .hint {
   font-size: 1.12rem;
-  color: #b3d6ff;
+  color: #ffffff;
   margin: 10px 0 18px 0;
   text-align: center;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
 }
 .key {
   font-family: var(--font-digi);
@@ -193,6 +195,7 @@ body {
   pointer-events: none;
   animation: popIn 0.7s cubic-bezier(.52,1.4,.38,1) both;
   transition: opacity 0.25s, transform 0.22s;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
 }
 
 .bar-wrap {
@@ -290,11 +293,11 @@ body {
 /* Jail Grundtext/Subtitle */
 .jail-reason {
   font-size: 1.17rem;
-  color: #e7f0ff;
+  color: #ffffff;
   margin: 8px 0 15px 0;
   text-align: center;
   letter-spacing: 0.04em;
-  text-shadow: 0 0 10px #10182b99;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
   z-index: 2;
   position: relative;
 }
@@ -327,8 +330,8 @@ body {
   font-size: 1.5rem;
   font-weight: 900;
   letter-spacing: 0.1em;
-  color: #ffefae;
-  text-shadow: 0 0 6px #ffefaecc, 0 0 2px #ff2a2acc;
+  color: #ffffff;
+  text-shadow: 0 0 8px #ff2a2acc, 0 1px 4px rgba(0,0,0,0.8);
 }
 @keyframes fine-glow {
   0%   { box-shadow: 0 0 18px #217aff55, 0 0 6px #ff2a2a33; }
@@ -465,11 +468,11 @@ body {
 
 .vorwarnung-text {
   font-size: 1.2rem;
-  color: #ffe0b2;
+  color: #ffffff;
   text-align: center;
   margin: 10px 0 18px 0;
   line-height: 1.5;
-  text-shadow: 0 0 12px #f39c1266;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8), 0 0 10px #f39c1266;
 }
 
 .vorwarnung-countdown {
@@ -497,14 +500,13 @@ body {
 .notify-stack {
   position: fixed;
   left: 24px;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 18px;
   z-index: 999;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   pointer-events: none;
-  max-width: 340px;
+  max-width: 380px;
 }
 
 .notify-item {
@@ -513,10 +515,10 @@ body {
   gap: 10px;
   padding: 10px 18px 10px 14px;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(18,27,59,0.92) 0%, rgba(33,122,255,0.18) 100%);
+  background: linear-gradient(135deg, rgba(10,16,38,0.97) 0%, rgba(18,30,60,0.95) 100%);
   border-left: 3px solid var(--accent);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 0 18px 0 rgba(33,122,255,0.3), 0 0 8px 0 rgba(255,42,42,0.2), 0 2px 8px rgba(0,0,0,0.35);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.55), 0 0 12px 0 rgba(33,122,255,0.2);
   color: #fff;
   font-family: var(--font-main);
   font-size: 0.92rem;
@@ -541,7 +543,7 @@ body {
 
 .notify-text {
   flex: 1;
-  text-shadow: 0 0 8px rgba(33,122,255,0.4);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8), 0 0 6px rgba(0,0,0,0.4);
 }
 
 .notify-item.type-polizei {
