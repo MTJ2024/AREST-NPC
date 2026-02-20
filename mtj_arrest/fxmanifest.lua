@@ -30,7 +30,8 @@ client_scripts {
   'client/nui_focus_handlers.lua',
   'client/auto_cop_spawn.lua',
   'client/controls.lua',
-  'client/external_police.lua',  
+  'client/external_police.lua',
+  'client/polizeiakte_npc.lua',
   'client/debug.lua'
 }
 

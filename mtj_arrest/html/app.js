@@ -129,9 +129,17 @@
 
     const item = document.createElement('div');
     item.className = 'notify-item type-' + type;
-    item.innerHTML =
-      '<span class="notify-icon">' + icon + '</span>' +
-      '<span class="notify-text">' + cleanText + '</span>';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'notify-icon';
+    iconSpan.textContent = icon;
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'notify-text';
+    textSpan.textContent = cleanText;
+
+    item.appendChild(iconSpan);
+    item.appendChild(textSpan);
 
     el.notifyStack.appendChild(item);
     setUiVisible(true);
@@ -149,6 +157,64 @@
       }, 400);
     }, NOTIFY_DURATION);
   }
+
+  /* ═══ Polizeiakte Vollbild-UI ═══ */
+  function handlePolizeiakteOpen(akte) {
+    const overlay = byId('akte-overlay');
+    if (!overlay) return;
+
+    // Werte befüllen
+    safeText(byId('akte-server'), akte.serverName || 'Police Department');
+    safeText(byId('akte-status'), (akte.status || 'unbescholten').toUpperCase());
+    safeText(byId('akte-festnahmen'), String(akte.festnahmen || 0));
+    safeText(byId('akte-haftzeit'), (akte.gesamtHaftzeit || 0) + ' Min');
+    safeText(byId('akte-geldstrafe'), (akte.gesamtGeldstrafe || 0).toLocaleString('de-DE') + ' \u20AC');
+    safeText(byId('akte-flucht'), String(akte.fluchtversuche || 0));
+    safeText(byId('akte-letzte'), akte.letztesFestnahme || '\u2014');
+    safeText(byId('akte-haft-mult'), '\u00D7' + (akte.haftzeitMultiplikator || 1).toFixed(1));
+    safeText(byId('akte-geld-mult'), '\u00D7' + (akte.geldstrafeMultiplikator || 1).toFixed(1));
+
+    // Nächste Stufe
+    var naechsteRow = byId('akte-naechste-row');
+    if (akte.naechsteStufeStatus) {
+      safeText(byId('akte-naechste'), akte.naechsteStufeStatus + ' (ab ' + akte.naechsteStufeAb + ' Festnahmen)');
+      if (naechsteRow) naechsteRow.style.display = '';
+    } else {
+      if (naechsteRow) naechsteRow.style.display = 'none';
+    }
+
+    // Status-Farbe
+    var statusBar = byId('akte-status-bar');
+    if (statusBar) statusBar.setAttribute('data-status', akte.status || 'unbescholten');
+
+    overlay.classList.remove('hidden');
+    setUiVisible(true);
+  }
+
+  function closePolizeiakte() {
+    var overlay = byId('akte-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    evaluateUiVisibility();
+    // NUI Callback
+    fetch('https://mtj_arrest/closePolizeiakte', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    }).catch(function() {});
+  }
+
+  // Close-Button & ESC
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'akte-close') closePolizeiakte();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var overlay = byId('akte-overlay');
+      if (overlay && !overlay.classList.contains('hidden')) {
+        closePolizeiakte();
+      }
+    }
+  });
 
   function setUiVisible(show) {
     try {
@@ -341,6 +407,9 @@
         break;
       case 'notify':
         showNotify(d.text || '', d.type || 'info');
+        break;
+      case 'polizeiakteOpen':
+        handlePolizeiakteOpen(d.akte || {});
         break;
       case 'mtj_debug_state':
       case 'mtj_debug_log':

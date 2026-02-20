@@ -208,4 +208,44 @@ AddEventHandler('mtj_arrest:requestAkte', function()
   end
 end)
 
+-- Vollständige Akte für NPC-Einsicht (mit Stufen-Details)
+RegisterNetEvent('mtj_arrest:requestFullAkte')
+AddEventHandler('mtj_arrest:requestFullAkte', function()
+  local src = source
+  local akte = getAkte(src)
+  if not akte then
+    TriggerClientEvent('mtj_arrest:clientFullAkte', src, nil)
+    return
+  end
+
+  -- Stufen-Info hinzufügen
+  local cfg = Config.Polizeiakte or {}
+  local stufen = cfg.Stufen or {}
+  local currentStufe = nil
+  for i = #stufen, 1, -1 do
+    if akte.festnahmen >= stufen[i].AbFestnahmen then
+      currentStufe = stufen[i]
+      break
+    end
+  end
+
+  -- Nächste Stufe berechnen
+  local naechsteStufe = nil
+  for _, s in ipairs(stufen) do
+    if akte.festnahmen < s.AbFestnahmen then
+      naechsteStufe = s
+      break
+    end
+  end
+
+  akte.haftzeitMultiplikator = currentStufe and currentStufe.HaftzeitMultiplikator or 1.0
+  akte.geldstrafeMultiplikator = currentStufe and currentStufe.GeldstrafeMultiplikator or 1.0
+  akte.naechsteStufeStatus = naechsteStufe and naechsteStufe.Status or nil
+  akte.naechsteStufeAb = naechsteStufe and naechsteStufe.AbFestnahmen or nil
+  akte.serverName = cfg.ServerName or "GreenZone420 PD"
+
+  TriggerClientEvent('mtj_arrest:clientFullAkte', src, akte)
+  dbg(("Vollständige Akte gesendet an Spieler %d"):format(src))
+end)
+
 dbg("Polizeiakte-System geladen (KVP-persistent)")

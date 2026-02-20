@@ -72,6 +72,74 @@
         <div class="accent-line subtle"></div>
       </section>
     </div>
+
+    <!-- ═══ Polizeiakte Vollbild-UI ═══ -->
+    <div id="akte-overlay" class="akte-overlay hidden">
+      <div class="akte-bg"></div>
+      <div class="akte-container">
+        <div class="akte-header">
+          <div class="akte-badge">🛡️</div>
+          <div class="akte-header-text">
+            <h1 class="akte-title">POLIZEIAKTE</h1>
+            <p class="akte-server" id="akte-server">Police Department</p>
+          </div>
+          <button class="akte-close" id="akte-close">✕</button>
+        </div>
+
+        <div class="akte-status-bar" id="akte-status-bar">
+          <span class="akte-status-label">Status:</span>
+          <span class="akte-status-value" id="akte-status">UNBESCHOLTEN</span>
+        </div>
+
+        <div class="akte-grid">
+          <div class="akte-stat">
+            <div class="akte-stat-icon">🚔</div>
+            <div class="akte-stat-value" id="akte-festnahmen">0</div>
+            <div class="akte-stat-label">Festnahmen</div>
+          </div>
+          <div class="akte-stat">
+            <div class="akte-stat-icon">⏱️</div>
+            <div class="akte-stat-value" id="akte-haftzeit">0 Min</div>
+            <div class="akte-stat-label">Gesamte Haftzeit</div>
+          </div>
+          <div class="akte-stat">
+            <div class="akte-stat-icon">💰</div>
+            <div class="akte-stat-value" id="akte-geldstrafe">0 €</div>
+            <div class="akte-stat-label">Geldstrafen gesamt</div>
+          </div>
+          <div class="akte-stat">
+            <div class="akte-stat-icon">🏃</div>
+            <div class="akte-stat-value" id="akte-flucht">0</div>
+            <div class="akte-stat-label">Fluchtversuche</div>
+          </div>
+        </div>
+
+        <div class="akte-details">
+          <div class="akte-detail-row">
+            <span class="akte-detail-label">📅 Letzte Festnahme</span>
+            <span class="akte-detail-value" id="akte-letzte">—</span>
+          </div>
+          <div class="akte-detail-row">
+            <span class="akte-detail-label">⚖️ Haftzeit-Multiplikator</span>
+            <span class="akte-detail-value" id="akte-haft-mult">×1.0</span>
+          </div>
+          <div class="akte-detail-row">
+            <span class="akte-detail-label">💸 Geldstrafe-Multiplikator</span>
+            <span class="akte-detail-value" id="akte-geld-mult">×1.0</span>
+          </div>
+          <div class="akte-detail-row" id="akte-naechste-row">
+            <span class="akte-detail-label">⬆️ Nächste Stufe</span>
+            <span class="akte-detail-value" id="akte-naechste">—</span>
+          </div>
+        </div>
+
+        <div class="akte-footer">
+          <p class="akte-hinweis">Dieses Dokument ist Eigentum der Polizeibehörde.<br>Unbefugte Weitergabe ist strafbar.</p>
+          <p class="akte-esc">Drücke <span class="akte-key">ESC</span> oder <span class="akte-key">✕</span> zum Schließen</p>
+        </div>
+      </div>
+    </div>
+
     <script src="app.js"></script>
   </body>
 </html>

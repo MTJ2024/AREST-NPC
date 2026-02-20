@@ -80,16 +80,10 @@ CreateThread(function()
                     Wait(500)
                 end
             end
-            -- Entferne tote Cops aus Liste (Leiche nach 3s löschen)
+            -- Remove dead cops from tracking list (entity deleted by main.lua deadBodies system)
             for i = #activeCops, 1, -1 do
                 local cop = activeCops[i]
-                if not DoesEntityExist(cop) then
-                    table.remove(activeCops, i)
-                elseif IsEntityDead(cop) then
-                    -- Leiche nach kurzer Verzögerung entfernen
-                    SetTimeout(3000, function()
-                        if DoesEntityExist(cop) then DeleteEntity(cop) end
-                    end)
+                if not DoesEntityExist(cop) or IsEntityDead(cop) then
                     table.remove(activeCops, i)
                 end
             end

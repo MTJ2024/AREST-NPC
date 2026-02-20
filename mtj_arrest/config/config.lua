@@ -286,6 +286,29 @@ Config.Entlassungswarnung = {
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              POLIZEIAKTE-NPC (Akte einsehen am NPC)             ║
+-- ║  Ein NPC vor dem Spieler hinfahren kann, um seine Akte zu       ║
+-- ║  sehen — vollautomatisch, kein echter Spieler nötig             ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.PolizeiakteNPC = {
+    Aktiviert           = true,                                    -- true = NPC wird gespawnt
+    Position            = vector3(441.4, -979.5, 30.69),           -- Vor dem Polizeirevier (Mission Row PD)
+    Heading             = 180.0,                                   -- Blickrichtung des NPC
+    Model               = "s_m_y_cop_01",                          -- NPC-Modell (Polizist)
+    Scenario            = "WORLD_HUMAN_CLIPBOARD",                 -- Animation (Clipboard halten)
+    Interaktionsradius  = 2.5,                                     -- Meter: wie nah der Spieler sein muss
+    InteraktionsText    = "[E] Polizeiakte einsehen",              -- Text über dem NPC
+
+    -- Blip auf der Karte
+    Blip = {
+        Sprite          = 60,                                      -- Blip-Icon (60 = Stern/Polizei)
+        Scale           = 0.85,                                    -- Größe des Blips
+        Farbe           = 3,                                       -- Farbe (3 = blau)
+        Name            = "Polizeiakte",                           -- Name auf der Karte
+    },
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              DEBUG                                              ║
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.Debug                    = false   -- true = Debug-Ausgaben in Konsole

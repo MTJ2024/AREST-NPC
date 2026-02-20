@@ -519,3 +519,244 @@ body {
   0%   { opacity: 1; transform: translateX(0); }
   100% { opacity: 0; transform: translateX(-60px); }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Polizeiakte Vollbild-UI
+   ═══════════════════════════════════════════════════════ */
+.akte-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: akteFadeIn 0.4s ease-out both;
+}
+.akte-overlay.hidden {
+  display: none !important;
+}
+
+/* Hintergrund: Dunkler Blur-Overlay mit Polizei-Muster */
+.akte-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(33,122,255,0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(255,42,42,0.08) 0%, transparent 50%),
+    linear-gradient(135deg, #070c1e 0%, #0e1630 40%, #121b3b 100%);
+  opacity: 0.97;
+}
+
+.akte-container {
+  position: relative;
+  z-index: 2;
+  width: 700px;
+  max-width: 92vw;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: linear-gradient(160deg, rgba(18,27,59,0.95) 0%, rgba(14,22,48,0.98) 100%);
+  border: 2px solid rgba(33,122,255,0.3);
+  border-radius: 24px;
+  box-shadow:
+    0 0 60px 0 rgba(33,122,255,0.2),
+    0 0 30px 0 rgba(255,42,42,0.1),
+    0 20px 60px rgba(0,0,0,0.5);
+  padding: 0;
+  animation: akteSlideUp 0.5s cubic-bezier(.22,1.1,.38,1) both;
+}
+
+/* Header */
+.akte-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 28px 32px 20px 32px;
+  border-bottom: 2px solid rgba(33,122,255,0.2);
+  background: linear-gradient(90deg, rgba(33,122,255,0.08) 0%, transparent 100%);
+  border-radius: 24px 24px 0 0;
+}
+.akte-badge {
+  font-size: 2.8rem;
+  filter: drop-shadow(0 0 12px rgba(33,122,255,0.5));
+}
+.akte-header-text { flex: 1; }
+.akte-title {
+  font-family: var(--font-digi);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(33,122,255,0.5), 0 0 8px rgba(255,42,42,0.3);
+  margin: 0;
+}
+.akte-server {
+  font-size: 0.95rem;
+  color: rgba(179,214,255,0.7);
+  margin: 4px 0 0 0;
+  letter-spacing: 0.04em;
+}
+.akte-close {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.15);
+  background: rgba(255,42,42,0.15);
+  color: #ff6b6b;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.akte-close:hover {
+  background: rgba(255,42,42,0.3);
+  border-color: #ff6b6b;
+  box-shadow: 0 0 16px rgba(255,42,42,0.4);
+}
+
+/* Status-Bar */
+.akte-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 32px;
+  background: linear-gradient(90deg, rgba(33,122,255,0.06) 0%, rgba(255,42,42,0.06) 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.akte-status-label {
+  font-family: var(--font-digi);
+  font-size: 0.9rem;
+  color: rgba(179,214,255,0.6);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.akte-status-value {
+  font-family: var(--font-digi);
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 20px;
+  border-radius: 30px;
+  border: 2px solid currentColor;
+  text-shadow: 0 0 12px currentColor;
+  box-shadow: 0 0 16px rgba(33,122,255,0.2);
+}
+
+/* Status-Farben */
+.akte-status-bar[data-status="unbescholten"] .akte-status-value { color: #2ecc71; }
+.akte-status-bar[data-status="vorbestraft"] .akte-status-value { color: #f39c12; }
+.akte-status-bar[data-status="mehrfach vorbestraft"] .akte-status-value { color: #e67e22; }
+.akte-status-bar[data-status="schwerkriminell"] .akte-status-value { color: #e74c3c; }
+.akte-status-bar[data-status="Staatsfeind"] .akte-status-value {
+  color: #ff1744;
+  animation: statusBlink 1.2s infinite alternate;
+}
+@keyframes statusBlink {
+  0% { text-shadow: 0 0 8px #ff1744; }
+  100% { text-shadow: 0 0 30px #ff1744, 0 0 60px rgba(255,23,68,0.4); }
+}
+
+/* Statistik-Grid */
+.akte-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  padding: 0;
+}
+.akte-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 12px;
+  border-right: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.akte-stat:last-child { border-right: none; }
+.akte-stat-icon {
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 8px rgba(33,122,255,0.3));
+}
+.akte-stat-value {
+  font-family: var(--font-digi);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 12px rgba(33,122,255,0.4);
+  margin-bottom: 4px;
+}
+.akte-stat-label {
+  font-size: 0.78rem;
+  color: rgba(179,214,255,0.5);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+/* Detail-Rows */
+.akte-details {
+  padding: 16px 32px;
+}
+.akte-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.akte-detail-row:last-child { border-bottom: none; }
+.akte-detail-label {
+  font-size: 0.95rem;
+  color: rgba(179,214,255,0.7);
+}
+.akte-detail-value {
+  font-family: var(--font-digi);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+
+/* Footer */
+.akte-footer {
+  padding: 18px 32px 24px 32px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  text-align: center;
+}
+.akte-hinweis {
+  font-size: 0.78rem;
+  color: rgba(179,214,255,0.35);
+  line-height: 1.5;
+  margin: 0 0 10px 0;
+}
+.akte-esc {
+  font-size: 0.85rem;
+  color: rgba(179,214,255,0.5);
+  margin: 0;
+}
+.akte-key {
+  font-family: var(--font-digi);
+  font-size: 0.8rem;
+  background: rgba(33,122,255,0.2);
+  color: var(--accent2);
+  padding: 2px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(33,122,255,0.3);
+}
+
+@keyframes akteFadeIn {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes akteSlideUp {
+  0%   { opacity: 0; transform: translateY(40px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 600px) {
+  .akte-grid { grid-template-columns: repeat(2, 1fr); }
+  .akte-container { border-radius: 16px; }
+  .akte-title { font-size: 1.4rem; }
+}
