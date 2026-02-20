@@ -143,6 +143,9 @@ body {
   margin: 10px 0 18px 0;
   text-align: center;
   text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 .key {
   font-family: var(--font-digi);
@@ -425,35 +428,37 @@ body {
   transition: width 1s linear;
 }
 
-/* Starker Puls: 100% bis 0% Sichtbarkeit (voll pulsierend) */
+/* Langsamer Puls: 0% bis 100% Sichtbarkeit in 11 Sekunden */
 .card.scenario.pulse-ui {
-  animation: scenarioPulseStrong 2.2s ease-in-out infinite !important;
+  animation: scenarioPulseSlow 11s ease-in-out infinite !important;
 }
-@keyframes scenarioPulseStrong {
-  0%   { opacity: 1; }
-  50%  { opacity: 0; }
-  100% { opacity: 1; }
+@keyframes scenarioPulseSlow {
+  0%   { opacity: 0; }
+  50%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
-/* Jail-UI: Gleiche Groesse wie Szenario + sanfter Puls */
+/* Jail-UI: GROSS (gleiche Groesse wie Szenario) + langsamer 11s Puls */
 .card.jail {
-  min-width: 440px;
-  max-width: 560px;
-  padding: 28px 36px 24px 36px;
+  min-width: 540px;
+  max-width: 700px;
+  padding: 38px 48px 32px 48px;
   animation: none;
 }
 
 .card.jail .title {
-  font-size: 2.4rem;
+  font-size: 3.2rem;
+  letter-spacing: 0.10em;
 }
 
 .card.jail .chip {
-  font-size: 1.25rem;
-  padding: 7px 20px;
+  font-size: 1.4rem;
+  padding: 9px 24px;
 }
 
 .card.jail .subtitle {
-  font-size: 1.3rem;
+  font-size: 1.5rem;
+  margin: 10px 0 22px 0;
 }
 
 .card.jail .accent-line {
@@ -461,7 +466,7 @@ body {
 }
 
 .card.jail.pulse-ui {
-  animation: scenarioPulse 5s ease-in-out infinite !important;
+  animation: scenarioPulseSlow 11s ease-in-out infinite !important;
 }
 
 /* Sanfter Puls: 100% bis 60% Sichtbarkeit (nie unsichtbar) */
@@ -529,14 +534,16 @@ body {
    ═══════════════════════════════════════════════════════ */
 .notify-stack {
   position: fixed;
-  left: 24px;
+  left: 50%;
+  transform: translateX(-50%);
   top: 18px;
   z-index: 999;
   display: flex;
   flex-direction: column;
   gap: 10px;
   pointer-events: none;
-  max-width: 380px;
+  max-width: 520px;
+  width: 90vw;
 }
 
 .notify-item {
@@ -551,11 +558,11 @@ body {
   box-shadow: 0 2px 16px 0 rgba(0,0,0,0.55), 0 0 12px 0 rgba(33,122,255,0.2);
   color: #fff;
   font-family: var(--font-main);
-  font-size: 0.92rem;
-  line-height: 1.3;
+  font-size: 0.95rem;
+  line-height: 1.4;
   letter-spacing: 0.02em;
   opacity: 0;
-  transform: translateX(-60px);
+  transform: translateY(-30px);
   animation: notifySlideIn 0.5s cubic-bezier(.22,1.1,.38,1) forwards;
   pointer-events: none;
 }
@@ -574,6 +581,8 @@ body {
 .notify-text {
   flex: 1;
   text-shadow: 0 1px 4px rgba(0,0,0,0.8), 0 0 6px rgba(0,0,0,0.4);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .notify-item.type-polizei {
@@ -597,12 +606,12 @@ body {
 .notify-item.type-info .notify-icon { color: var(--accent2); }
 
 @keyframes notifySlideIn {
-  0%   { opacity: 0; transform: translateX(-60px); }
-  100% { opacity: 1; transform: translateX(0); }
+  0%   { opacity: 0; transform: translateY(-30px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 @keyframes notifySlideOut {
-  0%   { opacity: 1; transform: translateX(0); }
-  100% { opacity: 0; transform: translateX(-60px); }
+  0%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-30px); }
 }
 
 /* ═══════════════════════════════════════════════════════
