@@ -232,6 +232,8 @@ local RESPAWN_RADIUS = 100.0 -- Cops zaehlen und verwalten im 100m Radius
 local vorwarnungActive = false -- Vorwarnung gerade aktiv (auto_cop_spawn muss warten)
 local diedDuringScenario = false -- Spieler ist waehrend Polizeieinsatz gestorben
 local lastKnownWanted = 0 -- Letzter bekannter Wanted-Level (fuer Wiederherstellung bei GTA-Reset)
+local evasionStartTime = 0 -- GameTimer wann Evasion-Countdown begann (0 = nicht aktiv)
+local evasionNotifiedAt = 0 -- Letzter Zeitpunkt einer Evasion-HUD-Nachricht
 
 -- Gibt den effektiven Wanted-Level zurueck: GTA-Wert ODER lastKnownWanted als Fallback.
 -- GTA V setzt Wanted manchmal kurz auf 0 wenn keine Cops sichtbar sind.
@@ -309,21 +311,120 @@ end)
 -- === WANTED-LEVEL WARTUNG (haelt Wanted-Level aktiv solange Szenario laeuft) ===
 -- GTA V setzt Wanted auf 0 wenn keine Cops in Sichtlinie — dieses Thread verhindert das.
 -- Prinzip: "Solange Sterne, solange Aktion" — Wanted bleibt aktiv ab Szenario-Start.
+-- ENTKOMMEN: Wenn Spieler lange genug ALLEN Cops entwischt, Wanted sinkt → Szenario endet.
 CreateThread(function()
   while true do
     Wait(500)
     if scenarioActive and not surrendered and not cuffed and not inJail then
-      local wanted = GetPlayerWantedLevel(PlayerId())
-      if wanted > 0 then
-        lastKnownWanted = wanted
-        -- Wanted aktiv halten (GTA vergisst es sonst)
-        SetPlayerWantedLevel(PlayerId(), wanted, false)
-        SetPlayerWantedLevelNow(PlayerId(), false)
-      elseif lastKnownWanted > 0 then
-        -- GTA hat Wanted zurueckgesetzt (keine Cops sichtbar) → Wiederherstellen
-        dbg("WantedMaintenance: GTA hat Wanted auf 0 gesetzt, stelle wieder her:", lastKnownWanted)
-        SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
-        SetPlayerWantedLevelNow(PlayerId(), false)
+      -- === Entkommen-Pruefung: Ist ein Cop in der Naehe? ===
+      local esc = Config.Entkommen
+      local escapeEnabled = esc and esc.Aktiviert
+      local copNearby = false
+      if escapeEnabled then
+        local escRadius = esc.FreiRadius or 80.0
+        local ppos = GetEntityCoords(PlayerPedId())
+        -- Pruefe Fusscops
+        copNearby = isAnyCopNearPlayer(escRadius)
+        -- Pruefe Heli-Besatzung
+        if not copNearby then
+          for _, h in ipairs(helis) do
+            if h.vehicle and DoesEntityExist(h.vehicle) and not IsEntityDead(h.vehicle) then
+              if #(GetEntityCoords(h.vehicle) - ppos) <= escRadius then
+                copNearby = true
+                break
+              end
+            end
+          end
+        end
+        -- Pruefe Fahrzeug-Besatzung
+        if not copNearby then
+          for _, pv in ipairs(policeVehicles) do
+            if pv.crew then
+              for _, c in ipairs(pv.crew) do
+                if DoesEntityExist(c) and not IsEntityDead(c) then
+                  if #(GetEntityCoords(c) - ppos) <= escRadius then
+                    copNearby = true
+                    break
+                  end
+                end
+              end
+            end
+            if copNearby then break end
+          end
+        end
+      end
+
+      -- === Entkommen-Logik ===
+      if escapeEnabled and not copNearby then
+        local now = GetGameTimer()
+        if evasionStartTime == 0 then
+          evasionStartTime = now
+          dbg("Evasion gestartet: kein Cop in Reichweite")
+        end
+        local elapsed = (now - evasionStartTime) / 1000.0
+        local escTime = esc.ZeitBisEntkommen or 45
+        local remaining = math.ceil(escTime - elapsed)
+
+        if remaining <= 0 then
+          -- ENTKOMMEN! Wanted abbauen, Szenario beenden
+          dbg("ENTKOMMEN! Spieler hat alle Cops abgehaengt fuer", escTime, "Sekunden")
+          lastKnownWanted = 0
+          evasionStartTime = 0
+          evasionNotifiedAt = 0
+          SetPlayerWantedLevel(PlayerId(), 0, false)
+          SetPlayerWantedLevelNow(PlayerId(), false)
+          nativeNotify(esc.NachrichtEntkommen or "~g~ENTKOMMEN!~s~ Du hast die Polizei abgehängt!", "erfolg")
+          nativeHudSet("evasion", nil) -- HUD-Zeile entfernen
+          -- endScenario wird vom Wanted-Level-Watcher ausgeloest (erkennt Wanted=0)
+        else
+          -- Evasion laeuft: HUD-Feedback alle 5 Sekunden
+          if now - evasionNotifiedAt >= 5000 then
+            evasionNotifiedAt = now
+            local hudMsg = (esc.NachrichtEvasion or "~b~Polizei verliert dich...~s~ Noch %ds bis Entkommen!"):format(remaining)
+            -- Strip GTA color codes for native HUD (NUI gets the formatted version)
+            nativeHudSet("evasion", hudMsg:gsub("~[a-zA-Z]~", ""), 100, 180, 255)
+            dbg("Evasion:", remaining, "s verbleibend")
+          end
+          -- Wanted trotzdem halten (Spieler ist noch nicht frei!)
+          local wanted = GetPlayerWantedLevel(PlayerId())
+          if wanted > 0 then
+            lastKnownWanted = wanted
+            SetPlayerWantedLevel(PlayerId(), wanted, false)
+            SetPlayerWantedLevelNow(PlayerId(), false)
+          elseif lastKnownWanted > 0 then
+            SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
+            SetPlayerWantedLevelNow(PlayerId(), false)
+          end
+        end
+      else
+        -- Cop in der Naehe oder Entkommen deaktiviert: Reset Evasion-Timer
+        if evasionStartTime > 0 then
+          dbg("Evasion abgebrochen: Cop in der Naehe!")
+          if escapeEnabled then
+            nativeNotify(esc.NachrichtVerloren or "~r~ENTDECKT!~s~ Die Polizei hat dich wieder im Visier!", "warnung")
+          end
+          evasionStartTime = 0
+          evasionNotifiedAt = 0
+          nativeHudSet("evasion", nil) -- HUD-Zeile entfernen
+        end
+        -- Wanted aktiv halten (normal)
+        local wanted = GetPlayerWantedLevel(PlayerId())
+        if wanted > 0 then
+          lastKnownWanted = wanted
+          SetPlayerWantedLevel(PlayerId(), wanted, false)
+          SetPlayerWantedLevelNow(PlayerId(), false)
+        elseif lastKnownWanted > 0 then
+          dbg("WantedMaintenance: GTA hat Wanted auf 0 gesetzt, stelle wieder her:", lastKnownWanted)
+          SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
+          SetPlayerWantedLevelNow(PlayerId(), false)
+        end
+      end
+    else
+      -- Szenario nicht aktiv oder Spieler bereits verhaftet → Reset Evasion
+      if evasionStartTime > 0 then
+        evasionStartTime = 0
+        evasionNotifiedAt = 0
+        nativeHudSet("evasion", nil)
       end
     end
   end
@@ -1486,6 +1587,8 @@ AddEventHandler('mtj_arrest:endScenario', function()
   vorwarnungActive = false
   scenarioStartPos = nil
   lastKnownWanted = 0
+  evasionStartTime = 0
+  evasionNotifiedAt = 0
   hideScenarioUI()
   hideVorwarnungUI()
   nativeHudClear()
@@ -1550,6 +1653,8 @@ AddEventHandler('playerSpawned', function()
   vorwarnungActive = false
   scenarioStartPos = nil
   lastKnownWanted = 0
+  evasionStartTime = 0
+  evasionNotifiedAt = 0
   releaseWarningShown = false
   inJail = false
   deadBodies = {} -- Leichen-Cleanup zurücksetzen
@@ -1595,6 +1700,8 @@ AddEventHandler('onResourceStop', function(res)
   vorwarnungActive = false
   scenarioStartPos = nil
   lastKnownWanted = 0
+  evasionStartTime = 0
+  evasionNotifiedAt = 0
   releaseWarningShown = false
   inJail = false
   deadBodies = {}

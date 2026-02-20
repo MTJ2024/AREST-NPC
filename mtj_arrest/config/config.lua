@@ -193,6 +193,21 @@ Config.Fluchtversuch = {
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              ENTKOMMEN (Flucht gelingt bei guter Evasion)       ║
+-- ║  Wenn der Spieler lange genug ALLEN Cops entwischt (kein Cop    ║
+-- ║  in Sichtweite), sinkt das Wanted-Level und er entkommt.        ║
+-- ║  Belohnt geschickte Spieler, die wirklich gut entkommen!        ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.Entkommen = {
+    Aktiviert           = true,     -- true = Entkommen möglich
+    FreiRadius          = 80.0,     -- Meter: Kein Cop darf SO NAH sein (dann zählt Evasion)
+    ZeitBisEntkommen    = 45,       -- Sekunden: So lange muss Spieler ALLEN Cops entwischt sein
+    NachrichtEvasion    = "~b~Polizei verliert dich...~s~ Noch %ds bis Entkommen!",
+    NachrichtEntkommen  = "~g~ENTKOMMEN!~s~ Du hast die Polizei abgehängt!",
+    NachrichtVerloren   = "~r~ENTDECKT!~s~ Die Polizei hat dich wieder im Visier!",
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              STRAFREGISTER (Wiederholungstäter)                  ║
 -- ║  Mehrfach verhaftete Spieler bekommen härtere Strafen           ║
 -- ╚══════════════════════════════════════════════════════════════════╝
