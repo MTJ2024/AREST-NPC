@@ -350,7 +350,7 @@ Config.PolizeiakteNPC = {
     Heading             = 149.8703,                                -- Blickrichtung des NPC
     Model               = "s_m_y_cop_01",                          -- NPC-Modell (Polizist)
     Scenario            = "WORLD_HUMAN_CLIPBOARD",                 -- Animation (Clipboard halten)
-    Interaktionsradius  = 2.5,                                     -- Meter: wie nah der Spieler sein muss
+    Interaktionsradius  = 5.0,                                     -- Meter: wie nah der Spieler sein muss
     InteraktionsText    = "[E] Polizeiakte einsehen",              -- Text über dem NPC
 
     -- Blip auf der Karte

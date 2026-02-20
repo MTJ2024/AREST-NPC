@@ -36,13 +36,21 @@ CreateThread(function()
     return
   end
 
-  akteNpc = CreatePed(4, hash, pos.x, pos.y, pos.z, heading, false, true)
+  -- Korrekte Bodenhoehe ermitteln (NPC darf nicht schweben!)
+  local groundZ = pos.z
+  local found, gz = GetGroundZFor_3dCoord(pos.x, pos.y, pos.z + 2.0, false)
+  if found then
+    groundZ = gz
+  end
+
+  akteNpc = CreatePed(4, hash, pos.x, pos.y, groundZ, heading, false, true)
   SetEntityAsMissionEntity(akteNpc, true, true)
   SetBlockingOfNonTemporaryEvents(akteNpc, true)
   SetPedFleeAttributes(akteNpc, 0, false)
   SetPedCombatAttributes(akteNpc, 46, true)
   SetEntityInvincible(akteNpc, true)
   FreezeEntityPosition(akteNpc, true)
+  PlaceObjectOnGroundProperly(akteNpc) -- Extra Sicherheit gegen Schweben
   SetPedKeepTask(akteNpc, true)
   TaskStartScenarioInPlace(akteNpc, cfg.Scenario or "WORLD_HUMAN_CLIPBOARD", 0, true)
   SetModelAsNoLongerNeeded(hash)
@@ -79,9 +87,9 @@ CreateThread(function()
       local dist = #(ppos - npcPos)
 
       if dist < interactDist then
-        -- 3D-Text über NPC anzeigen
+        -- 3D-Text über NPC anzeigen (hoeher fuer bessere Sichtbarkeit)
         local label = cfg.InteraktionsText or "[E] Polizeiakte einsehen"
-        DrawText3D(npcPos.x, npcPos.y, npcPos.z + 1.1, label)
+        DrawText3D(npcPos.x, npcPos.y, npcPos.z + 1.3, label)
 
         if IsControlJustPressed(0, 38) then -- E
           akteOpen = true
@@ -101,10 +109,10 @@ end)
 function DrawText3D(x, y, z, text)
   local onScreen, sx, sy = World3dToScreen2d(x, y, z)
   if onScreen then
-    SetTextScale(0.35, 0.35)
+    SetTextScale(0.50, 0.50)
     SetTextFont(4)
     SetTextProportional(true)
-    SetTextColour(255, 255, 255, 230)
+    SetTextColour(255, 255, 255, 240)
     SetTextDropshadow(0, 0, 0, 0, 255)
     SetTextEdge(2, 0, 0, 0, 150)
     SetTextDropShadow()
