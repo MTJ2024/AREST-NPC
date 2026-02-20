@@ -63,30 +63,54 @@ local function getMaxCopsForWanted(wanted)
     return math.min(wanted + 1, 10)
 end
 
--- Haupt-Loop
+-- Haupt-Loop (koordiniert mit main.lua ueber globale Funktionen)
 CreateThread(function()
     while true do
         Wait(1500)
-        local wanted = GetPlayerWantedLevel(PlayerId())
-        if wanted >= 2 then
-            local playerPed = PlayerPedId()
-            local playerCoords = GetEntityCoords(playerPed)
-            local maxCops = getMaxCopsForWanted(wanted)
-            -- Falls zu wenige Cops: Nachspawnen
-            if #activeCops < maxCops then
-                local toSpawn = maxCops - #activeCops
-                for i=1, toSpawn do
-                    spawnCopNearPlayer(playerCoords)
-                    Wait(500)
-                end
-            end
-            -- Remove dead cops from tracking list (entity deleted by main.lua deadBodies system)
+
+        -- Waehrend Vorwarnung oder aktivem Szenario: main.lua uebernimmt das Spawning
+        local scenActive = (IsArrestScenarioActive and IsArrestScenarioActive()) or false
+        local vwActive = (IsVorwarnungActive and IsVorwarnungActive()) or false
+        if scenActive or vwActive then
+            -- Eigene Cops behalten (kaempfen weiter), aber NICHT nachspawnen
+            -- Tote entfernen
             for i = #activeCops, 1, -1 do
                 local cop = activeCops[i]
                 if not DoesEntityExist(cop) or IsEntityDead(cop) then
                     table.remove(activeCops, i)
                 end
             end
+            goto continue
+        end
+
+        local wanted = GetPlayerWantedLevel(PlayerId())
+        if wanted >= 2 then
+            local playerPed = PlayerPedId()
+            local playerCoords = GetEntityCoords(playerPed)
+
+            -- Tote Cops zuerst entfernen
+            for i = #activeCops, 1, -1 do
+                local cop = activeCops[i]
+                if not DoesEntityExist(cop) or IsEntityDead(cop) then
+                    table.remove(activeCops, i)
+                end
+            end
+
+            -- Globales Limit pruefen: main.lua Cops + eigene Cops < MaxActiveCops
+            local mainCops = (GetMainLuaAliveCopCount and GetMainLuaAliveCopCount()) or 0
+            local maxGlobal = (Config and Config.MaxActiveCops) or 20
+            local maxForWanted = getMaxCopsForWanted(wanted)
+            local totalAlive = mainCops + #activeCops
+            local canSpawn = math.min(maxForWanted - #activeCops, maxGlobal - totalAlive)
+
+            if canSpawn > 0 then
+                -- Max 2 pro Tick (statt alle auf einmal)
+                for i = 1, math.min(canSpawn, 2) do
+                    spawnCopNearPlayer(playerCoords)
+                    Wait(500)
+                end
+            end
+
             -- Bestehende Cops neu bewaffnen und Kampf sicherstellen
             local pistolHash = GetHashKey("WEAPON_PISTOL")
             for _, cop in ipairs(activeCops) do
@@ -105,5 +129,6 @@ CreateThread(function()
                 clearCops()
             end
         end
+        ::continue::
     end
 end)

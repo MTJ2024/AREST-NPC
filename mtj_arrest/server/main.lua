@@ -80,25 +80,25 @@ local function clearAllWeaponsAndItems(src)
   if ESX then
     local xPlayer = ESX.GetPlayerFromId(src)
     if xPlayer then
-      -- Waffen im Loadout
+      -- Waffen im Loadout (WICHTIG: Colon-Syntax fuer ESX-Methoden!)
       if xPlayer.getLoadout and xPlayer.removeWeapon then
-        local loadout = xPlayer.getLoadout()
+        local loadout = xPlayer:getLoadout()
         if loadout then
           for _, w in pairs(loadout) do
             local wname = (w and (w.name or w.weapon)) or nil
             if wname then
-              xPlayer.removeWeapon(wname)
+              xPlayer:removeWeapon(wname)
               removed_esx = removed_esx + 1
             end
           end
         end
       end
       -- Alles aus dem Inventory
-      local inv = (xPlayer.getInventory and xPlayer.getInventory()) or xPlayer.inventory
+      local inv = (xPlayer.getInventory and xPlayer:getInventory()) or xPlayer.inventory
       if inv then
         for _, item in pairs(inv) do
           if item and item.name and item.count and item.count > 0 then
-            xPlayer.removeInventoryItem(item.name, item.count)
+            xPlayer:removeInventoryItem(item.name, item.count)
             removed_esx = removed_esx + item.count
           end
         end
@@ -322,7 +322,7 @@ local function playerHasWeaponLicense(src)
 
   -- ESX Lizenzen prüfen
   if xPlayer.getLicenses then
-    local licenses = xPlayer.getLicenses()
+    local licenses = xPlayer:getLicenses()
     if licenses then
       for _, lic in pairs(licenses) do
         if lic and lic.type == "weapon" then
@@ -347,12 +347,12 @@ AddEventHandler('mtj_arrest:serverJailRelease', function()
       local xPlayer = ESX.GetPlayerFromId(src)
       if xPlayer then
         if xPlayer.getLoadout and xPlayer.removeWeapon then
-          local loadout = xPlayer.getLoadout()
+          local loadout = xPlayer:getLoadout()
           if loadout then
             for _, w in pairs(loadout) do
               local wname = (w and (w.name or w.weapon)) or nil
               if wname then
-                xPlayer.removeWeapon(wname)
+                xPlayer:removeWeapon(wname)
               end
             end
           end

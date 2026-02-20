@@ -81,6 +81,40 @@ local fluchtversuchTriggered = false -- Fluchtversuch nur einmal pro Szenario
 local releaseWarningShown = false -- Entlassungswarnung nur einmal
 local playerAkteStatus = "unbescholten" -- Polizeiakte-Status (vom Server geladen)
 local policeVehicles = {} -- Gespawnte Polizeifahrzeuge
+local vorwarnungActive = false -- Vorwarnung gerade aktiv (auto_cop_spawn muss warten)
+
+-- === GLOBALER COP-ZAEHLER (fuer auto_cop_spawn.lua Koordination) ===
+-- Zaehlt nur LEBENDE Cops aus main.lua (cops + policeVehicles + heli crews)
+function GetMainLuaAliveCopCount()
+  local count = 0
+  for _, ped in ipairs(cops) do
+    if DoesEntityExist(ped) and not IsEntityDead(ped) then count = count + 1 end
+  end
+  for _, h in ipairs(helis) do
+    if h.gunners then
+      for _, g in ipairs(h.gunners) do
+        if DoesEntityExist(g) and not IsEntityDead(g) then count = count + 1 end
+      end
+    end
+    if h.pilot and DoesEntityExist(h.pilot) and not IsEntityDead(h.pilot) then count = count + 1 end
+  end
+  for _, pv in ipairs(policeVehicles) do
+    if pv.crew then
+      for _, c in ipairs(pv.crew) do
+        if DoesEntityExist(c) and not IsEntityDead(c) then count = count + 1 end
+      end
+    end
+  end
+  return count
+end
+
+function IsArrestScenarioActive()
+  return scenarioActive
+end
+
+function IsVorwarnungActive()
+  return vorwarnungActive
+end
 
 -- === RELATIONSHIP GROUP (Cops MÜSSEN den Spieler hassen, sonst keine Interaktion) ===
 local ARREST_COP_GROUP = nil
@@ -488,15 +522,17 @@ local function startCombatMaintenance()
       end
 
       -- Verstaerkung nachspawnen wenn Cops gestorben sind
+      -- Globales Limit: main.lua Cops vs MaxActiveCops (inkl. lebende Cops-Zaehlung)
       local targetCount = Config.PoliceCount or 7
       if Config.CopsPerWantedLevel and Config.CopsPerWantedLevel[wanted] then
         targetCount = Config.CopsPerWantedLevel[wanted]
       end
       local maxActive = Config.MaxActiveCops or 20
+      local aliveCops = GetMainLuaAliveCopCount()
       targetCount = math.min(targetCount, maxActive)
-      local toSpawn = targetCount - #cops
+      local toSpawn = math.min(targetCount - aliveCops, maxActive - aliveCops)
       if toSpawn > 0 then
-        dbg("Verstärkung: spawne", toSpawn, "neue Cops (von", #cops, "auf", targetCount, ")")
+        dbg("Verstärkung: spawne", math.min(toSpawn, 3), "neue Cops (alive:", aliveCops, "target:", targetCount, "max:", maxActive, ")")
         for i = 1, math.min(toSpawn, 3) do -- Max 3 pro Tick
           local pos = randomPosAroundPlayer(25.0, Config.MaxSpawnDistance or 40.0)
           local model = Config.PoliceModels[math.random(1, #Config.PoliceModels)]
@@ -1002,6 +1038,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
     local vwText = vw.Text or "Stellen Sie sofort Ihre Waffen ab!"
     showVorwarnungUI(vwTitel, vwText, vwDauer)
     nativeNotify("~o~WARNUNG~s~: " .. (vw.TextKurz or vwText), "warnung")
+    vorwarnungActive = true
     dbg("startScenario: Vorwarnung angezeigt fuer", vwDauer, "Sekunden")
 
     CreateThread(function()
@@ -1014,6 +1051,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
         end
       end
       hideVorwarnungUI()
+      vorwarnungActive = false
 
       if not scenarioActive then
         dbg("startScenario: Szenario waehrend Vorwarnung beendet")
@@ -1121,6 +1159,7 @@ AddEventHandler('mtj_arrest:endScenario', function()
   complianceCountdownThreadActive = false
   combatMaintenanceActive = false
   fluchtversuchTriggered = false
+  vorwarnungActive = false
   scenarioStartPos = nil
   hideScenarioUI()
   hideVorwarnungUI()
@@ -1176,6 +1215,7 @@ AddEventHandler('playerSpawned', function()
   complianceCountdownThreadActive = false
   combatMaintenanceActive = false
   fluchtversuchTriggered = false
+  vorwarnungActive = false
   scenarioStartPos = nil
   releaseWarningShown = false
   inJail = false
@@ -1217,6 +1257,7 @@ AddEventHandler('onResourceStop', function(res)
   complianceCountdownThreadActive = false
   combatMaintenanceActive = false
   fluchtversuchTriggered = false
+  vorwarnungActive = false
   scenarioStartPos = nil
   releaseWarningShown = false
   inJail = false
