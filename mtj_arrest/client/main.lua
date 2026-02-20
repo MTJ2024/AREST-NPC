@@ -9,6 +9,7 @@ local Config = Config or {}
 Config.Keys = Config.Keys or { Surrender = 38 }
 Config.PoliceCount = Config.PoliceCount or 7
 Config.MaxActiveCops = Config.MaxActiveCops or 12
+Config.Aktionsradius = Config.Aktionsradius or 25.0
 Config.PoliceOffsets = Config.PoliceOffsets or {
     vector3(8.0, 4.0, 0.0),
     vector3(-6.0, 5.0, 0.0),
@@ -1026,7 +1027,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
       dbg("startScenario: cops spawned nach Vorwarnung, warte auf Ankunft...")
 
       -- ETAPPE 2: Warten bis mindestens ein Cop im Aktionsradius ist
-      local arrivalRadius = Config.Aktionsradius or 25.0
+      local arrivalRadius = Config.Aktionsradius
       local arrivalTimeout = GetGameTimer() + ((Config.AktionsradiusTimeout or 20) * 1000)
       while scenarioActive and not isAnyCopNearPlayer(arrivalRadius) and GetGameTimer() < arrivalTimeout do
         Wait(500)
@@ -1069,7 +1070,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
     setAmbientCopsIgnore(true)
     dbg("startScenario: cops spawned (ohne Vorwarnung), warte auf Ankunft...")
 
-    local arrivalRadius = Config.Aktionsradius or 25.0
+    local arrivalRadius = Config.Aktionsradius
     local arrivalTimeout = GetGameTimer() + ((Config.AktionsradiusTimeout or 20) * 1000)
     CreateThread(function()
       while scenarioActive and not isAnyCopNearPlayer(arrivalRadius) and GetGameTimer() < arrivalTimeout do
