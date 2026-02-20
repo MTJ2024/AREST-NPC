@@ -193,10 +193,21 @@
     if (statusBar) statusBar.setAttribute('data-status', akte.status || 'unbescholten');
 
     overlay.classList.remove('hidden');
+    akteClosing = false;
     setUiVisible(true);
+
+    // Auto-Close Timer auf JS-Seite: nach 5s automatisch schliessen (Sicherheitsnetz)
+    if (akteAutoCloseTimer) clearTimeout(akteAutoCloseTimer);
+    akteAutoCloseTimer = setTimeout(function() {
+      var ov = byId('akte-overlay');
+      if (ov && !ov.classList.contains('hidden')) {
+        closePolizeiakte();
+      }
+    }, 5000);
   }
 
   var akteClosing = false;
+  var akteAutoCloseTimer = null;
 
   function sendCloseRequest(attempt) {
     attempt = attempt || 1;
@@ -216,24 +227,27 @@
   }
 
   function closePolizeiakte() {
-    if (akteClosing) return;
-    akteClosing = true;
     var overlay = byId('akte-overlay');
     if (overlay) overlay.classList.add('hidden');
     evaluateUiVisibility();
-    sendCloseRequest(1);
+    if (akteAutoCloseTimer) { clearTimeout(akteAutoCloseTimer); akteAutoCloseTimer = null; }
+    if (!akteClosing) {
+      akteClosing = true;
+      sendCloseRequest(1);
+    }
   }
 
   function forceHideAkte() {
     var overlay = byId('akte-overlay');
     if (overlay) overlay.classList.add('hidden');
     akteClosing = false;
+    if (akteAutoCloseTimer) { clearTimeout(akteAutoCloseTimer); akteAutoCloseTimer = null; }
     evaluateUiVisibility();
   }
 
-  // Close-Button & ESC
+  // Close-Button & ESC & Klick ausserhalb
   document.addEventListener('click', function(e) {
-    if (e.target && e.target.id === 'akte-close') closePolizeiakte();
+    if (e.target && (e.target.id === 'akte-close' || e.target.id === 'akte-overlay')) closePolizeiakte();
   });
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {

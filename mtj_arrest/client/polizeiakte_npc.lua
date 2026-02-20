@@ -36,11 +36,31 @@ CreateThread(function()
     return
   end
 
-  -- Korrekte Bodenhoehe ermitteln (NPC darf nicht schweben!)
+  -- Kollisionsdaten laden bevor Bodenhoehe abgefragt wird
+  RequestCollisionAtCoord(pos.x, pos.y, pos.z)
+  local colTimeout = GetGameTimer() + 5000
+  while not HasCollisionLoadedAroundEntity(PlayerPedId()) do
+    if GetGameTimer() > colTimeout then break end
+    Wait(50)
+  end
+  -- Mehrere Z-Werte probieren fuer zuverlaessige Bodenerkennung
   local groundZ = pos.z
-  local found, gz = GetGroundZFor_3dCoord(pos.x, pos.y, pos.z + 2.0, false)
-  if found then
-    groundZ = gz
+  local found = false
+  for zOffset = 0.0, 10.0, 2.0 do
+    local ok, gz = GetGroundZFor_3dCoord(pos.x, pos.y, pos.z + zOffset, false)
+    if ok then
+      groundZ = gz
+      found = true
+      break
+    end
+    Wait(50)
+  end
+  -- Fallback: Spieler-Z verwenden wenn nichts gefunden
+  if not found then
+    local pz = GetEntityCoords(PlayerPedId()).z
+    if math.abs(pz - pos.z) < 20.0 then
+      groundZ = pz
+    end
   end
 
   akteNpc = CreatePed(4, hash, pos.x, pos.y, groundZ, heading, false, true)
@@ -125,15 +145,15 @@ end
 
 -- Akte-Daten vom Server empfangen -> UI oeffnen
 local akteOpenTime = 0
-local AKTE_TIMEOUT = 30000 -- 30 Sekunden max offen
+local AKTE_TIMEOUT = 5000 -- 5 Sekunden max offen (NUI-Focus darf nie haengen)
 
 local function forceCloseAkte()
-  if not akteOpen then return end
+  -- IMMER ausfuehren, auch wenn akteOpen==false (Sicherheitsnetz)
   akteOpen = false
   akteOpenTime = 0
   SetNuiFocus(false, false)
+  SetNuiFocusKeepInput(false)
   SendNUIMessage({ action = "polizeiakteClose" })
-  print("[mtj_arrest] Polizeiakte zwangsgeschlossen (Fallback)")
 end
 
 RegisterNetEvent('mtj_arrest:clientFullAkte')
@@ -148,32 +168,41 @@ AddEventHandler('mtj_arrest:clientFullAkte', function(akte)
   })
   SetNuiFocus(true, true)
   akteOpenTime = GetGameTimer()
+
+  -- Eigener Timer-Thread fuer DIESE Oeffnung: schliesst nach AKTE_TIMEOUT garantiert
+  local openedAt = akteOpenTime
+  CreateThread(function()
+    Wait(AKTE_TIMEOUT)
+    -- Nur schliessen wenn DIESE Oeffnung noch aktiv ist (nicht eine neuere)
+    if akteOpen and akteOpenTime == openedAt then
+      print("[mtj_arrest] Polizeiakte Timeout (" .. AKTE_TIMEOUT .. "ms) - Zwangsschliessung")
+      forceCloseAkte()
+    end
+  end)
 end)
 
--- NUI Callback: Akte schliessen
+-- NUI Callback: Akte schliessen (JS fetch erfolgreich)
 RegisterNUICallback('closePolizeiakte', function(data, cb)
-  akteOpen = false
-  akteOpenTime = 0
-  SetNuiFocus(false, false)
+  forceCloseAkte()
   cb('ok')
 end)
 
--- Fallback: ESC-Taste + Timeout-Sicherung
+-- Sicherheitsnetz: Alle 2 Sekunden pruefen ob NUI-Focus haengt
+-- KEINE ESC-Erkennung — mit SetNuiFocus(true,true) gehen alle Tasten an den Browser,
+-- IsDisabledControlJustPressed funktioniert NICHT bei NUI-Focus!
 CreateThread(function()
   while true do
-    if akteOpen then
-      Wait(0)
-      -- ESC auf Lua-Seite: sofort schliessen falls NUI-Callback fehlschlaegt
-      if IsControlJustPressed(0, 200) or IsDisabledControlJustPressed(0, 200) then
-        forceCloseAkte()
-      end
-      -- Timeout: nach 30s automatisch schliessen
-      if akteOpenTime > 0 and (GetGameTimer() - akteOpenTime) >= AKTE_TIMEOUT then
-        print("[mtj_arrest] Polizeiakte Timeout (" .. AKTE_TIMEOUT .. "ms) - zwangsgeschlossen")
-        forceCloseAkte()
-      end
-    else
-      Wait(500)
+    Wait(2000)
+    -- Wenn akteOpen aber Timeout laengst abgelaufen → sofort befreien
+    if akteOpen and akteOpenTime > 0 and (GetGameTimer() - akteOpenTime) >= AKTE_TIMEOUT then
+      print("[mtj_arrest] Sicherheitsnetz: Polizeiakte haengt, zwangsgeschlossen")
+      forceCloseAkte()
+    end
+    -- Zusaetzlich: Wenn akteOpen==false aber NUI-Focus noch aktiv (Restfehler)
+    -- FiveM hat kein IsNuiFocused(), daher vorsichtshalber immer freigeben wenn nicht offen
+    if not akteOpen then
+      SetNuiFocus(false, false)
+      SetNuiFocusKeepInput(false)
     end
   end
 end)
