@@ -635,11 +635,19 @@ local function startCombatMaintenance()
     -- Laufe solange Szenario aktiv UND Spieler nicht verhaftet/ergeben
     -- AUCH weiterlaufen solange Wanted > 0 (Endlos-Verfolgung)
     while scenarioActive and not surrendered and not cuffed and not inJail do
-      Wait(3000)
+      Wait(1500) -- 1.5s statt 3s fuer schnellere Verstaerkung
       local playerPed = PlayerPedId()
       local wanted = GetPlayerWantedLevel(PlayerId())
 
-      -- Wenn Wanted auf 0 gefallen: Szenario beenden
+      -- WICHTIG: Wanted-Level aktiv halten solange Szenario laeuft!
+      -- GTA V resettet Wanted wenn keine Cops in Sichtlinie sind.
+      -- Ohne dies: Spieler toetet alle Cops → Wanted faellt auf 0 → keine neuen Cops!
+      if wanted > 0 then
+        SetPlayerWantedLevel(PlayerId(), wanted, false)
+        SetPlayerWantedLevelNow(PlayerId(), false)
+      end
+
+      -- Wenn Wanted auf 0 gefallen (trotz Schutz): Szenario beenden
       if wanted == 0 then
         dbg("combatMaintenance: Wanted = 0, beende Szenario")
         TriggerEvent('mtj_arrest:endScenario')
@@ -698,8 +706,8 @@ local function startCombatMaintenance()
       targetCount = math.min(targetCount, maxActive)
       local toSpawn = math.min(targetCount - aliveCops, maxActive - aliveCops)
       if toSpawn > 0 then
-        dbg("Verstärkung: spawne", math.min(toSpawn, 3), "neue Cops (alive:", aliveCops, "target:", targetCount, "max:", maxActive, ")")
-        for i = 1, math.min(toSpawn, 3) do -- Max 3 pro Tick
+        dbg("Verstärkung: spawne", math.min(toSpawn, 4), "neue Cops (alive:", aliveCops, "target:", targetCount, "max:", maxActive, ")")
+        for i = 1, math.min(toSpawn, 4) do -- Max 4 pro Tick (alle 1.5s)
           local pos = randomPosAroundPlayer(25.0, Config.MaxSpawnDistance or 40.0)
           local model = Config.PoliceModels[math.random(1, #Config.PoliceModels)]
           local ped = createCopAt(pos, model)
