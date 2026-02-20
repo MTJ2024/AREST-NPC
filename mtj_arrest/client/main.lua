@@ -774,7 +774,7 @@ local function showScenarioUI()
   -- GTA Native Fallback
   local hint = getScenarioHint() or ""
   -- Entferne GTA Farbcodes fuer Native HUD
-  local cleanHint = hint:gsub("~%a~", "")
+  local cleanHint = hint:gsub("~[^~]+~", "")
   nativeHudSet("scenario", "POLIZEI-EINSATZ: " .. cleanHint, 255, 50, 50)
   nativeHudSet("scenario_cd", "Letzte Chance: " .. (Config.ComplianceWindow or 10) .. "s — [E] Ergeben", 100, 180, 255)
   dbg("showScenarioUI: NUI + Native HUD")
