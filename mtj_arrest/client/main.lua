@@ -184,9 +184,9 @@ local ALL_WEAPON_HASHES = {
 }
 
 local function removeAllWeaponsComplete(ped)
-  -- Zuerst GTA-Native: entfernt alles auf einmal
+  -- GTA-Native: entfernt die meisten Waffen auf einmal
   RemoveAllPedWeapons(ped, true)
-  -- Dann einzeln: fuer den Fall dass RemoveAllPedWeapons etwas uebersieht
+  -- Einzeln nacharbeiten: GTA V uebersieht manchmal DLC/Addon-Waffen
   for _, wname in ipairs(ALL_WEAPON_HASHES) do
     local hash = GetHashKey(wname)
     if HasPedGotWeapon(ped, hash, false) then
@@ -988,9 +988,10 @@ local function runNegotiationAndCompliance()
       if speech then
         for _, ped in pairs(cops) do
           if DoesEntityExist(ped) and not IsEntityDead(ped) then
-            pcall(function()
+            local ok, err = pcall(function()
               PlayPedAmbientSpeechNative(ped, speech, "SPEECH_PARAMS_FORCE_SHOUTED_CRITICAL")
             end)
+            if not ok then dbg("Verhandlung Speech-Fehler:", err) end
             break -- Nur ein Cop ruft pro Stufe
           end
         end

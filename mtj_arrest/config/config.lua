@@ -33,7 +33,6 @@ Config.Vorwarnung = {
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.WaffenBeiTod = {
     Aktiviert           = true,     -- true = Waffen NUR bei Tod im Polizeieinsatz entfernt
-    NurBeiEinsatz       = true,     -- true = NUR waehrend aktivem Polizei-Einsatz (EMPFOHLEN!)
     Nachricht           = "Deine Waffen wurden nach dem Polizeieinsatz sichergestellt!",
 }
 
