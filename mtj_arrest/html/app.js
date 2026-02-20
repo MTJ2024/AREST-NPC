@@ -193,6 +193,8 @@
     if (statusBar) statusBar.setAttribute('data-status', akte.status || 'unbescholten');
 
     overlay.classList.remove('hidden');
+    // Vorherige Close-Operation abbrechen falls noch laufend
+    if (akteAutoCloseTimer) { clearTimeout(akteAutoCloseTimer); akteAutoCloseTimer = null; }
     akteClosing = false;
     setUiVisible(true);
 
