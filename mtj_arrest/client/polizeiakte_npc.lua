@@ -50,7 +50,6 @@ CreateThread(function()
   SetPedCombatAttributes(akteNpc, 46, true)
   SetEntityInvincible(akteNpc, true)
   FreezeEntityPosition(akteNpc, true)
-  PlaceObjectOnGroundProperly(akteNpc) -- Extra Sicherheit gegen Schweben
   SetPedKeepTask(akteNpc, true)
   TaskStartScenarioInPlace(akteNpc, cfg.Scenario or "WORLD_HUMAN_CLIPBOARD", 0, true)
   SetModelAsNoLongerNeeded(hash)
