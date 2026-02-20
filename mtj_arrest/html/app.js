@@ -55,6 +55,7 @@
       dbgLog: byId('mtj-debug-log'),
       dbgBtnClear: byId('mtj-debug-btn-clear'),
       dbgBtnState: byId('mtj-debug-btn-state'),
+      notifyStack: byId('notify-stack'),
     };
 
     // Initial hide to ensure clean state
@@ -108,6 +109,47 @@
     }, DURATION);
   }
 
+  /* ═══ Custom Notification (links mittig) ═══ */
+  const NOTIFY_ICONS = {
+    polizei: '🚨',
+    erfolg:  '✅',
+    warnung: '⚠️',
+    info:    'ℹ️',
+  };
+  const NOTIFY_DURATION = 4000;
+  const NOTIFY_MAX = 5;
+
+  function showNotify(text, type) {
+    if (!el.notifyStack) return;
+    type = type || 'info';
+    const icon = NOTIFY_ICONS[type] || NOTIFY_ICONS.info;
+
+    // Clean GTA formatting codes (~r~, ~s~, ~g~, ~b~ etc.)
+    const cleanText = String(text || '').replace(/~[a-zA-Z]~/g, '');
+
+    const item = document.createElement('div');
+    item.className = 'notify-item type-' + type;
+    item.innerHTML =
+      '<span class="notify-icon">' + icon + '</span>' +
+      '<span class="notify-text">' + cleanText + '</span>';
+
+    el.notifyStack.appendChild(item);
+    setUiVisible(true);
+
+    // Limit max visible
+    while (el.notifyStack.children.length > NOTIFY_MAX) {
+      el.notifyStack.removeChild(el.notifyStack.firstChild);
+    }
+
+    setTimeout(() => {
+      item.classList.add('out');
+      setTimeout(() => {
+        if (item.parentNode) item.parentNode.removeChild(item);
+        evaluateUiVisibility();
+      }, 400);
+    }, NOTIFY_DURATION);
+  }
+
   function setUiVisible(show) {
     try {
       if (show) {
@@ -125,6 +167,7 @@
       el && el.jail && !el.jail.classList.contains('hidden'),
       el && el.aLog && !el.aLog.classList.contains('hidden'),
       el && el.toast && !el.toast.classList.contains('hidden'),
+      el && el.notifyStack && el.notifyStack.children.length > 0,
     ];
     const anyVisible = panels.some(Boolean);
     setUiVisible(anyVisible);
@@ -295,6 +338,9 @@
         break;
       case 'uiToggle':
         if (typeof d.show !== 'undefined') setUiVisible(!!d.show);
+        break;
+      case 'notify':
+        showNotify(d.text || '', d.type || 'info');
         break;
       case 'mtj_debug_state':
       case 'mtj_debug_log':

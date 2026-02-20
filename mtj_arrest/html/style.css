@@ -437,3 +437,85 @@ body {
   50%  { opacity: 0; }
   100% { opacity: 1; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Custom Notification — links mittig (über Minimap)
+   ═══════════════════════════════════════════════════════ */
+.notify-stack {
+  position: fixed;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-width: 420px;
+}
+
+.notify-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px 14px 18px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(18,27,59,0.92) 0%, rgba(33,122,255,0.18) 100%);
+  border-left: 4px solid var(--accent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 24px 0 rgba(33,122,255,0.35), 0 0 10px 0 rgba(255,42,42,0.25), 0 2px 12px rgba(0,0,0,0.4);
+  color: #fff;
+  font-family: var(--font-main);
+  font-size: 1.05rem;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transform: translateX(-60px);
+  animation: notifySlideIn 0.5s cubic-bezier(.22,1.1,.38,1) forwards;
+  pointer-events: none;
+}
+
+.notify-item.out {
+  animation: notifySlideOut 0.4s cubic-bezier(.6,0,.4,1) forwards;
+}
+
+.notify-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  text-shadow: 0 0 12px var(--accent-glow), 0 0 6px #fff6;
+  filter: drop-shadow(0 0 6px var(--accent-glow));
+}
+
+.notify-text {
+  flex: 1;
+  text-shadow: 0 0 8px rgba(33,122,255,0.4);
+}
+
+.notify-item.type-polizei {
+  border-left-color: var(--accent);
+}
+.notify-item.type-polizei .notify-icon { color: var(--accent); }
+
+.notify-item.type-erfolg {
+  border-left-color: #2ecc71;
+}
+.notify-item.type-erfolg .notify-icon { color: #2ecc71; text-shadow: 0 0 12px #2ecc7199; }
+
+.notify-item.type-warnung {
+  border-left-color: #f39c12;
+}
+.notify-item.type-warnung .notify-icon { color: #f39c12; text-shadow: 0 0 12px #f39c1299; }
+
+.notify-item.type-info {
+  border-left-color: var(--accent2);
+}
+.notify-item.type-info .notify-icon { color: var(--accent2); }
+
+@keyframes notifySlideIn {
+  0%   { opacity: 0; transform: translateX(-60px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes notifySlideOut {
+  0%   { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-60px); }
+}

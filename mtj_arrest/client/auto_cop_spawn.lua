@@ -80,9 +80,16 @@ CreateThread(function()
                     Wait(500)
                 end
             end
-            -- Entferne tote Cops aus Liste
+            -- Entferne tote Cops aus Liste (Leiche nach 3s löschen)
             for i = #activeCops, 1, -1 do
-                if not DoesEntityExist(activeCops[i]) or IsEntityDead(activeCops[i]) then
+                local cop = activeCops[i]
+                if not DoesEntityExist(cop) then
+                    table.remove(activeCops, i)
+                elseif IsEntityDead(cop) then
+                    -- Leiche nach kurzer Verzögerung entfernen
+                    SetTimeout(3000, function()
+                        if DoesEntityExist(cop) then DeleteEntity(cop) end
+                    end)
                     table.remove(activeCops, i)
                 end
             end

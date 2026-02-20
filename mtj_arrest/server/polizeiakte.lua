@@ -30,9 +30,11 @@ local function kvpKey(identifier, field)
 end
 
 local function kvpGetInt(identifier, field, default)
-  local str = GetResourceKvpString(kvpKey(identifier, field))
-  if not str or str == "" then return default or 0 end
-  return GetResourceKvpInt(kvpKey(identifier, field))
+  local val = GetResourceKvpInt(kvpKey(identifier, field))
+  if val == 0 and default and default ~= 0 then
+    return default
+  end
+  return val
 end
 
 local function kvpSetInt(identifier, field, value)

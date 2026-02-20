@@ -50,10 +50,13 @@ local function dbg(...)
   print(("[mtj_arrest][DEBUG] %s"):format(table.concat(t, " ")))
 end
 
-local function nativeNotify(text)
-  SetNotificationTextEntry("STRING")
-  AddTextComponentSubstringPlayerName(tostring(text))
-  DrawNotification(false, true)
+local function nativeNotify(text, ntype)
+  -- Custom NUI Notification (links mittig, über Minimap)
+  SendNUIMessage({
+    action = "notify",
+    text = tostring(text),
+    type = ntype or "info"
+  })
 end
 
 -- State
@@ -97,6 +100,52 @@ CreateThread(function()
   -- Max-Wanted-Level auf 5 setzen (GTA/FiveM begrenzt sonst oft auf 3!)
   SetMaxWantedLevel(5)
   dbg("SetMaxWantedLevel(5) gesetzt")
+end)
+
+-- === TOTE NPC LEICHEN-CLEANUP (nach 3 Sekunden verschwinden) ===
+local deadBodies = {} -- { ped = deathGameTimer }
+
+CreateThread(function()
+  while true do
+    Wait(1000)
+    local now = GetGameTimer()
+    -- Track newly dead cops
+    for _, ped in ipairs(cops) do
+      if DoesEntityExist(ped) and IsEntityDead(ped) and not deadBodies[ped] then
+        deadBodies[ped] = now
+      end
+    end
+    -- Track dead helis/vehicle crew
+    for _, h in ipairs(helis) do
+      if h.crew then
+        for _, c in ipairs(h.crew) do
+          if DoesEntityExist(c) and IsEntityDead(c) and not deadBodies[c] then
+            deadBodies[c] = now
+          end
+        end
+      end
+    end
+    for _, pv in ipairs(policeVehicles) do
+      if pv.crew then
+        for _, c in ipairs(pv.crew) do
+          if DoesEntityExist(c) and IsEntityDead(c) and not deadBodies[c] then
+            deadBodies[c] = now
+          end
+        end
+      end
+    end
+    -- Delete bodies after 3 seconds
+    for ped, deathTime in pairs(deadBodies) do
+      if now - deathTime >= 3000 then
+        if DoesEntityExist(ped) then
+          NetworkFadeOutEntity(ped, false, true)
+          Wait(400)
+          DeleteEntity(ped)
+        end
+        deadBodies[ped] = nil
+      end
+    end
+  end
 end)
 
 -- === HILFSFUNKTIONEN ===
@@ -650,7 +699,7 @@ local function checkFluchtversuch()
     -- Fluchtversuch in Polizeiakte eintragen (persistent)
     TriggerServerEvent('mtj_arrest:serverFluchtversuch')
     -- Benachrichtigung
-    nativeNotify(fc.Nachricht or "~r~FLUCHTVERSUCH~s~: Wanted-Level erhöht!")
+    nativeNotify(fc.Nachricht or "~r~FLUCHTVERSUCH~s~: Wanted-Level erhöht!", "warnung")
     -- Surrender nicht mehr möglich
     canSurrender = false
     hideScenarioUI()
@@ -752,9 +801,9 @@ local function playCuffSequence()
   if playerAkteStatus ~= "unbescholten" then
     local pa = Config.Polizeiakte
     local msg = (pa and pa.NachrichtVorbestraft) or ("~r~Festnahme~s~: " .. playerAkteStatus .. " — verschärftes Verfahren!")
-    nativeNotify(msg)
+    nativeNotify(msg, "polizei")
   else
-    nativeNotify("~r~Festnahme~s~: Du wirst verhaftet!")
+    nativeNotify("~r~Festnahme~s~: Du wirst verhaftet!", "polizei")
   end
   TriggerEvent('mtj_arrest:nui:arrest_log', true, getArrestLogLines())
   Wait(3000)
@@ -802,7 +851,7 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
 
   local jailSeconds = math.floor((tonumber(minutes) or 10) * 60)
   dbg(("Spieler wurde ins Jail teleportiert für %d Minuten!"):format(minutes))
-  nativeNotify(("~r~Inhaftiert~s~: %d Minuten in %s"):format(math.ceil(jailSeconds/60), Config.JailName or "Gefängnis"))
+  nativeNotify(("~r~Inhaftiert~s~: %d Minuten in %s"):format(math.ceil(jailSeconds/60), Config.JailName or "Gefängnis"), "polizei")
   DoScreenFadeIn(1000)
   releaseWarningShown = false
   -- Jail-Countdown-Timer UI
@@ -821,7 +870,7 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
         if jailSeconds <= warnAt and jailSeconds > 0 then
           releaseWarningShown = true
           local msg = ew.Nachricht or "~g~Entlassung~s~: Du wirst in %d Sekunden freigelassen!"
-          nativeNotify(msg:format(jailSeconds))
+          nativeNotify(msg:format(jailSeconds), "erfolg")
           dbg("Entlassungswarnung bei", jailSeconds, "Sekunden")
         end
       end
@@ -847,7 +896,7 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
       SetEntityHeading(player, heading)
       Wait(600)
       DoScreenFadeIn(1000)
-      nativeNotify("~g~Entlassen~s~: Du bist nun wieder auf freiem Fuß!")
+      nativeNotify("~g~Entlassen~s~: Du bist nun wieder auf freiem Fuß!", "erfolg")
       dbg("Jailzeit vorbei, Spieler vor das Gefängnis gesetzt!")
     end
   end)
@@ -863,7 +912,7 @@ AddEventHandler('mtj_arrest:clientAkteInfo', function(akte)
   if playerAkteStatus ~= "unbescholten" then
     local pa = Config.Polizeiakte
     if pa and pa.NachrichtAkte then
-      nativeNotify(pa.NachrichtAkte:format(playerAkteStatus, akte.festnahmen or 0, akte.fluchtversuche or 0))
+      nativeNotify(pa.NachrichtAkte:format(playerAkteStatus, akte.festnahmen or 0, akte.fluchtversuche or 0), "warnung")
     end
   end
 end)
@@ -876,7 +925,7 @@ AddEventHandler('mtj_arrest:clientVorstrafeInfo', function(arrestCount)
   if not sr or not sr.Aktiviert then return end
   local vorstrafen = arrestCount - 1
   local msg = sr.NachrichtVorstrafe or "~o~Strafregister~s~: %d Vorstrafe(n) — Strafe erhöht!"
-  nativeNotify(msg:format(vorstrafen))
+  nativeNotify(msg:format(vorstrafen), "warnung")
   dbg("Strafregister: Vorstrafen =", vorstrafen)
 end)
 
@@ -935,7 +984,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
     showScenarioUI()
     makeCopsShout()
     -- Native Notify als Fallback (nutzt gleichen Status-Text wie UI)
-    nativeNotify("~r~POLIZEI~s~: " .. getScenarioHint())
+    nativeNotify("~r~POLIZEI~s~: " .. getScenarioHint(), "polizei")
 
     complianceCountdownThreadActive = true
     while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
@@ -1028,12 +1077,20 @@ AddEventHandler('playerSpawned', function()
   scenarioStartPos = nil
   releaseWarningShown = false
   inJail = false
+  deadBodies = {} -- Leichen-Cleanup zurücksetzen
   FreezeEntityPosition(PlayerPedId(), false)
   SetEnableHandcuffs(PlayerPedId(), false)
+  -- Wanted-Level auf 0 setzen (GTA behält Wanted nach Tod bei!)
+  SetPlayerWantedLevel(PlayerId(), 0, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  ClearPlayerWantedLevel(PlayerId())
   hideScenarioUI()
+  TriggerEvent('mtj_arrest:nui:jail', false)
   clearCops()
+  clearHelis()
+  clearPoliceVehicles()
   setAmbientCopsIgnore(false)
-  dbg("playerSpawned: reset scenario state")
+  dbg("playerSpawned: reset scenario state + wanted level auf 0")
 end)
 
 AddEventHandler('onResourceStop', function(res)
@@ -1051,10 +1108,17 @@ AddEventHandler('onResourceStop', function(res)
   scenarioStartPos = nil
   releaseWarningShown = false
   inJail = false
+  deadBodies = {}
   FreezeEntityPosition(PlayerPedId(), false)
   SetEnableHandcuffs(PlayerPedId(), false)
+  SetPlayerWantedLevel(PlayerId(), 0, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  ClearPlayerWantedLevel(PlayerId())
   hideScenarioUI()
+  TriggerEvent('mtj_arrest:nui:jail', false)
   clearCops()
+  clearHelis()
+  clearPoliceVehicles()
   setAmbientCopsIgnore(false)
   dbg("onResourceStop: reset scenario state")
 end)
