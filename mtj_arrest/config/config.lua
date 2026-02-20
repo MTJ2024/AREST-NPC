@@ -21,7 +21,7 @@ Config.Vorwarnung = {
     Aktiviert           = true,     -- true = Vorwarnung wird angezeigt
     Dauer               = 5,        -- Sekunden: Wie lange die Warnung angezeigt wird
     Titel               = "POLIZEI-WARNUNG",
-    Text                = "Stellen Sie sofort Ihre Waffen ab!\nBei Widerstand wird mit Gegenwehr gerechnet!",
+    Text                = "Legen Sie sofort Ihre Waffen ab!",
     TextKurz            = "Waffen ablegen oder Konsequenzen!",
 }
 
@@ -48,13 +48,13 @@ Config.Verhandlung = {
         {   -- Stufe 1: Aufforderung (ruhiger Ton)
             Dauer   = 5,            -- Sekunden
             Text    = "POLIZEI! Legen Sie sofort Ihre Waffen ab!",
-            Farbe   = {255, 200, 50},   -- Gelb/Orange
+            Farbe   = {355, 200, 50},   -- Gelb/Orange
             Speech  = "ARREST_PLAYER",  -- GTA Speech Kontext
         },
         {   -- Stufe 2: Warnung (aggressiver)
             Dauer   = 5,
             Text    = "LETZTE WARNUNG! Ergeben Sie sich SOFORT oder wir schiessen!",
-            Farbe   = {255, 100, 30},   -- Orange/Rot
+            Farbe   = {355, 100, 30},   -- Orange/Rot
             Speech  = "CHALLENGE_THREATEN",
         },
         {   -- Stufe 3: Zugriff (Cops schiessen)
@@ -70,7 +70,7 @@ Config.Verhandlung = {
 -- ║              POLIZEI-EINSATZ ANZEIGE (SZENARIO-UI)              ║
 -- ║  Wann und wie die "POLIZEI-EINSATZ" Info angezeigt wird         ║
 -- ╚══════════════════════════════════════════════════════════════════╝
-Config.Aktionsradius            = 40.0    -- Meter: Polizei muss SO NAH sein, bevor Info + Timer starten
+Config.Aktionsradius            = 60.0    -- Meter: Polizei muss SO NAH sein, bevor Info + Timer starten
 Config.AktionsradiusTimeout     = 20      -- Sekunden: Maximale Wartezeit auf Polizei-Ankunft
 Config.ComplianceWindow         = 11      -- Sekunden: Zeit zum Ergeben [E], bevor Polizei schiesst
 Config.RequiredWantedLevel      = 2       -- Ab diesem Wanted-Level startet das Szenario (1-5)
