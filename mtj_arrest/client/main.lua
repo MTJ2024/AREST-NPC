@@ -402,6 +402,8 @@ end
 local function randomPosAroundPlayer(minDist, maxDist)
   local ped = PlayerPedId()
   local p = GetEntityCoords(ped)
+  -- Collision vorladen fuer zuverlaessige Z-Ermittlung
+  RequestCollisionAtCoord(p.x, p.y, p.z)
   -- Versuche bis zu 5x eine gueltige Position zu finden
   for attempt = 1, 5 do
     local angle = math.random() * math.pi * 2
@@ -411,6 +413,8 @@ local function randomPosAroundPlayer(minDist, maxDist)
     local dist = math.random() * (effectiveMax - minDist) + minDist
     local nx = p.x + math.cos(angle) * dist
     local ny = p.y + math.sin(angle) * dist
+    -- Collision am Zielpunkt laden
+    RequestCollisionAtCoord(nx, ny, p.z)
     -- Methode 1: GetSafeCoordForPed (GTA sucht begehbare Position, flags=16: auf Gehweg)
     local safeFound, sx, sy, sz = GetSafeCoordForPed(nx, ny, p.z, true, 16)
     if safeFound then
@@ -422,16 +426,21 @@ local function randomPosAroundPlayer(minDist, maxDist)
       local gFound, gz = GetGroundZFor_3dCoord(nx, ny, p.z + zOff, false)
       if gFound then
         dbg("randomPos: GroundZ gefunden bei Versuch", attempt, "zOff:", zOff, "dist:", dist)
-        return vector3(nx, ny, gz)
+        return vector3(nx, ny, gz + 0.5)
       end
     end
   end
-  -- Fallback: Spawne direkt hinter dem Spieler (15-25m, garantiert sichtbar)
+  -- Fallback: Spawne direkt hinter dem Spieler (10-18m, nahe genug fuer zuverlaessige Z)
   dbg("randomPos: ALLE Versuche fehlgeschlagen, spawne nahe am Spieler")
   local heading = GetEntityHeading(ped)
   local rad = math.rad(heading + 180.0 + math.random(-45, 45))
-  local fallbackDist = 15.0 + math.random() * 10.0
-  return vector3(p.x + math.cos(rad) * fallbackDist, p.y + math.sin(rad) * fallbackDist, p.z)
+  local fallbackDist = 10.0 + math.random() * 8.0
+  local fx = p.x + math.cos(rad) * fallbackDist
+  local fy = p.y + math.sin(rad) * fallbackDist
+  local fz = p.z
+  local gFound, gz = GetGroundZFor_3dCoord(fx, fy, fz + 10.0, false)
+  if gFound then fz = gz + 0.5 end
+  return vector3(fx, fy, fz)
 end
 
 local function clearHelis()
@@ -484,27 +493,36 @@ end
 local function createCopAt(pos, modelName)
   local modelHash = loadModel(modelName)
   if not modelHash then return nil end
+  -- Boden-Z ermitteln damit Cop nicht unterirdisch spawnt
+  local gFound, gz = GetGroundZFor_3dCoord(pos.x, pos.y, pos.z + 10.0, false)
+  if gFound then
+    pos = vector3(pos.x, pos.y, gz + 0.5)
+  end
   local heading = GetEntityHeading(PlayerPedId()) + 180.0
   local ped = CreatePed(4, modelHash, pos.x, pos.y, pos.z, heading, true, true)
-  if DoesEntityExist(ped) then
-    SetEntityAsMissionEntity(ped, true, true)
-    SetBlockingOfNonTemporaryEvents(ped, true)
-    SetPedArmour(ped, 100)
-    SetPedFleeAttributes(ped, 0, false)
-    -- Approach-Phase: COP-Gruppe (RESPECT) — Waffe gezogen aber KEIN Kampf
-    -- Erst bei reactivatePolice() → ARREST_COP_GROUP (HATE) + aktiver Kampf
-    SetPedRelationshipGroupHash(ped, GetHashKey("COP"))
-    GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
-    SetCurrentPedWeapon(ped, GetHashKey("WEAPON_PISTOL"), true)
-    SetPedSeeingRange(ped, 80.0)
-    SetPedHearingRange(ped, 80.0)
-    SetPedAlertness(ped, 3)       -- Voll aufmerksam (sichtbar aktiv)
-    SetPedCombatAbility(ped, 0)   -- Kein Kampf waehrend Approach
-    SetPedCombatRange(ped, 0)
-    SetPedCombatMovement(ped, 0)  -- Kein Kampf-Bewegen (nur laufen)
-    SetPedAccuracy(ped, 0)
-    TaskGoToEntity(ped, PlayerPedId(), -1, 3.0, 3.0, 1073741824, 0)
+  if not ped or ped == 0 or not DoesEntityExist(ped) then
+    dbg("createCopAt FAILED: model=", tostring(modelName), "pos=", tostring(pos))
+    return nil
   end
+  SetEntityAsMissionEntity(ped, true, true)
+  PlaceObjectOnGroundProperly(ped) -- Sicherheitsnetz: auf Boden setzen
+  SetBlockingOfNonTemporaryEvents(ped, true)
+  SetPedArmour(ped, 100)
+  SetPedFleeAttributes(ped, 0, false)
+  -- Approach-Phase: COP-Gruppe (RESPECT) — Waffe gezogen aber KEIN Kampf
+  -- Erst bei reactivatePolice() → ARREST_COP_GROUP (HATE) + aktiver Kampf
+  SetPedRelationshipGroupHash(ped, GetHashKey("COP"))
+  GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
+  SetCurrentPedWeapon(ped, GetHashKey("WEAPON_PISTOL"), true)
+  SetPedSeeingRange(ped, 80.0)
+  SetPedHearingRange(ped, 80.0)
+  SetPedAlertness(ped, 3)       -- Voll aufmerksam (sichtbar aktiv)
+  SetPedCombatAbility(ped, 0)   -- Kein Kampf waehrend Approach
+  SetPedCombatRange(ped, 0)
+  SetPedCombatMovement(ped, 0)  -- Kein Kampf-Bewegen (nur laufen)
+  SetPedAccuracy(ped, 0)
+  TaskGoToEntity(ped, PlayerPedId(), -1, 3.0, 3.0, 1073741824, 0)
+  dbg("createCopAt OK: ped=", ped, "model=", tostring(modelName))
   return ped
 end
 
@@ -520,12 +538,16 @@ local function spawnCopsAroundPlayer()
   toSpawn = math.min(toSpawn, maxActive - #cops)
   if toSpawn <= 0 then return end
   local ppos = GetEntityCoords(PlayerPedId())
+  -- Collision laden damit GetGroundZFor_3dCoord funktioniert
+  RequestCollisionAtCoord(ppos.x, ppos.y, ppos.z)
   for i = 1, toSpawn do
     local off = Config.PoliceOffsets[((i - 1) % #Config.PoliceOffsets) + 1]
     local model = Config.PoliceModels[((i - 1) % #Config.PoliceModels) + 1]
     local pos = vector3(ppos.x + off.x, ppos.y + off.y, ppos.z + (off.z or 0))
-    if #(pos - ppos) < 30.0 then
-      pos = randomPosAroundPlayer(25.0, 50.0)
+    -- Nur bei extrem nahen Offsets (<5m) auf Zufallsposition ausweichen
+    -- Config-Offsets (8-12m) direkt verwenden — nah genug fuer zuverlaessige Z-Ermittlung
+    if #(pos - ppos) < 5.0 then
+      pos = randomPosAroundPlayer(15.0, 35.0)
     end
     local ped = createCopAt(pos, model)
     if ped then table.insert(cops, ped) end
