@@ -18,8 +18,8 @@
   --chip-bg: #192042;
   --card-radius: 28px;
   --shadow: 0 10px 60px 0 #11284c99;
-  --font-main: 'Inter', Arial, sans-serif;
-  --font-digi: 'Orbitron', Arial, sans-serif;
+  --font-main: 'Segoe UI', Arial, Helvetica, sans-serif;
+  --font-digi: 'Consolas', 'Courier New', monospace;
 }
 
 body {

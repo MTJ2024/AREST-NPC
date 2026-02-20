@@ -52,13 +52,79 @@ local function dbg(...)
 end
 
 local function nativeNotify(text, ntype)
-  -- Custom NUI Notification (links mittig, über Minimap)
+  -- Custom NUI Notification (links mittig, ueber Minimap)
   SendNUIMessage({
     action = "notify",
     text = tostring(text),
     type = ntype or "info"
   })
+  dbg("nativeNotify sent:", tostring(text), "type:", ntype or "info")
 end
+
+-- === GTA NATIVE 2D TEXT FALLBACK (100% zuverlaessig, kein NUI noetig) ===
+-- Zeichnet Texte direkt auf den Bildschirm als Backup falls NUI ausfaellt
+local nativeHudLines = {}   -- { {text=, expire=, r=, g=, b=} }
+local nativeHudPersist = {} -- { key = {text=, r=, g=, b=} } (dauerhaft bis entfernt)
+
+local function nativeHudShow(text, durationSec, r, g, b)
+  table.insert(nativeHudLines, {
+    text = tostring(text or ""),
+    expire = GetGameTimer() + ((durationSec or 5) * 1000),
+    r = r or 255, g = g or 255, b = b or 255
+  })
+end
+
+local function nativeHudSet(key, text, r, g, b)
+  if text then
+    nativeHudPersist[key] = { text = tostring(text), r = r or 255, g = g or 255, b = b or 255 }
+  else
+    nativeHudPersist[key] = nil
+  end
+end
+
+local function nativeHudClear()
+  nativeHudLines = {}
+  nativeHudPersist = {}
+end
+
+-- Native Text Draw Helper (GTA V)
+local function drawText2D(text, x, y, scale, r, g, b, a)
+  SetTextFont(4)
+  SetTextProportional(true)
+  SetTextScale(scale, scale)
+  SetTextColour(r or 255, g or 255, b or 255, a or 255)
+  SetTextDropShadow()
+  SetTextOutline()
+  SetTextEntry("STRING")
+  AddTextComponentString(tostring(text))
+  DrawText(x, y)
+end
+
+-- HUD Render Thread (zeichnet JEDEN Frame)
+CreateThread(function()
+  while true do
+    Wait(0)
+    local now = GetGameTimer()
+    local y = 0.35 -- Startposition links-mitte
+
+    -- Persistente Zeilen (Vorwarnung, Szenario, Jail etc.)
+    for _, line in pairs(nativeHudPersist) do
+      drawText2D(line.text, 0.018, y, 0.55, line.r, line.g, line.b, 240)
+      y = y + 0.04
+    end
+
+    -- Temporaere Zeilen (Notifications)
+    for i = #nativeHudLines, 1, -1 do
+      if now > nativeHudLines[i].expire then
+        table.remove(nativeHudLines, i)
+      end
+    end
+    for _, line in ipairs(nativeHudLines) do
+      drawText2D(line.text, 0.018, y, 0.45, line.r, line.g, line.b, 220)
+      y = y + 0.035
+    end
+  end
+end)
 
 -- State
 local cops = {}
@@ -705,23 +771,36 @@ end
 
 local function showScenarioUI()
   TriggerEvent('mtj_arrest:nui:scenario', true, getScenarioHint(), Config.ComplianceWindow)
-  dbg("SendNUIMessage: scenarioToggle via event, Status:", playerAkteStatus)
+  -- GTA Native Fallback
+  local hint = getScenarioHint() or ""
+  -- Entferne GTA Farbcodes fuer Native HUD
+  local cleanHint = hint:gsub("~%a~", "")
+  nativeHudSet("scenario", "POLIZEI-EINSATZ: " .. cleanHint, 255, 50, 50)
+  nativeHudSet("scenario_cd", "Letzte Chance: " .. (Config.ComplianceWindow or 10) .. "s — [E] Ergeben", 100, 180, 255)
+  dbg("showScenarioUI: NUI + Native HUD")
 end
 
 local function hideScenarioUI()
   TriggerEvent('mtj_arrest:nui:scenario', false)
-  dbg("SendNUIMessage: scenarioToggle hide via event")
+  nativeHudSet("scenario", nil)
+  nativeHudSet("scenario_cd", nil)
+  dbg("hideScenarioUI")
 end
 
 -- Vorwarnung UI
 local function showVorwarnungUI(titel, text, countdown)
   TriggerEvent('mtj_arrest:nui:vorwarnung', true, titel, text, countdown)
-  dbg("Vorwarnung UI angezeigt")
+  -- GTA Native Fallback
+  nativeHudSet("vorwarnung", (titel or "WARNUNG") .. ": " .. (text or ""):gsub("\n", " "), 243, 156, 18)
+  nativeHudSet("vorwarnung_cd", "Noch " .. (countdown or 5) .. "s", 255, 200, 100)
+  dbg("showVorwarnungUI: NUI + Native HUD")
 end
 
 local function hideVorwarnungUI()
   TriggerEvent('mtj_arrest:nui:vorwarnung', false)
-  dbg("Vorwarnung UI versteckt")
+  nativeHudSet("vorwarnung", nil)
+  nativeHudSet("vorwarnung_cd", nil)
+  dbg("hideVorwarnungUI")
 end
 
 -- Prüft ob mindestens ein Cop innerhalb des Radius ist
@@ -870,6 +949,9 @@ local function playCuffSequence()
 
   -- JETZT erst Festnahme-Info anzeigen (nach Animation + Handschellen)
   deescalateAllPolice()
+  nativeHudSet("scenario", nil)
+  nativeHudSet("scenario_cd", nil)
+  nativeHudSet("arrest", "FESTNAHME: Du wirst verhaftet!", 255, 50, 50)
   -- Status-basierte Festnahme-Texte
   if playerAkteStatus ~= "unbescholten" then
     local pa = Config.Polizeiakte
@@ -881,6 +963,7 @@ local function playCuffSequence()
   TriggerEvent('mtj_arrest:nui:arrest_log', true, getArrestLogLines())
   Wait(3000)
   TriggerEvent('mtj_arrest:nui:arrest_log', false)
+  nativeHudSet("arrest", nil)
   cuffing = false
   dbg("cuff sequence done")
   hideScenarioUI()
@@ -924,7 +1007,9 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
 
   local jailSeconds = math.floor((tonumber(minutes) or 10) * 60)
   dbg(("Spieler wurde ins Jail teleportiert für %d Minuten!"):format(minutes))
-  nativeNotify(("~r~Inhaftiert~s~: %d Minuten in %s"):format(math.ceil(jailSeconds/60), Config.JailName or "Gefängnis"), "polizei")
+  nativeNotify(("~r~Inhaftiert~s~: %d Minuten in %s"):format(math.ceil(jailSeconds/60), Config.JailName or "Gefaengnis"), "polizei")
+  nativeHudSet("jail", "GEFAENGNIS: " .. (Config.JailName or "JVA"), 255, 50, 50)
+  nativeHudSet("jail_timer", "Verbleibend: " .. math.ceil(jailSeconds/60) .. " Min", 100, 180, 255)
   DoScreenFadeIn(1000)
   releaseWarningShown = false
   -- Jail-Countdown-Timer UI
@@ -932,6 +1017,9 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
     while jailSeconds > 0 and inJail do
       jailTime = jailSeconds
       TriggerEvent('mtj_arrest:nui:jail', true, jailSeconds, Config.JailName, Config.JailReason)
+      local mins = math.floor(jailSeconds / 60)
+      local secs = jailSeconds % 60
+      nativeHudSet("jail_timer", ("Verbleibend: %02d:%02d"):format(mins, secs), 100, 180, 255)
       Wait(1000)
       jailSeconds = jailSeconds - 1
       TriggerEvent('mtj_arrest:nui:jail_tick', jailSeconds)
@@ -951,6 +1039,8 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
     if inJail then
       -- Jailzeit vorbei: Entlassen UND vor das Tor teleportieren!
       TriggerEvent('mtj_arrest:nui:jail', false)
+      nativeHudSet("jail", nil)
+      nativeHudSet("jail_timer", nil)
       FreezeEntityPosition(player, false)
       SetEnableHandcuffs(player, false)
       inJail = false
@@ -1054,6 +1144,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
         remaining = remaining - 1
         if scenarioActive then
           TriggerEvent('mtj_arrest:nui:vorwarnung_tick', remaining)
+          nativeHudSet("vorwarnung_cd", "Noch " .. remaining .. "s", 255, 200, 100)
         end
       end
       hideVorwarnungUI()
@@ -1094,20 +1185,17 @@ AddEventHandler('mtj_arrest:startScenario', function()
         if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
           complianceWindow = complianceWindow - 1
           TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
+          nativeHudSet("scenario_cd", "Letzte Chance: " .. complianceWindow .. "s — [E] Ergeben", 100, 180, 255)
           checkFluchtversuch()
           if complianceWindow <= 0 then
             canSurrender = false
+            nativeHudSet("scenario", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
+            nativeHudSet("scenario_cd", nil)
             reactivatePolice()
             startCombatMaintenance()
             dbg("Surrender window abgelaufen!")
           end
         else
-          break
-        end
-      end
-      complianceCountdownThreadActive = false
-    end)
-  else
     -- Keine Vorwarnung: direkt Polizei spawnen (alter Ablauf)
     clearCops()
     spawnCopsAroundPlayer()
@@ -1137,9 +1225,12 @@ AddEventHandler('mtj_arrest:startScenario', function()
         if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
           complianceWindow = complianceWindow - 1
           TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
+          nativeHudSet("scenario_cd", "Letzte Chance: " .. complianceWindow .. "s — [E] Ergeben", 100, 180, 255)
           checkFluchtversuch()
           if complianceWindow <= 0 then
             canSurrender = false
+            nativeHudSet("scenario", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
+            nativeHudSet("scenario_cd", nil)
             reactivatePolice()
             startCombatMaintenance()
             dbg("Surrender window abgelaufen!")
@@ -1169,6 +1260,7 @@ AddEventHandler('mtj_arrest:endScenario', function()
   scenarioStartPos = nil
   hideScenarioUI()
   hideVorwarnungUI()
+  nativeHudClear()
   clearCops()
   setAmbientCopsIgnore(false)
   dbg("endScenario: scenario ended")
@@ -1234,6 +1326,7 @@ AddEventHandler('playerSpawned', function()
   ClearPlayerWantedLevel(PlayerId())
   hideScenarioUI()
   hideVorwarnungUI()
+  nativeHudClear()
   TriggerEvent('mtj_arrest:nui:jail', false)
   clearCops()
   clearHelis()
@@ -1275,6 +1368,7 @@ AddEventHandler('onResourceStop', function(res)
   ClearPlayerWantedLevel(PlayerId())
   hideScenarioUI()
   hideVorwarnungUI()
+  nativeHudClear()
   TriggerEvent('mtj_arrest:nui:jail', false)
   clearCops()
   clearHelis()
