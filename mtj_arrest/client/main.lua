@@ -233,6 +233,16 @@ local vorwarnungActive = false -- Vorwarnung gerade aktiv (auto_cop_spawn muss w
 local diedDuringScenario = false -- Spieler ist waehrend Polizeieinsatz gestorben
 local lastKnownWanted = 0 -- Letzter bekannter Wanted-Level (fuer Wiederherstellung bei GTA-Reset)
 
+-- Gibt den effektiven Wanted-Level zurueck: GTA-Wert ODER lastKnownWanted als Fallback.
+-- GTA V setzt Wanted manchmal kurz auf 0 wenn keine Cops sichtbar sind.
+-- Diese Funktion stellt sicher, dass Spawn-Logik immer den korrekten Level hat.
+local function getEffectiveWanted()
+  local w = GetPlayerWantedLevel(PlayerId())
+  if w > 0 then return w end
+  if lastKnownWanted > 0 then return lastKnownWanted end
+  return 0
+end
+
 -- === GLOBALER COP-ZAEHLER (fuer auto_cop_spawn.lua Koordination) ===
 -- Zaehlt nur LEBENDE Cops im Radius von 100m um den Spieler
 function GetMainLuaAliveCopCount()
@@ -502,7 +512,7 @@ local function spawnCopsAroundPlayer()
   if not (Config and Config.PoliceOffsets and #Config.PoliceOffsets > 0) then dbg("No PoliceOffsets"); return end
   if not (Config and Config.PoliceModels and #Config.PoliceModels > 0) then dbg("No PoliceModels"); return end
   local maxActive = Config.MaxActiveCops or 12
-  local wanted = GetPlayerWantedLevel(PlayerId())
+  local wanted = getEffectiveWanted()
   local toSpawn = Config.PoliceCount or 7
   if Config.CopsPerWantedLevel and Config.CopsPerWantedLevel[wanted] then
     toSpawn = Config.CopsPerWantedLevel[wanted]
@@ -525,7 +535,7 @@ local function spawnCopsAroundPlayer()
 end
 
 local function spawnPoliceHeli()
-  local w = GetPlayerWantedLevel(PlayerId())
+  local w = getEffectiveWanted()
   local ht = Config.HelisPerWantedLevel
   local maxH = (ht and ht[w]) or Config.MaxHelis or 1
   if #helis >= maxH then return end
@@ -602,7 +612,7 @@ end
 -- Polizeifahrzeug spawnen (Streifenwagen mit bewaffneter Besatzung)
 local policeVehicleModels = {"police", "police2", "police3", "policet"}
 local function getMaxVehiclesForWanted()
-  local w = GetPlayerWantedLevel(PlayerId())
+  local w = getEffectiveWanted()
   local ft = Config.FahrzeugePerWantedLevel
   if ft and ft[w] then return ft[w] end
   return 2
@@ -683,7 +693,7 @@ local function startCombatMaintenance()
     while scenarioActive and not surrendered and not cuffed and not inJail do
       Wait(1500) -- 1.5s statt 3s fuer schnellere Verstaerkung
       local playerPed = PlayerPedId()
-      local wanted = GetPlayerWantedLevel(PlayerId())
+      local wanted = getEffectiveWanted()
 
       -- Tote und zu weit entfernte Cops aus Liste entfernen (200m Radius)
       local ppos = GetEntityCoords(playerPed)
@@ -827,7 +837,7 @@ local function startCombatMaintenance()
     -- nichts tun. Aber wenn Wanted > 0 und Szenario irgendwie haengt,
     -- endScenario triggern damit wanted_level.lua neu starten kann.
     if scenarioActive and not surrendered and not cuffed and not inJail then
-      local wanted = GetPlayerWantedLevel(PlayerId())
+      local wanted = getEffectiveWanted()
       if wanted > 0 then
         dbg("combatMaintenance: Loop beendet aber Wanted > 0, resette Szenario fuer Neustart")
         TriggerEvent('mtj_arrest:endScenario')
@@ -1398,11 +1408,29 @@ AddEventHandler('mtj_arrest:startScenario', function()
       end
     end
 
-    -- ETAPPE 1: Polizei spawnen
+    -- ETAPPE 1: Polizei spawnen (Cops, Fahrzeuge, Helikopter — alles laut Config)
     clearCops()
     spawnCopsAroundPlayer()
+    -- Fahrzeuge und Helikopter sofort spawnen (laut Config pro Wanted-Level)
+    local initWanted = getEffectiveWanted()
+    if initWanted >= 2 then
+      local maxVeh = getMaxVehiclesForWanted()
+      for v = 1, maxVeh do
+        spawnPoliceVehicle()
+        Wait(200)
+      end
+    end
+    local heliLevel = Config.HeliWantedLevel or 3
+    if initWanted >= heliLevel then
+      local ht = Config.HelisPerWantedLevel
+      local maxHeli = (ht and ht[initWanted]) or Config.MaxHelis or 1
+      for h = 1, maxHeli do
+        spawnPoliceHeli()
+        Wait(200)
+      end
+    end
     setAmbientCopsIgnore(true)
-    dbg("startScenario: cops spawned, warte auf Ankunft...")
+    dbg("startScenario: cops/vehicles/helis spawned, warte auf Ankunft...")
 
     -- ETAPPE 2: Warten bis mindestens ein Cop im Aktionsradius ist
     local arrivalRadius = Config.Aktionsradius
