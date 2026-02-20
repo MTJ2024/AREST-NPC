@@ -377,7 +377,7 @@ local function randomPosAroundPlayer(minDist, maxDist)
     local dist = math.random() * (effectiveMax - minDist) + minDist
     local nx = p.x + math.cos(angle) * dist
     local ny = p.y + math.sin(angle) * dist
-    -- Methode 1: GetSafeCoordForPed (GTA sucht begehbare Position)
+    -- Methode 1: GetSafeCoordForPed (GTA sucht begehbare Position, flags=16: auf Gehweg)
     local safeFound, sx, sy, sz = GetSafeCoordForPed(nx, ny, p.z, true, 16)
     if safeFound then
       dbg("randomPos: SafeCoord gefunden bei Versuch", attempt, "dist:", dist)
