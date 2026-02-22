@@ -48,13 +48,13 @@ Config.Verhandlung = {
         {   -- Stufe 1: Aufforderung (ruhiger Ton)
             Dauer   = 5,            -- Sekunden
             Text    = "POLIZEI! Legen Sie sofort Ihre Waffen ab!",
-            Farbe   = {355, 200, 50},   -- Gelb/Orange
+            Farbe   = {255, 200, 50},   -- Gelb/Orange
             Speech  = "ARREST_PLAYER",  -- GTA Speech Kontext
         },
         {   -- Stufe 2: Warnung (aggressiver)
             Dauer   = 5,
             Text    = "LETZTE WARNUNG! Ergeben Sie sich SOFORT oder wir schiessen!",
-            Farbe   = {355, 100, 30},   -- Orange/Rot
+            Farbe   = {255, 100, 30},   -- Orange/Rot
             Speech  = "CHALLENGE_THREATEN",
         },
         {   -- Stufe 3: Zugriff (Cops schiessen)

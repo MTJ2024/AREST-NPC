@@ -429,6 +429,15 @@ CreateThread(function()
         evasionNotifiedAt = 0
         nativeHudSet("evasion", nil)
       end
+      -- Wanted auch im Gap zwischen Szenario-Neustarts halten
+      -- Verhindert dass GTA den Wanted-Level auf 0 setzt waehrend endScenario → startScenario
+      if lastKnownWanted > 0 and not inJail then
+        local wanted = GetPlayerWantedLevel(PlayerId())
+        if wanted == 0 then
+          SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
+          SetPlayerWantedLevelNow(PlayerId(), false)
+        end
+      end
     end
   end
 end)
@@ -1641,7 +1650,11 @@ AddEventHandler('mtj_arrest:endScenario', function()
   fluchtversuchTriggered = false
   vorwarnungActive = false
   scenarioStartPos = nil
-  lastKnownWanted = 0
+  -- lastKnownWanted wird NICHT auf 0 gesetzt!
+  -- Bei Stale-Timeout-Neustarts muss der Wanted-Level erhalten bleiben,
+  -- sonst droppt GTA den Level im Gap zwischen endScenario und startScenario.
+  -- Callers die lastKnownWanted=0 brauchen (Entkommen, playerSpawned, onResourceStop)
+  -- setzen es selbst VOR dem Aufruf von endScenario.
   evasionStartTime = 0
   evasionNotifiedAt = 0
   hideScenarioUI()
@@ -1649,7 +1662,7 @@ AddEventHandler('mtj_arrest:endScenario', function()
   nativeHudClear()
   clearCops()
   setAmbientCopsIgnore(false)
-  dbg("endScenario: scenario ended")
+  dbg("endScenario: scenario ended, lastKnownWanted beibehalten:", lastKnownWanted)
 end)
 
 -- === E-TASTE / SURRENDER ===
@@ -1683,6 +1696,7 @@ CreateThread(function()
         Wait(1500)
         if GetPlayerWantedLevel(PlayerId()) == 0 and scenarioActive then
           dbg("Wanted Level = 0 (auch nach Wartung), beende Szenario!")
+          lastKnownWanted = 0 -- Wanted wirklich weg
           pursuitStartTime = 0 -- Verfolgung wirklich vorbei (entkommen)
           TriggerEvent('mtj_arrest:endScenario')
         end

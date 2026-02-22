@@ -12,7 +12,7 @@ Config.RequiredWantedLevel = Config.RequiredWantedLevel or 1
 
 local scenarioTriggered = false
 local lastTriggerTime = 0
-local SCENARIO_STALE_TIMEOUT_MS = 45000 -- 45 Sekunden: Wenn Szenario so lange "aktiv" war ohne Ergebnis, Reset
+local SCENARIO_STALE_TIMEOUT_MS = 300000 -- 300 Sekunden (5 Min): Szenario-Setup braucht ~30s + Kampfzeit, 45s war viel zu kurz
 
 -- Listen for scenario end to allow re-triggering
 AddEventHandler('mtj_arrest:endScenario', function()
