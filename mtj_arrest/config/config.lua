@@ -188,8 +188,8 @@ Config.GuardReleaseTime         = 8       -- Sekunden: Freigabe des Anti-Doppel-
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.Nachlassen = {
     Aktiviert           = true,     -- true = Nachlassen-System aktiv
-    AbSekunden          = 120,      -- Sekunden: Ab dieser Verfolgungsdauer beginnt das Nachlassen
-    NachlassDauer       = 90,       -- Sekunden: Ueber diesen Zeitraum laesst der Druck komplett nach
+    AbSekunden          = 300,      -- Sekunden (5 Min): Ab dieser Verfolgungsdauer beginnt das Nachlassen
+    NachlassDauer       = 180,      -- Sekunden (3 Min): Ueber diesen Zeitraum laesst der Druck komplett nach
     MinCopFaktor        = 0.0,      -- Minimaler Cop-Faktor (0.0 = am Ende keine neuen Cops mehr)
     MinGenauigkeit      = 5,        -- Minimale Cop-Genauigkeit (normal: 40-50, hier fast harmlos)
     NachrichtStart      = "~y~Die Polizei verliert langsam die Kontrolle...",

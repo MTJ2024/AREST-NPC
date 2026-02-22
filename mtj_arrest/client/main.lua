@@ -223,6 +223,7 @@ local helis = {}
 local combatMaintenanceActive = false
 local combatStartTime = 0 -- GameTimer wann Kampfphase begann (fuer Nachlassen)
 local nachlassenNotifiedStage = 0 -- Letzte angezeigte Nachlassen-Stufe (0=keine, 1=start, 2=mitte, 3=ende)
+local pursuitStartTime = 0 -- GameTimer wann Verfolgung insgesamt begann (persistent ueber Szenario-Neustarts)
 local lastScenarioStart = 0
 local scenarioCooldown = 5000 -- 5 seconds cooldown between scenario starts
 local scenarioStartPos = nil  -- Position bei Szenario-Start (für Fluchtversuch)
@@ -823,14 +824,16 @@ local function startCombatMaintenance()
       local wanted = getEffectiveWanted()
 
       -- === NACHLASSEN: Verfolgungsdruck berechnen ===
+      -- Verwendet pursuitStartTime (persistiert ueber Szenario-Neustarts)
+      -- statt combatStartTime (wird bei jedem Neustart zurueckgesetzt)
       local nl = Config.Nachlassen
       local nachlassenFaktor = 1.0 -- 1.0 = voller Druck, 0.0 = kein Druck
-      if nl and nl.Aktiviert and combatStartTime > 0 then
-        local combatElapsed = (GetGameTimer() - combatStartTime) / 1000.0
-        local abSek = nl.AbSekunden or 120
-        local nlDauer = nl.NachlassDauer or 90
-        if combatElapsed >= abSek then
-          local progress = math.min((combatElapsed - abSek) / nlDauer, 1.0)
+      if nl and nl.Aktiviert and pursuitStartTime > 0 then
+        local pursuitElapsed = (GetGameTimer() - pursuitStartTime) / 1000.0
+        local abSek = nl.AbSekunden or 300
+        local nlDauer = nl.NachlassDauer or 180
+        if pursuitElapsed >= abSek then
+          local progress = math.min((pursuitElapsed - abSek) / nlDauer, 1.0)
           local minFaktor = nl.MinCopFaktor or 0.0
           nachlassenFaktor = 1.0 - progress * (1.0 - minFaktor)
           -- Nachlassen-Benachrichtigungen
@@ -838,7 +841,7 @@ local function startCombatMaintenance()
             nachlassenNotifiedStage = 1
             nativeNotify(nl.NachrichtStart or "~y~Die Polizei verliert langsam die Kontrolle...", "info")
             nativeHudSet("nachlassen", "Polizeidruck lässt nach...", 255, 200, 50)
-            dbg("Nachlassen gestartet nach", math.floor(combatElapsed), "s Verfolgung")
+            dbg("Nachlassen gestartet nach", math.floor(pursuitElapsed), "s Verfolgung")
           end
           if progress >= 0.5 and nachlassenNotifiedStage < 2 then
             nachlassenNotifiedStage = 2
@@ -1535,6 +1538,12 @@ AddEventHandler('mtj_arrest:startScenario', function()
   combatMaintenanceActive = false
   combatStartTime = 0
   nachlassenNotifiedStage = 0
+  -- pursuitStartTime bleibt bestehen ueber Szenario-Neustarts (Stale-Timeout)
+  -- Wird nur gesetzt wenn noch keine aktive Verfolgung laeuft
+  if pursuitStartTime == 0 then
+    pursuitStartTime = GetGameTimer()
+    dbg("pursuitStartTime gesetzt (neue Verfolgung)")
+  end
   complianceWindow = Config.ComplianceWindow
   fluchtversuchTriggered = false
   scenarioStartPos = GetEntityCoords(PlayerPedId())
@@ -1674,6 +1683,7 @@ CreateThread(function()
         Wait(1500)
         if GetPlayerWantedLevel(PlayerId()) == 0 and scenarioActive then
           dbg("Wanted Level = 0 (auch nach Wartung), beende Szenario!")
+          pursuitStartTime = 0 -- Verfolgung wirklich vorbei (entkommen)
           TriggerEvent('mtj_arrest:endScenario')
         end
       end
@@ -1697,6 +1707,7 @@ AddEventHandler('playerSpawned', function()
   combatMaintenanceActive = false
   combatStartTime = 0
   nachlassenNotifiedStage = 0
+  pursuitStartTime = 0
   fluchtversuchTriggered = false
   vorwarnungActive = false
   scenarioStartPos = nil
@@ -1746,6 +1757,7 @@ AddEventHandler('onResourceStop', function(res)
   combatMaintenanceActive = false
   combatStartTime = 0
   nachlassenNotifiedStage = 0
+  pursuitStartTime = 0
   fluchtversuchTriggered = false
   vorwarnungActive = false
   scenarioStartPos = nil
