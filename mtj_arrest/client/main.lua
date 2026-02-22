@@ -221,6 +221,8 @@ local complianceWindow = 0
 local complianceCountdownThreadActive = false
 local helis = {}
 local combatMaintenanceActive = false
+local combatStartTime = 0 -- GameTimer wann Kampfphase begann (fuer Nachlassen)
+local nachlassenNotifiedStage = 0 -- Letzte angezeigte Nachlassen-Stufe (0=keine, 1=start, 2=mitte, 3=ende)
 local lastScenarioStart = 0
 local scenarioCooldown = 5000 -- 5 seconds cooldown between scenario starts
 local scenarioStartPos = nil  -- Position bei Szenario-Start (für Fluchtversuch)
@@ -808,6 +810,8 @@ end
 local function startCombatMaintenance()
   if combatMaintenanceActive then return end
   combatMaintenanceActive = true
+  combatStartTime = GetGameTimer()
+  nachlassenNotifiedStage = 0
   CreateThread(function()
     local pistolHash = GetHashKey("WEAPON_PISTOL")
     local heliWeaponHash = GetHashKey(Config.HeliWeapon or "WEAPON_CARBINERIFLE")
@@ -817,6 +821,40 @@ local function startCombatMaintenance()
       Wait(1500) -- 1.5s statt 3s fuer schnellere Verstaerkung
       local playerPed = PlayerPedId()
       local wanted = getEffectiveWanted()
+
+      -- === NACHLASSEN: Verfolgungsdruck berechnen ===
+      local nl = Config.Nachlassen
+      local nachlassenFaktor = 1.0 -- 1.0 = voller Druck, 0.0 = kein Druck
+      if nl and nl.Aktiviert and combatStartTime > 0 then
+        local combatElapsed = (GetGameTimer() - combatStartTime) / 1000.0
+        local abSek = nl.AbSekunden or 120
+        local nlDauer = nl.NachlassDauer or 90
+        if combatElapsed >= abSek then
+          local progress = math.min((combatElapsed - abSek) / nlDauer, 1.0)
+          local minFaktor = nl.MinCopFaktor or 0.0
+          nachlassenFaktor = 1.0 - progress * (1.0 - minFaktor)
+          -- Nachlassen-Benachrichtigungen
+          if progress > 0 and nachlassenNotifiedStage < 1 then
+            nachlassenNotifiedStage = 1
+            nativeNotify(nl.NachrichtStart or "~y~Die Polizei verliert langsam die Kontrolle...", "info")
+            nativeHudSet("nachlassen", "Polizeidruck laesst nach...", 255, 200, 50)
+            dbg("Nachlassen gestartet nach", math.floor(combatElapsed), "s Verfolgung")
+          end
+          if progress >= 0.5 and nachlassenNotifiedStage < 2 then
+            nachlassenNotifiedStage = 2
+            nativeNotify(nl.NachrichtMitte or "~o~Der Verfolgungsdruck laesst nach! Nutze deine Chance!", "warnung")
+            nativeHudSet("nachlassen", "Polizeidruck sinkt!", 255, 150, 30)
+            dbg("Nachlassen 50%: Druck halbiert")
+          end
+          if progress >= 1.0 and nachlassenNotifiedStage < 3 then
+            nachlassenNotifiedStage = 3
+            nativeNotify(nl.NachrichtEnde or "~g~Die Polizei zieht sich zurueck! Jetzt entkommen!", "erfolg")
+            nativeHudSet("nachlassen", nil)
+            dbg("Nachlassen 100%: Keine Verstaerkung mehr")
+          end
+        end
+      end
+      local nachlassenAccuracy = math.floor(40 * nachlassenFaktor + (((nl and nl.MinGenauigkeit) or 5) * (1.0 - nachlassenFaktor)))
 
       -- Tote und zu weit entfernte Cops aus Liste entfernen (200m Radius)
       local ppos = GetEntityCoords(playerPed)
@@ -838,6 +876,7 @@ local function startCombatMaintenance()
           if ARREST_COP_GROUP then
             SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
           end
+          SetPedAccuracy(ped, nachlassenAccuracy)
           if not HasPedGotWeapon(ped, pistolHash, false) then
             GiveWeaponToPed(ped, pistolHash, 120, false, true)
             dbg("re-armed cop", ped)
@@ -861,16 +900,18 @@ local function startCombatMaintenance()
 
       -- Verstaerkung nachspawnen wenn Cops gestorben sind
       -- Globales Limit: main.lua Cops vs MaxActiveCops (inkl. lebende Cops-Zaehlung)
+      -- Nachlassen: targetCount wird durch nachlassenFaktor reduziert
       local targetCount = Config.PoliceCount or 7
       if Config.CopsPerWantedLevel and Config.CopsPerWantedLevel[wanted] then
         targetCount = Config.CopsPerWantedLevel[wanted]
       end
+      targetCount = math.floor(targetCount * nachlassenFaktor)
       local maxActive = Config.MaxActiveCops or 20
       local aliveCops = GetMainLuaAliveCopCount()
       targetCount = math.min(targetCount, maxActive)
       local toSpawn = math.min(targetCount - aliveCops, maxActive - aliveCops)
       if toSpawn > 0 then
-        dbg("Verstärkung: spawne", math.min(toSpawn, 4), "neue Cops (alive:", aliveCops, "target:", targetCount, "max:", maxActive, ")")
+        dbg("Verstärkung: spawne", math.min(toSpawn, 4), "neue Cops (alive:", aliveCops, "target:", targetCount, "max:", maxActive, "nachlassen:", nachlassenFaktor, ")")
         for i = 1, math.min(toSpawn, 4) do -- Max 4 pro Tick (alle 1.5s)
           local pos = randomPosAroundPlayer(20.0, 60.0)
           local model = Config.PoliceModels[math.random(1, #Config.PoliceModels)]
@@ -890,7 +931,7 @@ local function startCombatMaintenance()
             SetPedCombatAbility(ped, 2)
             SetPedCombatRange(ped, 2)
             SetPedCombatMovement(ped, 2)
-            SetPedAccuracy(ped, 50)
+            SetPedAccuracy(ped, nachlassenAccuracy)
             SetCurrentPedWeapon(ped, pistolHash, true)
             SetPedKeepTask(ped, true)
             TaskCombatPed(ped, playerPed, 0, 16)
@@ -899,14 +940,14 @@ local function startCombatMaintenance()
         end
       end
 
-      -- Polizeifahrzeuge spawnen (ab 2 Sterne)
-      if wanted >= 2 then
+      -- Polizeifahrzeuge spawnen (ab 2 Sterne) — nicht bei vollem Nachlassen
+      if wanted >= 2 and nachlassenFaktor > 0.3 then
         spawnPoliceVehicle()
       end
 
-      -- Helikopter ab konfiguriertem Wanted-Level
+      -- Helikopter ab konfiguriertem Wanted-Level — nicht bei fortgeschrittenem Nachlassen
       local heliLevel = Config.HeliWantedLevel or 3
-      if wanted >= heliLevel then
+      if wanted >= heliLevel and nachlassenFaktor > 0.5 then
         spawnPoliceHeli()
         -- Heli-Besatzung: Waffen und Kampf sicherstellen
         for _, heli in ipairs(helis) do
@@ -1491,6 +1532,8 @@ AddEventHandler('mtj_arrest:startScenario', function()
   cuffing = false
   complianceCountdownThreadActive = false
   combatMaintenanceActive = false
+  combatStartTime = 0
+  nachlassenNotifiedStage = 0
   complianceWindow = Config.ComplianceWindow
   fluchtversuchTriggered = false
   scenarioStartPos = GetEntityCoords(PlayerPedId())
@@ -1583,6 +1626,8 @@ AddEventHandler('mtj_arrest:endScenario', function()
   complianceWindow = 0
   complianceCountdownThreadActive = false
   combatMaintenanceActive = false
+  combatStartTime = 0
+  nachlassenNotifiedStage = 0
   fluchtversuchTriggered = false
   vorwarnungActive = false
   scenarioStartPos = nil
@@ -1649,6 +1694,8 @@ AddEventHandler('playerSpawned', function()
   complianceWindow = 0
   complianceCountdownThreadActive = false
   combatMaintenanceActive = false
+  combatStartTime = 0
+  nachlassenNotifiedStage = 0
   fluchtversuchTriggered = false
   vorwarnungActive = false
   scenarioStartPos = nil
@@ -1696,6 +1743,8 @@ AddEventHandler('onResourceStop', function(res)
   complianceWindow = 0
   complianceCountdownThreadActive = false
   combatMaintenanceActive = false
+  combatStartTime = 0
+  nachlassenNotifiedStage = 0
   fluchtversuchTriggered = false
   vorwarnungActive = false
   scenarioStartPos = nil
