@@ -180,18 +180,21 @@ Config.AntiDoubleJailTime       = 5       -- Sekunden: Schutz gegen doppeltes Ei
 Config.GuardReleaseTime         = 8       -- Sekunden: Freigabe des Anti-Doppel-Guards
 
 -- ╔══════════════════════════════════════════════════════════════════╗
--- ║              NACHLASSEN (Festhaltegriff lockert sich)           ║
--- ║  Ab einer bestimmten Haftzeit lockert sich der Griff nach      ║
--- ║  und nach, bis der Spieler entkommen kann.                     ║
--- ║  Verhindert unfaire Endlos-Festhalte bei langen Strafen.       ║
+-- ║              NACHLASSEN (Verfolgungsdruck laesst nach)          ║
+-- ║  Ab einer bestimmten Verfolgungsdauer laesst der Polizeidruck  ║
+-- ║  nach und nach nach: weniger Cops, weniger Genauigkeit,        ║
+-- ║  keine Verstaerkung mehr — bis der Spieler entkommen kann.     ║
+-- ║  Verhindert unfaire Endlos-Verfolgungen.                       ║
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.Nachlassen = {
     Aktiviert           = true,     -- true = Nachlassen-System aktiv
-    AbSekunden          = 120,      -- Sekunden: Ab dieser Haftzeit beginnt das Nachlassen
-    NachlassDauer       = 60,       -- Sekunden: Ueber diesen Zeitraum lockert sich der Griff
-    NachrichtStart      = "~y~Die Handschellen lockern sich langsam...",
-    NachrichtMitte      = "~o~Du spürst, wie der Griff nachlässt... Noch etwas Geduld!",
-    NachrichtFlucht     = "~g~BEFREIT!~s~ Du hast dich aus der Haft befreit!",
+    AbSekunden          = 120,      -- Sekunden: Ab dieser Verfolgungsdauer beginnt das Nachlassen
+    NachlassDauer       = 90,       -- Sekunden: Ueber diesen Zeitraum laesst der Druck komplett nach
+    MinCopFaktor        = 0.0,      -- Minimaler Cop-Faktor (0.0 = am Ende keine neuen Cops mehr)
+    MinGenauigkeit      = 5,        -- Minimale Cop-Genauigkeit (normal: 40-50, hier fast harmlos)
+    NachrichtStart      = "~y~Die Polizei verliert langsam die Kontrolle...",
+    NachrichtMitte      = "~o~Der Verfolgungsdruck laesst nach! Nutze deine Chance!",
+    NachrichtEnde       = "~g~Die Polizei zieht sich zurueck! Jetzt entkommen!",
     NachrichtFortschritt = "~y~Nachlassen~s~: %d%% — Halte durch!",
 }
 
