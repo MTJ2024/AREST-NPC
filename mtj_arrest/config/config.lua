@@ -193,8 +193,8 @@ Config.Nachlassen = {
     MinCopFaktor        = 0.0,      -- Minimaler Cop-Faktor (0.0 = am Ende keine neuen Cops mehr)
     MinGenauigkeit      = 5,        -- Minimale Cop-Genauigkeit (normal: 40-50, hier fast harmlos)
     NachrichtStart      = "~y~Die Polizei verliert langsam die Kontrolle...",
-    NachrichtMitte      = "~o~Der Verfolgungsdruck laesst nach! Nutze deine Chance!",
-    NachrichtEnde       = "~g~Die Polizei zieht sich zurueck! Jetzt entkommen!",
+    NachrichtMitte      = "~o~Der Verfolgungsdruck lässt nach! Nutze deine Chance!",
+    NachrichtEnde       = "~g~Die Polizei zieht sich zurück! Jetzt entkommen!",
     NachrichtFortschritt = "~y~Nachlassen~s~: %d%% — Halte durch!",
 }
 

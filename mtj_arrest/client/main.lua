@@ -837,7 +837,7 @@ local function startCombatMaintenance()
           if progress > 0 and nachlassenNotifiedStage < 1 then
             nachlassenNotifiedStage = 1
             nativeNotify(nl.NachrichtStart or "~y~Die Polizei verliert langsam die Kontrolle...", "info")
-            nativeHudSet("nachlassen", "Polizeidruck laesst nach...", 255, 200, 50)
+            nativeHudSet("nachlassen", "Polizeidruck lässt nach...", 255, 200, 50)
             dbg("Nachlassen gestartet nach", math.floor(combatElapsed), "s Verfolgung")
           end
           if progress >= 0.5 and nachlassenNotifiedStage < 2 then
@@ -854,7 +854,8 @@ local function startCombatMaintenance()
           end
         end
       end
-      local nachlassenAccuracy = math.floor(40 * nachlassenFaktor + (((nl and nl.MinGenauigkeit) or 5) * (1.0 - nachlassenFaktor)))
+      local minAccuracy = (nl and nl.MinGenauigkeit) or 5
+      local nachlassenAccuracy = math.floor(40 * nachlassenFaktor + minAccuracy * (1.0 - nachlassenFaktor))
 
       -- Tote und zu weit entfernte Cops aus Liste entfernen (200m Radius)
       local ppos = GetEntityCoords(playerPed)
