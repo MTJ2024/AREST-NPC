@@ -1384,6 +1384,11 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
   nativeHudSet("jail_timer", "Verbleibend: " .. math.ceil(jailSeconds/60) .. " Min", 100, 180, 255)
   DoScreenFadeIn(1000)
   releaseWarningShown = false
+  -- Nachlassen-Tracking
+  local totalJailSeconds = jailSeconds
+  local nachlassenStarted = false
+  local nachlassenMitteShown = false
+  local nachlassenLastProgress = -1
   -- Jail-Countdown-Timer UI
   CreateThread(function()
     while jailSeconds > 0 and inJail do
@@ -1407,12 +1412,62 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
           dbg("Entlassungswarnung bei", jailSeconds, "Sekunden")
         end
       end
+
+      -- === NACHLASSEN: Griff lockert sich nach und nach ===
+      local nl = Config.Nachlassen
+      if nl and nl.Aktiviert then
+        local served = totalJailSeconds - jailSeconds
+        local abSek = nl.AbSekunden or 120
+        local nlDauer = nl.NachlassDauer or 60
+
+        if served >= abSek and totalJailSeconds > abSek then
+          local elapsed = served - abSek
+          local progress = math.min(elapsed / nlDauer, 1.0)
+          local progressPct = math.floor(progress * 100)
+
+          -- Phase 1: Nachlassen beginnt (Handschellen lockern sich)
+          if not nachlassenStarted then
+            nachlassenStarted = true
+            nativeNotify(nl.NachrichtStart or "~y~Die Handschellen lockern sich langsam...", "warnung")
+            nativeHudSet("nachlassen", "Nachlassen: 0%", 255, 200, 50)
+            dbg("Nachlassen gestartet nach", served, "Sekunden Haft")
+          end
+
+          -- Fortschritt alle 10% anzeigen
+          local step = math.floor(progressPct / 10) * 10
+          if step > nachlassenLastProgress then
+            nachlassenLastProgress = step
+            local msg = (nl.NachrichtFortschritt or "~y~Nachlassen~s~: %d%% — Halte durch!"):format(step)
+            nativeHudSet("nachlassen", ("Nachlassen: %d%%"):format(step), 255, math.floor(200 - step * 1.5), 50)
+            if step > 0 and step < 100 then
+              nativeNotify(msg, "info")
+            end
+          end
+
+          -- Phase 2: 50% — Bewegung freigeben (Freeze aufheben)
+          if progress >= 0.5 and not nachlassenMitteShown then
+            nachlassenMitteShown = true
+            FreezeEntityPosition(player, false)
+            nativeNotify(nl.NachrichtMitte or "~o~Du spürst, wie der Griff nachlässt... Noch etwas Geduld!", "warnung")
+            dbg("Nachlassen 50%: Freeze aufgehoben")
+          end
+
+          -- Phase 3: 100% — Vollständig befreit, Jail beenden
+          if progress >= 1.0 then
+            nativeNotify(nl.NachrichtFlucht or "~g~BEFREIT!~s~ Du hast dich aus der Haft befreit!", "erfolg")
+            nativeHudSet("nachlassen", nil)
+            dbg("Nachlassen 100%: Spieler befreit!")
+            jailSeconds = 0 -- Loop beenden
+          end
+        end
+      end
     end
     if inJail then
       -- Jailzeit vorbei: Entlassen UND vor das Tor teleportieren!
       TriggerEvent('mtj_arrest:nui:jail', false)
       nativeHudSet("jail", nil)
       nativeHudSet("jail_timer", nil)
+      nativeHudSet("nachlassen", nil)
       FreezeEntityPosition(player, false)
       SetEnableHandcuffs(player, false)
       inJail = false

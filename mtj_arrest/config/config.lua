@@ -180,6 +180,22 @@ Config.AntiDoubleJailTime       = 5       -- Sekunden: Schutz gegen doppeltes Ei
 Config.GuardReleaseTime         = 8       -- Sekunden: Freigabe des Anti-Doppel-Guards
 
 -- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              NACHLASSEN (Festhaltegriff lockert sich)           ║
+-- ║  Ab einer bestimmten Haftzeit lockert sich der Griff nach      ║
+-- ║  und nach, bis der Spieler entkommen kann.                     ║
+-- ║  Verhindert unfaire Endlos-Festhalte bei langen Strafen.       ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.Nachlassen = {
+    Aktiviert           = true,     -- true = Nachlassen-System aktiv
+    AbSekunden          = 120,      -- Sekunden: Ab dieser Haftzeit beginnt das Nachlassen
+    NachlassDauer       = 60,       -- Sekunden: Ueber diesen Zeitraum lockert sich der Griff
+    NachrichtStart      = "~y~Die Handschellen lockern sich langsam...",
+    NachrichtMitte      = "~o~Du spürst, wie der Griff nachlässt... Noch etwas Geduld!",
+    NachrichtFlucht     = "~g~BEFREIT!~s~ Du hast dich aus der Haft befreit!",
+    NachrichtFortschritt = "~y~Nachlassen~s~: %d%% — Halte durch!",
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              FLUCHTVERSUCH                                      ║
 -- ║  Was passiert, wenn der Spieler während der Ergeben-Phase       ║
 -- ║  wegrennt statt [E] zu drücken                                  ║
