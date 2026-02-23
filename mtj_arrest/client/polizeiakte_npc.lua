@@ -1,7 +1,7 @@
 -- ╔══════════════════════════════════════════════════════════════════════════╗
 -- ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
 -- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
--- ║  github.com/MTJ2024/AREST-NPC                                          ║
+-- ║  Plagiatschutz aktiv — Unbefugte Nutzung wird erkannt und gemeldet.    ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 -- Polizeiakte NPC: Spieler kann an einem NPC seine Strafakte einsehen
 

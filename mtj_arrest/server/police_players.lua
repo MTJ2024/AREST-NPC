@@ -1,7 +1,7 @@
 -- ╔══════════════════════════════════════════════════════════════════════════╗
 -- ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
 -- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
--- ║  github.com/MTJ2024/AREST-NPC                                          ║
+-- ║  Plagiatschutz aktiv — Unbefugte Nutzung wird erkannt und gemeldet.    ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 -- mtj_arrest: Server-Helper zur Erkennung von Spieler-Cops in der Nähe
 -- Sendet Distanz zum nächsten Spieler mit ESX-Job (z. B. police/sheriff) an den Client.
