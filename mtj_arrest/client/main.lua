@@ -321,11 +321,16 @@ end)
 -- GTA V setzt Wanted auf 0 wenn keine Cops in Sichtlinie — dieses Thread verhindert das.
 -- Prinzip: "Solange Sterne, solange Aktion" — Wanted bleibt aktiv ab Szenario-Start.
 -- ENTKOMMEN: Wenn Spieler lange genug ALLEN Cops entwischt, Wanted sinkt → Szenario endet.
+local lastMaxWantedCheck = 0
 CreateThread(function()
   while true do
     Wait(500)
-    -- Periodisch SetMaxWantedLevel(5) erneuern (GTA/FiveM setzt es manchmal zurueck)
-    SetMaxWantedLevel(5)
+    -- SetMaxWantedLevel(5) alle 10 Sekunden erneuern (GTA/FiveM setzt es manchmal zurueck)
+    local now = GetGameTimer()
+    if now - lastMaxWantedCheck > 10000 then
+      SetMaxWantedLevel(5)
+      lastMaxWantedCheck = now
+    end
     if scenarioActive and not surrendered and not cuffed and not inJail then
       -- === Entkommen-Pruefung: Ist ein Cop in der Naehe? ===
       local esc = Config.Entkommen
