@@ -10,7 +10,7 @@ lua54 'yes'
 name 'mtj_arrest'
 author 'MTJ'
 version '1.0.0'
-description 'Immersives RP-Festnahme-Szenario mit NPC-Polizei, ESX Jail, UI-Timer'
+description 'AREST-NPC — Immersives RP-Festnahme-Szenario mit NPC-Polizei, ESX Jail, UI-Timer'
 
 ui_page 'html/index.html'
 

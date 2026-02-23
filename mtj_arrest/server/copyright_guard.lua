@@ -70,7 +70,7 @@ local function checkSignature()
   if not guard then
     return false, "copyright_guard.lua geloescht!"
   end
-  if not string.find(guard, SIGNATURE) then
+  if not string.find(guard, SIGNATURE, 1, true) then
     return false, "Plagiatschutz-Signatur manipuliert!"
   end
   return true
