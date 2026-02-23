@@ -18,7 +18,7 @@ Config.Keys = {
 -- ║  "Hoer auf zu schiessen, sonst Gegenwehr!"                     ║
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.Vorwarnung = {
-    Aktiviert           = true,     -- true = Vorwarnung wird angezeigt
+    Aktiviert           = false,    -- DEAKTIVIERT: Vorwarnung blockiert Polizei-Spawn und verursacht Stuck-States
     Dauer               = 5,        -- Sekunden: Wie lange die Warnung angezeigt wird
     Titel               = "POLIZEI-WARNUNG",
     Text                = "Legen Sie sofort Ihre Waffen ab!",

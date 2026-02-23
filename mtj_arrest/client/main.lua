@@ -3,46 +3,7 @@
 -- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
 -- ║  github.com/MTJ2024/AREST-NPC                                          ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
-local DEBUG = true
-
-local Config = Config or {}
-Config.Keys = Config.Keys or { Surrender = 38 }
-Config.PoliceCount = Config.PoliceCount or 7
-Config.MaxActiveCops = Config.MaxActiveCops or 12
-Config.Aktionsradius = Config.Aktionsradius or 25.0
-Config.PoliceOffsets = Config.PoliceOffsets or {
-    vector3(8.0, 4.0, 0.0),
-    vector3(-6.0, 5.0, 0.0),
-    vector3(4.0, -7.0, 0.0),
-    vector3(-8.0, -5.0, 0.0),
-    vector3(12.0, 0.0, 0.0),
-    vector3(-12.0, 0.0, 0.0),
-    vector3(6.0, 10.0, 0.0),
-}
-Config.PoliceModels = Config.PoliceModels or {
-    "s_m_y_cop_01",
-    "s_f_y_cop_01",
-    "s_m_y_sheriff_01",
-    "s_m_m_sheriff_01"
-}
-Config.ComplianceWindow = Config.ComplianceWindow or 10
-Config.JailMinutesDefault = Config.JailMinutesDefault or 10
-Config.MaxSpawnDistance = Config.MaxSpawnDistance or 40.0
-Config.DisableAmbientCopsAfterSurrender = true
-Config.UI = Config.UI or {
-    ScenarioHint = "Du bist umzingelt! Drücke [E], um dich zu ergeben.",
-    ArrestLogLines = {
-        "Tatverdacht: Widerstand gegen die Staatsgewalt",
-        "Maßnahme: Vorläufige Festnahme und Überstellung JVA",
-        "Rechte: Aussageverweigerungsrecht, Recht auf Verteidiger"
-    }
-}
-Config.JailPosition = Config.JailPosition or vector3(1690.5, 2565.9, 45.6)
-Config.JailHeading = Config.JailHeading or 180.0
-Config.JailReleasePosition = Config.JailReleasePosition or vector3(1845.0, 2585.0, 45.7)
-Config.JailReleaseHeading = Config.JailReleaseHeading or 270.0
-Config.JailName = Config.JailName or "JVA Bolingbroke"
-Config.JailReason = Config.JailReason or "Du bist inhaftiert und verbüßt deine Strafe."
+local DEBUG = false
 
 local function dbg(...)
   if not DEBUG then return end
@@ -232,11 +193,12 @@ local releaseWarningShown = false -- Entlassungswarnung nur einmal
 local playerAkteStatus = "unbescholten" -- Polizeiakte-Status (vom Server geladen)
 local policeVehicles = {} -- Gespawnte Polizeifahrzeuge
 local RESPAWN_RADIUS = 100.0 -- Cops zaehlen und verwalten im 100m Radius
-local vorwarnungActive = false -- Vorwarnung gerade aktiv (auto_cop_spawn muss warten)
+
 local diedDuringScenario = false -- Spieler ist waehrend Polizeieinsatz gestorben
 local lastKnownWanted = 0 -- Letzter bekannter Wanted-Level (fuer Wiederherstellung bei GTA-Reset)
 local evasionStartTime = 0 -- GameTimer wann Evasion-Countdown begann (0 = nicht aktiv)
 local evasionNotifiedAt = 0 -- Letzter Zeitpunkt einer Evasion-HUD-Nachricht
+local wantedDropCount = 0 -- Zaehlt wie oft WantedMaintenance Wanted=0 gelesen hat (Grace Period)
 
 -- Gibt den effektiven Wanted-Level zurueck: GTA-Wert ODER lastKnownWanted als Fallback.
 -- GTA V setzt Wanted manchmal kurz auf 0 wenn keine Cops sichtbar sind.
@@ -283,7 +245,7 @@ function IsArrestScenarioActive()
 end
 
 function IsVorwarnungActive()
-  return vorwarnungActive
+  return false
 end
 
 function IsCombatPhaseActive()
@@ -401,15 +363,23 @@ CreateThread(function()
             nativeHudSet("evasion", hudMsg:gsub("~[a-zA-Z]~", ""), 100, 180, 255)
             dbg("Evasion:", remaining, "s verbleibend")
           end
-          -- Wanted trotzdem halten (Spieler ist noch nicht frei!)
+          -- Wanted trotzdem halten (Spieler ist noch nicht frei!) — mit Grace Period
           local wanted = GetPlayerWantedLevel(PlayerId())
           if wanted > 0 then
             lastKnownWanted = wanted
+            wantedDropCount = 0
             SetPlayerWantedLevel(PlayerId(), wanted, false)
             SetPlayerWantedLevelNow(PlayerId(), false)
           elseif lastKnownWanted > 0 then
-            SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
-            SetPlayerWantedLevelNow(PlayerId(), false)
+            wantedDropCount = wantedDropCount + 1
+            if wantedDropCount < 6 then
+              SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
+              SetPlayerWantedLevelNow(PlayerId(), false)
+            else
+              dbg("WantedMaintenance (evasion): Wanted seit 3s auf 0 — akzeptiere")
+              lastKnownWanted = 0
+              wantedDropCount = 0
+            end
           end
         end
       else
@@ -423,16 +393,26 @@ CreateThread(function()
           evasionNotifiedAt = 0
           nativeHudSet("evasion", nil) -- HUD-Zeile entfernen
         end
-        -- Wanted aktiv halten (normal)
+        -- Wanted aktiv halten — aber mit Grace Period!
+        -- Wenn GTA 6x hintereinander (3s) Wanted=0 meldet, ist es ECHT (Server hat es entfernt)
         local wanted = GetPlayerWantedLevel(PlayerId())
         if wanted > 0 then
           lastKnownWanted = wanted
+          wantedDropCount = 0
           SetPlayerWantedLevel(PlayerId(), wanted, false)
           SetPlayerWantedLevelNow(PlayerId(), false)
         elseif lastKnownWanted > 0 then
-          dbg("WantedMaintenance: GTA hat Wanted auf 0 gesetzt, stelle wieder her:", lastKnownWanted)
-          SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
-          SetPlayerWantedLevelNow(PlayerId(), false)
+          wantedDropCount = wantedDropCount + 1
+          if wantedDropCount < 6 then
+            -- Kurzer Drop (GTA Race Condition): Wiederherstellen
+            SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
+            SetPlayerWantedLevelNow(PlayerId(), false)
+          else
+            -- Anhaltender Drop (3s): Server/Spieler hat Wanted entfernt → akzeptieren!
+            dbg("WantedMaintenance: Wanted seit 3s auf 0 — akzeptiere, setze lastKnownWanted=0")
+            lastKnownWanted = 0
+            wantedDropCount = 0
+          end
         end
       end
     else
@@ -442,13 +422,21 @@ CreateThread(function()
         evasionNotifiedAt = 0
         nativeHudSet("evasion", nil)
       end
-      -- Wanted auch im Gap zwischen Szenario-Neustarts halten
-      -- Verhindert dass GTA den Wanted-Level auf 0 setzt waehrend endScenario → startScenario
+      -- Wanted auch im Gap zwischen Szenario-Neustarts halten — mit gleicher Grace Period
       if lastKnownWanted > 0 and not inJail then
         local wanted = GetPlayerWantedLevel(PlayerId())
-        if wanted == 0 then
-          SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
-          SetPlayerWantedLevelNow(PlayerId(), false)
+        if wanted > 0 then
+          wantedDropCount = 0
+        elseif wanted == 0 then
+          wantedDropCount = wantedDropCount + 1
+          if wantedDropCount < 6 then
+            SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
+            SetPlayerWantedLevelNow(PlayerId(), false)
+          else
+            dbg("WantedMaintenance (gap): Wanted seit 3s auf 0 — akzeptiere")
+            lastKnownWanted = 0
+            wantedDropCount = 0
+          end
         end
       end
     end
@@ -854,6 +842,9 @@ local function spawnPoliceVehicle()
   dbg("spawned police vehicle with", #crew, "crew:", vehModel)
 end
 
+local updateCombatHUD
+local hideCombatHUD
+
 local function startCombatMaintenance()
   if combatMaintenanceActive then return end
   combatMaintenanceActive = true
@@ -866,6 +857,7 @@ local function startCombatMaintenance()
     -- Wanted-Level wird vom globalen WantedMaintenance-Thread aktiv gehalten
     while scenarioActive and not surrendered and not cuffed and not inJail do
       Wait(1500) -- 1.5s statt 3s fuer schnellere Verstaerkung
+      updateCombatHUD()
       local playerPed = PlayerPedId()
       local wanted = getEffectiveWanted()
 
@@ -1132,12 +1124,35 @@ local function getScenarioHint()
   return Config.UI.ScenarioHint
 end
 
+updateCombatHUD = function()
+  local wanted = getEffectiveWanted()
+  local aliveCops = GetMainLuaAliveCopCount()
+  local clampedWanted = math.min(wanted, 5)
+  local stars = string.rep("★", clampedWanted) .. string.rep("☆", 5 - clampedWanted)
+  local pursuitSec = 0
+  if pursuitStartTime > 0 then
+    pursuitSec = math.floor((GetGameTimer() - pursuitStartTime) / 1000)
+  end
+  local mins = math.floor(pursuitSec / 60)
+  local secs = pursuitSec % 60
+  nativeHudSet("combat_stars", stars .. "  Wanted: " .. wanted, 255, 50, 50)
+  nativeHudSet("combat_cops", "Aktive Einheiten: " .. aliveCops .. " | Helis: " .. #helis .. " | Fahrzeuge: " .. #policeVehicles, 100, 180, 255)
+  nativeHudSet("combat_time", ("Verfolgung: %02d:%02d"):format(mins, secs), 255, 200, 50)
+end
+
+hideCombatHUD = function()
+  nativeHudSet("combat_stars", nil)
+  nativeHudSet("combat_cops", nil)
+  nativeHudSet("combat_time", nil)
+end
+
 -- Alle Panels verstecken (gegenseitige Ausschliessung, nur 1 Panel gleichzeitig)
 local function hideAllUI()
   TriggerEvent('mtj_arrest:nui:vorwarnung', false)
   TriggerEvent('mtj_arrest:nui:scenario', false)
   TriggerEvent('mtj_arrest:nui:jail', false)
   TriggerEvent('mtj_arrest:nui:arrest_log', false)
+  hideCombatHUD()
   nativeHudClear()
   dbg("hideAllUI: alle Panels versteckt")
 end
@@ -1310,8 +1325,9 @@ local function runNegotiationAndCompliance()
     -- Nach allen Stufen: Zugriff (falls nicht ergeben)
     if scenarioActive and not surrendered and not cuffing and not cuffed and not inJail then
       canSurrender = false
+      -- Szenario-Panel AUSBLENDEN — Kampfphase braucht kein Countdown-Panel
+      hideScenarioUI()
       nativeHudSet("scenario", "ZUGRIFF! Feuer frei!", 255, 30, 30)
-      nativeHudSet("scenario_cd", nil)
       nativeNotify("~r~ZUGRIFF~s~: Verhandlung mit " .. playerName .. " gescheitert!", "polizei")
       reactivatePolice()
       startCombatMaintenance()
@@ -1330,8 +1346,9 @@ local function runNegotiationAndCompliance()
         checkFluchtversuch()
         if complianceWindow <= 0 then
           canSurrender = false
+          -- Szenario-Panel AUSBLENDEN — Kampfphase braucht kein Countdown-Panel
+          hideScenarioUI()
           nativeHudSet("scenario", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
-          nativeHudSet("scenario_cd", nil)
           reactivatePolice()
           startCombatMaintenance()
           dbg("Surrender window abgelaufen!")
@@ -1592,6 +1609,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
   combatMaintenanceActive = false
   combatStartTime = 0
   nachlassenNotifiedStage = 0
+  wantedDropCount = 0
   -- pursuitStartTime bleibt bestehen ueber Szenario-Neustarts (Stale-Timeout)
   -- Wird nur gesetzt wenn noch keine aktive Verfolgung laeuft
   if pursuitStartTime == 0 then
@@ -1716,13 +1734,14 @@ AddEventHandler('mtj_arrest:endScenario', function()
   combatMaintenanceActive = false
   combatStartTime = 0
   nachlassenNotifiedStage = 0
+  wantedDropCount = 0
   fluchtversuchTriggered = false
-  vorwarnungActive = false
   scenarioStartPos = nil
   evasionStartTime = 0
   evasionNotifiedAt = 0
   hideScenarioUI()
   hideVorwarnungUI()
+  hideCombatHUD()
   nativeHudClear()
   -- Cops NUR loeschen wenn Verfolgung WIRKLICH vorbei ist
   -- Bei Stale-Timeout-Neustarts (lastKnownWanted > 0) bleiben Cops bestehen!
@@ -1810,8 +1829,8 @@ AddEventHandler('playerSpawned', function()
   combatStartTime = 0
   nachlassenNotifiedStage = 0
   pursuitStartTime = 0
+  wantedDropCount = 0
   fluchtversuchTriggered = false
-  vorwarnungActive = false
   scenarioStartPos = nil
   lastKnownWanted = 0
   evasionStartTime = 0
@@ -1827,6 +1846,7 @@ AddEventHandler('playerSpawned', function()
   ClearPlayerWantedLevel(PlayerId())
   hideScenarioUI()
   hideVorwarnungUI()
+  hideCombatHUD()
   nativeHudClear()
   TriggerEvent('mtj_arrest:nui:jail', false)
   clearCops()
@@ -1860,8 +1880,8 @@ AddEventHandler('onResourceStop', function(res)
   combatStartTime = 0
   nachlassenNotifiedStage = 0
   pursuitStartTime = 0
+  wantedDropCount = 0
   fluchtversuchTriggered = false
-  vorwarnungActive = false
   scenarioStartPos = nil
   lastKnownWanted = 0
   evasionStartTime = 0
@@ -1876,6 +1896,7 @@ AddEventHandler('onResourceStop', function(res)
   ClearPlayerWantedLevel(PlayerId())
   hideScenarioUI()
   hideVorwarnungUI()
+  hideCombatHUD()
   nativeHudClear()
   TriggerEvent('mtj_arrest:nui:jail', false)
   clearCops()
