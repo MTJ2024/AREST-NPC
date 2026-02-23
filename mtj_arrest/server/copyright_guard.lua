@@ -24,10 +24,18 @@ local function critical(msg)
   print("^1^5[!!!] " .. msg .. " [!!!]^7")
 end
 
+local function isKnownResourceName(resName)
+  return string.find(resName, "AREST", 1, true) or string.find(resName, AUTHOR, 1, true)
+end
+
 local function checkAuthor()
   local resName = GetCurrentResourceName()
+  -- Resource-Name selbst (z.B. "AREST-NPC") ist ein gueltiger Nachweis
+  if isKnownResourceName(resName) then
+    return true
+  end
   local metaAuthor = GetResourceMetadata(resName, 'author', 0) or ""
-  if not string.find(metaAuthor, AUTHOR) then
+  if not string.find(metaAuthor, AUTHOR, 1, true) then
     return false, "Author-Metadaten manipuliert (erwartet: " .. AUTHOR_FULL .. ", gefunden: " .. metaAuthor .. ")"
   end
   return true
@@ -35,8 +43,12 @@ end
 
 local function checkDescription()
   local resName = GetCurrentResourceName()
+  -- Resource-Name selbst (z.B. "AREST-NPC") ist ein gueltiger Nachweis
+  if isKnownResourceName(resName) then
+    return true
+  end
   local metaDesc = GetResourceMetadata(resName, 'description', 0) or ""
-  if metaDesc ~= "" and not string.find(metaDesc, "MTJ") and not string.find(metaDesc, "AREST") and not string.find(metaDesc, "Arrest") then
+  if metaDesc ~= "" and not string.find(metaDesc, "MTJ", 1, true) and not string.find(metaDesc, "AREST", 1, true) and not string.find(metaDesc, "Arrest", 1, true) then
     return false, "Beschreibung verdaechtig veraendert"
   end
   return true
@@ -54,10 +66,10 @@ local function checkResourceFiles()
     if not content then
       return false, "Kritische Datei fehlt: " .. file
     end
-    if not string.find(content, AUTHOR_FULL) then
+    if not string.find(content, AUTHOR_FULL, 1, true) then
       return false, "Copyright-Header entfernt aus: " .. file
     end
-    if not string.find(content, "Plagiatschutz") then
+    if not string.find(content, "Plagiatschutz", 1, true) then
       return false, "Plagiatschutz-Markierung entfernt aus: " .. file
     end
   end
@@ -82,7 +94,7 @@ local function checkFxManifest()
   if not manifest then
     return false, "fxmanifest.lua fehlt!"
   end
-  if not string.find(manifest, "copyright_guard") then
+  if not string.find(manifest, "copyright_guard", 1, true) then
     return false, "copyright_guard.lua aus fxmanifest entfernt!"
   end
   return true
