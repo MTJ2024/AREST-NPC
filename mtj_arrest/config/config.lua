@@ -13,19 +13,6 @@ Config.Keys = {
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗
--- ║              VORWARNUNG (vor Polizei-Einsatz)                   ║
--- ║  Grosse Warnung BEVOR Polizei spawnt:                           ║
--- ║  "Hoer auf zu schiessen, sonst Gegenwehr!"                     ║
--- ╚══════════════════════════════════════════════════════════════════╝
-Config.Vorwarnung = {
-    Aktiviert           = false,    -- DEAKTIVIERT: Vorwarnung blockiert Polizei-Spawn und verursacht Stuck-States
-    Dauer               = 5,        -- Sekunden: Wie lange die Warnung angezeigt wird
-    Titel               = "POLIZEI-WARNUNG",
-    Text                = "Legen Sie sofort Ihre Waffen ab!",
-    TextKurz            = "Waffen ablegen oder Konsequenzen!",
-}
-
--- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              WAFFEN BEI TOD IM POLIZEI-EINSATZ                  ║
 -- ║  NUR wenn der Spieler waehrend eines aktiven Polizei-Einsatzes  ║
 -- ║  stirbt, werden alle Waffen entfernt. Normaler Tod = KEINE      ║

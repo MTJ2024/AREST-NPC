@@ -1018,7 +1018,6 @@ local function startCombatMaintenance()
       end
 
       -- Lebende Cops: Waffen, Kampf, Suchverhalten
-      local playerVisible = HasEntityClearLosToEntity(playerPed, playerPed, 17)
       for _, ped in ipairs(cops) do
         if DoesEntityExist(ped) and not IsEntityDead(ped) then
           if ARREST_COP_GROUP then
@@ -1258,6 +1257,7 @@ hideCombatHUD = function()
   nativeHudSet("combat_stars", nil)
   nativeHudSet("combat_cops", nil)
   nativeHudSet("combat_time", nil)
+  nativeHudSet("combat_status", nil)
 end
 
 -- Alle Panels verstecken (gegenseitige Ausschliessung, nur 1 Panel gleichzeitig)
@@ -1441,7 +1441,7 @@ local function runNegotiationAndCompliance()
       canSurrender = false
       -- Szenario-Panel AUSBLENDEN — Kampfphase braucht kein Countdown-Panel
       hideScenarioUI()
-      nativeHudSet("scenario", "ZUGRIFF! Feuer frei!", 255, 30, 30)
+      nativeHudSet("combat_status", "ZUGRIFF! Feuer frei!", 255, 30, 30)
       nativeNotify("~r~ZUGRIFF~s~: Verhandlung mit " .. playerName .. " gescheitert!", "polizei")
       reactivatePolice()
       startCombatMaintenance()
@@ -1462,7 +1462,7 @@ local function runNegotiationAndCompliance()
           canSurrender = false
           -- Szenario-Panel AUSBLENDEN — Kampfphase braucht kein Countdown-Panel
           hideScenarioUI()
-          nativeHudSet("scenario", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
+          nativeHudSet("combat_status", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
           reactivatePolice()
           startCombatMaintenance()
           dbg("Surrender window abgelaufen!")
