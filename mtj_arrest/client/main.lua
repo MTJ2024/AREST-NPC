@@ -1567,8 +1567,16 @@ AddEventHandler('mtj_arrest:startScenario', function()
   if lastKnownWanted < 1 then lastKnownWanted = Config.RequiredWantedLevel or 2 end
 
   -- Erkennung: Ist dies ein Neustart waehrend laufender Verfolgung?
-  -- Wenn pursuitStartTime > 0 UND Cops noch existieren, ist es ein Continuation-Restart
-  local isRestart = pursuitStartTime > 0 and #cops > 0
+  -- Nur wenn pursuitStartTime > 0 UND mindestens ein lebender Cop existiert
+  local hasAliveCop = false
+  local ppos = GetEntityCoords(PlayerPedId())
+  for _, ped in ipairs(cops) do
+    if DoesEntityExist(ped) and not IsEntityDead(ped) then
+      hasAliveCop = true
+      break
+    end
+  end
+  local isRestart = pursuitStartTime > 0 and hasAliveCop
 
   -- Polizeiakte vom Server laden (fuer status-basierte Texte)
   TriggerServerEvent('mtj_arrest:requestAkte')
