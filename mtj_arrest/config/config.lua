@@ -148,7 +148,25 @@ Config.HeliCrewModel            = "s_m_y_swat_01"   -- SWAT-Modell für Besatzun
 Config.HeliWeapon               = "WEAPON_CARBINERIFLE" -- Waffe der Heli-Besatzung
 Config.HeliSpawnHeight          = 80.0              -- Spawn-Höhe über dem Spieler (Meter)
 Config.MaxHelis                 = 2                 -- Maximale Anzahl Helikopter (Fallback)
--- Hinweis: HelisPerWantedLevel (oben) steuert Helis pro Wanted-Stufe
+
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              STRASSENSPERREN (ab 4 Sternen Wanted)              ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.Roadblock = {
+    Aktiviert           = true,     -- true = Strassensperren aktiv
+    AbWantedLevel       = 4,        -- Ab diesem Wanted-Level spawnen Sperren
+    MaxAnzahl           = 2,        -- Maximale Anzahl gleichzeitiger Sperren
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              DISPATCH (Polizeifunk fuer alle Spieler)           ║
+-- ║  Alle Spieler auf dem Server erhalten Polizeifunk-Meldungen     ║
+-- ║  wenn eine Verfolgungsjagd stattfindet — RP-Immersion           ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.Dispatch = {
+    Aktiviert           = true,     -- true = Dispatch-System aktiv
+    BlipAktiv           = true,     -- true = Blip auf der Karte bei Verfolgung
+}
 
 -- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              GEFÄNGNIS / JAIL                                   ║

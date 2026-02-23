@@ -5,7 +5,7 @@
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 -- mtj_arrest: Server main (crashsicher für ox_inventory, Jail-Teleport läuft IMMER)
 
-local DEBUG = true
+local DEBUG = false
 local function dbg(...)
   if not DEBUG then return end
   local t = {}
@@ -376,4 +376,64 @@ AddEventHandler('mtj_arrest:serverJailRelease', function()
       args = {"Gefängnis", "Deine Waffen wurden eingezogen (kein Waffenschein)."}
     })
   end
+end)
+
+-- === DISPATCH SYSTEM: Verfolgung fuer andere Spieler sichtbar ===
+local activePursuits = {}
+
+RegisterNetEvent('mtj_arrest:dispatch:pursuitStart')
+AddEventHandler('mtj_arrest:dispatch:pursuitStart', function(wanted)
+  local src = source
+  activePursuits[src] = { wanted = wanted or 2, start = os.time() }
+  local ped = GetPlayerPed(src)
+  local coords = GetEntityCoords(ped)
+  local name = GetPlayerName(src) or "Unbekannt"
+  TriggerClientEvent('mtj_arrest:dispatch:notify', -1, {
+    type = "start",
+    player = name,
+    playerId = src,
+    wanted = wanted or 2,
+    coords = { x = coords.x, y = coords.y, z = coords.z }
+  })
+  dbg(("[mtj_arrest][Dispatch] Verfolgung gestartet: %s (Wanted %d)"):format(name, wanted or 2))
+end)
+
+RegisterNetEvent('mtj_arrest:dispatch:pursuitEnd')
+AddEventHandler('mtj_arrest:dispatch:pursuitEnd', function(reason)
+  local src = source
+  if activePursuits[src] then
+    local name = GetPlayerName(src) or "Unbekannt"
+    TriggerClientEvent('mtj_arrest:dispatch:notify', -1, {
+      type = "end",
+      player = name,
+      playerId = src,
+      reason = reason or "unbekannt"
+    })
+    activePursuits[src] = nil
+    dbg(("[mtj_arrest][Dispatch] Verfolgung beendet: %s (%s)"):format(name, reason or "?"))
+  end
+end)
+
+RegisterNetEvent('mtj_arrest:dispatch:pursuitUpdate')
+AddEventHandler('mtj_arrest:dispatch:pursuitUpdate', function(wanted)
+  local src = source
+  if activePursuits[src] then
+    activePursuits[src].wanted = wanted or activePursuits[src].wanted
+  end
+end)
+
+AddEventHandler('playerDropped', function()
+  local src = source
+  if activePursuits[src] then
+    activePursuits[src] = nil
+  end
+end)
+
+RegisterNetEvent('mtj_arrest:serverFluchtversuch')
+AddEventHandler('mtj_arrest:serverFluchtversuch', function()
+  local src = source
+  if PolizeiakteRecordFlucht then
+    PolizeiakteRecordFlucht(src)
+  end
+  dbg(("[mtj_arrest] Fluchtversuch registriert fuer Spieler %d"):format(src))
 end)

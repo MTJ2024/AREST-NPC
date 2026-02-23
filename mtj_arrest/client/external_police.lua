@@ -7,7 +7,7 @@
 -- Erkennt NPC-Polizei (RelationGroups/Modelle) und optional Spieler-Cops (ESX-Job).
 -- Triggert automatisch 'mtj_arrest:startScenario', sobald nahe genug.
 
-local DEBUG = true
+local DEBUG = false
 local function dbg(...)
   if not DEBUG then return end
   local t = {}

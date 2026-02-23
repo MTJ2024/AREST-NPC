@@ -352,8 +352,8 @@ CreateThread(function()
           SetPlayerWantedLevel(PlayerId(), 0, false)
           SetPlayerWantedLevelNow(PlayerId(), false)
           nativeNotify(esc.NachrichtEntkommen or "~g~ENTKOMMEN!~s~ Du hast die Polizei abgehängt!", "erfolg")
-          nativeHudSet("evasion", nil) -- HUD-Zeile entfernen
-          -- endScenario wird vom Wanted-Level-Watcher ausgeloest (erkennt Wanted=0)
+          nativeHudSet("evasion", nil)
+          TriggerServerEvent('mtj_arrest:dispatch:pursuitEnd', "entkommen")
         else
           -- Evasion laeuft: HUD-Feedback alle 5 Sekunden
           if now - evasionNotifiedAt >= 5000 then
@@ -634,21 +634,24 @@ local function createCopAt(pos, modelName)
     return nil
   end
   SetEntityAsMissionEntity(ped, true, true)
-  PlaceObjectOnGroundProperly(ped) -- Sicherheitsnetz: auf Boden setzen
+  local netId = NetworkGetNetworkIdFromEntity(ped)
+  if netId and netId ~= 0 then
+    SetNetworkIdCanMigrate(netId, false)
+    SetNetworkIdExistsOnAllMachines(netId, true)
+  end
+  PlaceObjectOnGroundProperly(ped)
   SetBlockingOfNonTemporaryEvents(ped, true)
   SetPedArmour(ped, 100)
   SetPedFleeAttributes(ped, 0, false)
-  -- Approach-Phase: COP-Gruppe (RESPECT) — Waffe gezogen aber KEIN Kampf
-  -- Erst bei reactivatePolice() → ARREST_COP_GROUP (HATE) + aktiver Kampf
   SetPedRelationshipGroupHash(ped, GetHashKey("COP"))
   GiveWeaponToPed(ped, GetHashKey("WEAPON_PISTOL"), 120, false, true)
   SetCurrentPedWeapon(ped, GetHashKey("WEAPON_PISTOL"), true)
   SetPedSeeingRange(ped, 80.0)
   SetPedHearingRange(ped, 80.0)
-  SetPedAlertness(ped, 3)       -- Voll aufmerksam (sichtbar aktiv)
-  SetPedCombatAbility(ped, 0)   -- Kein Kampf waehrend Approach
+  SetPedAlertness(ped, 3)
+  SetPedCombatAbility(ped, 0)
   SetPedCombatRange(ped, 0)
-  SetPedCombatMovement(ped, 0)  -- Kein Kampf-Bewegen (nur laufen)
+  SetPedCombatMovement(ped, 0)
   SetPedAccuracy(ped, 0)
   TaskGoToEntity(ped, PlayerPedId(), -1, 3.0, 3.0, 1073741824, 0)
   dbg("createCopAt OK: ped=", ped, "model=", tostring(modelName))
@@ -709,6 +712,11 @@ local function spawnPoliceHeli()
   local veh = CreateVehicle(heliHash, spawnPos.x, spawnPos.y, spawnPos.z, math.random(0, 360) + 0.0, true, true)
   if not DoesEntityExist(veh) then dbg("heli vehicle creation failed"); return end
   SetEntityAsMissionEntity(veh, true, true)
+  local vehNetId = NetworkGetNetworkIdFromEntity(veh)
+  if vehNetId and vehNetId ~= 0 then
+    SetNetworkIdCanMigrate(vehNetId, false)
+    SetNetworkIdExistsOnAllMachines(vehNetId, true)
+  end
   SetVehicleEngineOn(veh, true, true, false)
   SetHeliBladesFullSpeed(veh)
 
@@ -720,6 +728,10 @@ local function spawnPoliceHeli()
     return
   end
   SetEntityAsMissionEntity(pilot, true, true)
+  local pilotNetId = NetworkGetNetworkIdFromEntity(pilot)
+  if pilotNetId and pilotNetId ~= 0 then
+    SetNetworkIdCanMigrate(pilotNetId, false)
+  end
   if ARREST_COP_GROUP then
     SetPedRelationshipGroupHash(pilot, ARREST_COP_GROUP)
   else
@@ -801,6 +813,11 @@ local function spawnPoliceVehicle()
   local veh = CreateVehicle(vehHash, spawnPos.x, spawnPos.y, spawnPos.z, heading, true, true)
   if not DoesEntityExist(veh) then dbg("police vehicle creation failed"); return end
   SetEntityAsMissionEntity(veh, true, true)
+  local vehNetId = NetworkGetNetworkIdFromEntity(veh)
+  if vehNetId and vehNetId ~= 0 then
+    SetNetworkIdCanMigrate(vehNetId, false)
+    SetNetworkIdExistsOnAllMachines(vehNetId, true)
+  end
   SetVehicleEngineOn(veh, true, true, false)
   SetVehicleSiren(veh, true) -- Sirene an
 
@@ -813,6 +830,10 @@ local function spawnPoliceVehicle()
     local ped = CreatePedInsideVehicle(veh, 4, crewHash, seat, true, true)
     if DoesEntityExist(ped) then
       SetEntityAsMissionEntity(ped, true, true)
+      local pedNetId = NetworkGetNetworkIdFromEntity(ped)
+      if pedNetId and pedNetId ~= 0 then
+        SetNetworkIdCanMigrate(pedNetId, false)
+      end
       if ARREST_COP_GROUP then
         SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
       end
@@ -840,6 +861,90 @@ local function spawnPoliceVehicle()
 
   table.insert(policeVehicles, {vehicle = veh, crew = crew})
   dbg("spawned police vehicle with", #crew, "crew:", vehModel)
+end
+
+local roadblocks = {}
+local function spawnRoadblock()
+  local maxBlocks = Config.Roadblock and Config.Roadblock.MaxAnzahl or 2
+  if #roadblocks >= maxBlocks then return end
+  local ppos = GetEntityCoords(PlayerPedId())
+  local heading = GetEntityHeading(PlayerPedId())
+  local rad = math.rad(heading)
+  local dist = 80.0 + math.random() * 40.0
+  local bx = ppos.x + math.sin(rad) * dist
+  local by = ppos.y + math.cos(rad) * dist
+  RequestCollisionAtCoord(bx, by, ppos.z)
+  Wait(150)
+  local found, gz = GetGroundZFor_3dCoord(bx, by, ppos.z + 50.0, false)
+  local bz = found and (gz + 0.5) or (ppos.z + 0.5)
+  local blockHeading = heading + 90.0 + math.random(-15, 15)
+  local blockModels = {"police", "police2", "police3"}
+  local blockModel = blockModels[math.random(1, #blockModels)]
+  local vehHash = loadModel(blockModel)
+  if not vehHash then return end
+  local veh = CreateVehicle(vehHash, bx, by, bz, blockHeading, true, true)
+  if not DoesEntityExist(veh) then return end
+  SetEntityAsMissionEntity(veh, true, true)
+  local vehNetId = NetworkGetNetworkIdFromEntity(veh)
+  if vehNetId and vehNetId ~= 0 then
+    SetNetworkIdCanMigrate(vehNetId, false)
+    SetNetworkIdExistsOnAllMachines(vehNetId, true)
+  end
+  SetVehicleSiren(veh, true)
+  SetVehicleEngineOn(veh, false, true, true)
+  FreezeEntityPosition(veh, true)
+  local crewModel = Config.PoliceModels and Config.PoliceModels[math.random(1, #Config.PoliceModels)] or "s_m_y_cop_01"
+  local crewHash = loadModel(crewModel)
+  local blockCops = {}
+  if crewHash then
+    for i = 1, 2 do
+      local angle = math.rad(blockHeading + (i == 1 and 90 or -90))
+      local cx = bx + math.sin(angle) * 3.0
+      local cy = by + math.cos(angle) * 3.0
+      local cop = CreatePed(4, crewHash, cx, cy, bz, blockHeading + 180.0, true, true)
+      if DoesEntityExist(cop) then
+        SetEntityAsMissionEntity(cop, true, true)
+        local copNetId = NetworkGetNetworkIdFromEntity(cop)
+        if copNetId and copNetId ~= 0 then
+          SetNetworkIdCanMigrate(copNetId, false)
+        end
+        if ARREST_COP_GROUP then
+          SetPedRelationshipGroupHash(cop, ARREST_COP_GROUP)
+        end
+        SetPedArmour(cop, 100)
+        SetPedFleeAttributes(cop, 0, false)
+        SetPedCombatAbility(cop, 2)
+        SetPedCombatRange(cop, 2)
+        SetPedCombatMovement(cop, 1)
+        SetPedAlertness(cop, 3)
+        SetPedAccuracy(cop, 50)
+        GiveWeaponToPed(cop, GetHashKey("WEAPON_PUMPSHOTGUN"), 50, false, true)
+        SetCurrentPedWeapon(cop, GetHashKey("WEAPON_PUMPSHOTGUN"), true)
+        SetPedKeepTask(cop, true)
+        TaskAimGunAtEntity(cop, PlayerPedId(), -1, false)
+        table.insert(blockCops, cop)
+        table.insert(cops, cop)
+      end
+    end
+  end
+  table.insert(roadblocks, {vehicle = veh, crew = blockCops})
+  nativeNotify("~r~STRASSENSPERRE~s~ voraus!", "polizei")
+  dbg("Roadblock gespawnt bei", bx, by, bz)
+end
+
+local function clearRoadblocks()
+  for _, rb in ipairs(roadblocks) do
+    if rb.crew then
+      for _, c in ipairs(rb.crew) do
+        if DoesEntityExist(c) then DeleteEntity(c) end
+      end
+    end
+    if rb.vehicle and DoesEntityExist(rb.vehicle) then
+      FreezeEntityPosition(rb.vehicle, false)
+      DeleteEntity(rb.vehicle)
+    end
+  end
+  roadblocks = {}
 end
 
 local updateCombatHUD
@@ -912,7 +1017,8 @@ local function startCombatMaintenance()
         end
       end
 
-      -- Lebende Cops: Waffen, Kampf, und Relationship sicherstellen
+      -- Lebende Cops: Waffen, Kampf, Suchverhalten
+      local playerVisible = HasEntityClearLosToEntity(playerPed, playerPed, 17)
       for _, ped in ipairs(cops) do
         if DoesEntityExist(ped) and not IsEntityDead(ped) then
           if ARREST_COP_GROUP then
@@ -921,7 +1027,6 @@ local function startCombatMaintenance()
           SetPedAccuracy(ped, nachlassenAccuracy)
           if not HasPedGotWeapon(ped, pistolHash, false) then
             GiveWeaponToPed(ped, pistolHash, 120, false, true)
-            dbg("re-armed cop", ped)
           end
           if not IsPedInCombat(ped) then
             ClearPedTasks(ped)
@@ -934,8 +1039,12 @@ local function startCombatMaintenance()
             SetPedCombatMovement(ped, 2)
             SetCurrentPedWeapon(ped, pistolHash, true)
             SetPedKeepTask(ped, true)
-            TaskCombatPed(ped, playerPed, 0, 16)
-            dbg("re-engaged cop", ped)
+            local copDist = #(GetEntityCoords(ped) - ppos)
+            if copDist < 50.0 then
+              TaskCombatPed(ped, playerPed, 0, 16)
+            else
+              TaskGoToEntity(ped, playerPed, -1, 5.0, 2.0, 1073741824, 0)
+            end
           end
         end
       end
@@ -987,11 +1096,10 @@ local function startCombatMaintenance()
         spawnPoliceVehicle()
       end
 
-      -- Helikopter ab konfiguriertem Wanted-Level — nicht bei fortgeschrittenem Nachlassen
+      -- Helikopter ab konfiguriertem Wanted-Level
       local heliLevel = Config.HeliWantedLevel or 3
       if wanted >= heliLevel and nachlassenFaktor > 0.5 then
         spawnPoliceHeli()
-        -- Heli-Besatzung: Waffen und Kampf sicherstellen
         for _, heli in ipairs(helis) do
           if heli.gunners then
             for _, g in ipairs(heli.gunners) do
@@ -1006,6 +1114,12 @@ local function startCombatMaintenance()
             end
           end
         end
+      end
+
+      -- Strassensperren ab 4 Sternen
+      local rbLevel = Config.Roadblock and Config.Roadblock.AbWantedLevel or 4
+      if wanted >= rbLevel and nachlassenFaktor > 0.5 then
+        spawnRoadblock()
       end
 
       -- Zerstörte Helis aufräumen
@@ -1450,6 +1564,7 @@ local function playCuffSequence()
   if not inJail and scenarioActive then
     jailRequested = true
     TriggerServerEvent('mtj_arrest:serverBeginJail', Config.JailMinutesDefault)
+    TriggerServerEvent('mtj_arrest:dispatch:pursuitEnd', "verhaftet")
   end
 end
 
@@ -1637,6 +1752,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
 
   -- Polizeiakte vom Server laden (fuer status-basierte Texte)
   TriggerServerEvent('mtj_arrest:requestAkte')
+  TriggerServerEvent('mtj_arrest:dispatch:pursuitStart', lastKnownWanted)
 
   CreateThread(function()
     if isRestart then
@@ -1680,6 +1796,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
 
     -- ETAPPE 1: Polizei spawnen (Cops, Fahrzeuge, Helikopter — alles laut Config)
     clearCops()
+    clearRoadblocks()
     spawnCopsAroundPlayer()
     -- Fahrzeuge und Helikopter sofort spawnen (laut Config pro Wanted-Level)
     local initWanted = getEffectiveWanted()
@@ -1753,8 +1870,8 @@ AddEventHandler('mtj_arrest:endScenario', function()
   else
     -- Wanted wirklich 0 → alles aufraeumen
     clearCops()
+    clearRoadblocks()
     setAmbientCopsIgnore(false)
-    dbg("endScenario: Cops GELOESCHT (lastKnownWanted = 0, Verfolgung vorbei)")
   end
   dbg("endScenario: scenario ended, lastKnownWanted:", lastKnownWanted)
 end)
@@ -1850,6 +1967,7 @@ AddEventHandler('playerSpawned', function()
   nativeHudClear()
   TriggerEvent('mtj_arrest:nui:jail', false)
   clearCops()
+  clearRoadblocks()
   clearHelis()
   clearPoliceVehicles()
   setAmbientCopsIgnore(false)
@@ -1900,10 +2018,45 @@ AddEventHandler('onResourceStop', function(res)
   nativeHudClear()
   TriggerEvent('mtj_arrest:nui:jail', false)
   clearCops()
+  clearRoadblocks()
   clearHelis()
   clearPoliceVehicles()
   setAmbientCopsIgnore(false)
   dbg("onResourceStop: reset scenario state")
 end)
 
-print("[mtj_arrest][DEBUG] main.lua loaded — LAUFFÄHIG: E-Taste, Jail, AutoRausziehen, Polizei scharf, Wanted-Check.")
+-- === DISPATCH SYSTEM: Verfolgungen anderer Spieler empfangen ===
+RegisterNetEvent('mtj_arrest:dispatch:notify')
+AddEventHandler('mtj_arrest:dispatch:notify', function(data)
+  if not data then return end
+  local myId = GetPlayerServerId(PlayerId())
+  if data.playerId == myId then return end
+  local dc = Config.Dispatch
+  if not dc or not dc.Aktiviert then return end
+  if data.type == "start" then
+    local stars = string.rep("★", data.wanted or 2)
+    nativeNotify(("~r~POLIZEIFUNK~s~: Verfolgungsjagd! %s | %s"):format(data.player or "?", stars), "polizei")
+    if data.coords and dc.BlipAktiv then
+      local blip = AddBlipForCoord(data.coords.x, data.coords.y, data.coords.z)
+      SetBlipSprite(blip, 58)
+      SetBlipScale(blip, 1.2)
+      SetBlipColour(blip, 1)
+      SetBlipFlashes(blip, true)
+      BeginTextCommandSetBlipName("STRING")
+      AddTextComponentString("Polizeieinsatz: " .. (data.player or "?"))
+      EndTextCommandSetBlipName(blip)
+      SetTimeout(30000, function()
+        if DoesBlipExist(blip) then RemoveBlip(blip) end
+      end)
+    end
+  elseif data.type == "end" then
+    local reason = data.reason or "unbekannt"
+    if reason == "verhaftet" then
+      nativeNotify(("~g~POLIZEIFUNK~s~: %s wurde verhaftet."):format(data.player or "?"), "erfolg")
+    elseif reason == "entkommen" then
+      nativeNotify(("~o~POLIZEIFUNK~s~: %s ist entkommen!"):format(data.player or "?"), "warnung")
+    end
+  end
+end)
+
+print("[mtj_arrest] main.lua loaded")
