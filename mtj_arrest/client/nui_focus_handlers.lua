@@ -56,13 +56,14 @@ AddEventHandler('mtj_arrest:nui:arrest_log', function(show, lines)
 end)
 
 RegisterNetEvent('mtj_arrest:nui:jail')
-AddEventHandler('mtj_arrest:nui:jail', function(show, seconds, title, sub)
+AddEventHandler('mtj_arrest:nui:jail', function(show, seconds, title, sub, fine)
   SendNUIMessage({
     action = "jailToggle",
     show = show or false,
     seconds = seconds or 0,
     title = title or "Gefängnis",
-    subtitle = sub or ""
+    subtitle = sub or "",
+    fine = fine or 0
   })
   setFocusSafe()
 end)

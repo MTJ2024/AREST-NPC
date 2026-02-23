@@ -19,6 +19,14 @@ local function spawnCopNearPlayer(playerCoords)
     local x = playerCoords.x + math.cos(angle) * dist
     local y = playerCoords.y + math.sin(angle) * dist
     local z = playerCoords.z + 0.5
+    -- Collision laden fuer zuverlaessige Bodenhoehe
+    RequestCollisionAtCoord(x, y, z)
+    Wait(100)
+    local gFound, gz = GetGroundZFor_3dCoord(x, y, z + 10.0, false)
+    if gFound then
+        z = gz + 0.5
+    end
+    -- Fallback: playerCoords.z + 0.5 (bereits oben gesetzt)
     local model = policeModels[math.random(1, #policeModels)]
     local modelHash = GetHashKey(model)
     RequestModel(modelHash)
@@ -86,6 +94,11 @@ CreateThread(function()
         end
 
         local wanted = GetPlayerWantedLevel(PlayerId())
+        -- Fallback: main.lua's lastKnownWanted (GTA setzt Wanted manchmal kurz auf 0)
+        if wanted < 2 then
+            local mainWanted = (GetMainLuaLastKnownWanted and GetMainLuaLastKnownWanted()) or 0
+            if mainWanted >= 2 then wanted = mainWanted end
+        end
         if wanted >= 2 then
             local playerPed = PlayerPedId()
             local playerCoords = GetEntityCoords(playerPed)

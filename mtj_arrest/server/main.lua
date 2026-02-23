@@ -289,8 +289,8 @@ AddEventHandler('mtj_arrest:serverBeginJail', function(minutes)
     TriggerClientEvent('mtj_arrest:clientVorstrafeInfo', src, arrestCount)
   end
 
-  -- Teleport & Timer auf Client (immer ausführen)
-  TriggerClientEvent('mtj_arrest:clientBeginJail', src, minutes)
+  -- Teleport & Timer auf Client (immer ausführen) — inkl. tatsaechlicher Geldstrafe
+  TriggerClientEvent('mtj_arrest:clientBeginJail', src, minutes, fineAmount)
   dbg(("[mtj_arrest] Player %d jailed for %d minutes (Arrest #%d, Mult x%.1f)"):format(src, minutes, arrestCount, totalJailMult))
 
   -- Optional: nochmalige Waffenbereinigung nach 1s

@@ -324,6 +324,8 @@ end)
 CreateThread(function()
   while true do
     Wait(500)
+    -- Periodisch SetMaxWantedLevel(5) erneuern (GTA/FiveM setzt es manchmal zurueck)
+    SetMaxWantedLevel(5)
     if scenarioActive and not surrendered and not cuffed and not inJail then
       -- === Entkommen-Pruefung: Ist ein Cop in der Naehe? ===
       local esc = Config.Entkommen
@@ -612,10 +614,25 @@ end
 local function createCopAt(pos, modelName)
   local modelHash = loadModel(modelName)
   if not modelHash then return nil end
+  -- Collision am Zielpunkt laden fuer zuverlaessige Z-Ermittlung
+  -- OHNE diesen Schritt scheitert GetGroundZFor_3dCoord ausserhalb vorgeladener Gebiete!
+  RequestCollisionAtCoord(pos.x, pos.y, pos.z)
+  Wait(150)
   -- Boden-Z ermitteln damit Cop nicht unterirdisch spawnt
   local gFound, gz = GetGroundZFor_3dCoord(pos.x, pos.y, pos.z + 10.0, false)
   if gFound then
     pos = vector3(pos.x, pos.y, gz + 0.5)
+  else
+    -- Zweiter Versuch mit hoeherer Z-Abfrage
+    gFound, gz = GetGroundZFor_3dCoord(pos.x, pos.y, pos.z + 50.0, false)
+    if gFound then
+      pos = vector3(pos.x, pos.y, gz + 0.5)
+    else
+      -- Letzter Fallback: Spieler-Z verwenden (immer gueltig, Cop ist in der Naehe)
+      local playerZ = GetEntityCoords(PlayerPedId()).z
+      pos = vector3(pos.x, pos.y, playerZ + 0.5)
+      dbg("createCopAt: GroundZ fehlgeschlagen, verwende Spieler-Z:", playerZ)
+    end
   end
   local heading = GetEntityHeading(PlayerPedId()) + 180.0
   local ped = CreatePed(4, modelHash, pos.x, pos.y, pos.z, heading, true, true)
@@ -774,9 +791,18 @@ local function spawnPoliceVehicle()
   local angle = math.random() * 2 * math.pi
   local dist = 60.0 + math.random() * 30.0 -- 60-90m entfernt
   local spawnPos = vector3(ppos.x + math.cos(angle) * dist, ppos.y + math.sin(angle) * dist, ppos.z)
+  -- Collision laden fuer zuverlaessige Bodenhoehe
+  RequestCollisionAtCoord(spawnPos.x, spawnPos.y, spawnPos.z)
+  Wait(150)
   -- Bodenhöhe finden
   local found, gz = GetGroundZFor_3dCoord(spawnPos.x, spawnPos.y, spawnPos.z + 50.0, 0)
-  if found then spawnPos = vector3(spawnPos.x, spawnPos.y, gz + 0.5) end
+  if found then
+    spawnPos = vector3(spawnPos.x, spawnPos.y, gz + 0.5)
+  else
+    -- Fallback: Spieler-Z verwenden
+    spawnPos = vector3(spawnPos.x, spawnPos.y, ppos.z + 0.5)
+    dbg("spawnPoliceVehicle: GroundZ fehlgeschlagen, verwende Spieler-Z")
+  end
 
   local heading = math.deg(math.atan(ppos.y - spawnPos.y, ppos.x - spawnPos.x)) - 90.0
   local veh = CreateVehicle(vehHash, spawnPos.x, spawnPos.y, spawnPos.z, heading, true, true)
@@ -1407,10 +1433,13 @@ end
 
 -- === JAIL-TELEPORT / JAIL-TIMER ===
 RegisterNetEvent('mtj_arrest:clientBeginJail')
-AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
+AddEventHandler('mtj_arrest:clientBeginJail', function(minutes, fineAmount)
   local jailPos = Config.JailPosition
   local jailHeading = Config.JailHeading
   local player = PlayerPedId()
+
+  -- Tatsaechliche Geldstrafe verwenden (vom Server berechnet mit Multiplikatoren)
+  local actualFine = tonumber(fineAmount) or Config.JailFine or 15000
 
   -- Waffen vom Ped entfernen BEVOR Teleport (Spieler soll mit Handschellen spawnen, nicht mit Waffe)
   RemoveAllPedWeapons(player, true)
@@ -1437,18 +1466,22 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
   end
 
   local jailSeconds = math.floor((tonumber(minutes) or 10) * 60)
-  dbg(("Spieler wurde ins Jail teleportiert für %d Minuten!"):format(minutes))
+  local jailTotalSeconds = jailSeconds -- Gesamtzeit fuer Progress-Bar (einmalig gesetzt)
+  dbg(("Spieler wurde ins Jail teleportiert für %d Minuten! Strafe: %d€"):format(minutes, actualFine))
   hideAllUI() -- Alle vorherigen Panels ausblenden vor Jail
-  nativeNotify(("~r~Inhaftiert~s~: " .. playerName .. " — %d Minuten in %s"):format(math.ceil(jailSeconds/60), Config.JailName or "Gefaengnis"), "polizei")
+  nativeNotify(("~r~Inhaftiert~s~: " .. playerName .. " — %d Minuten in %s | Strafe: %s€"):format(math.ceil(jailSeconds/60), Config.JailName or "Gefaengnis", tostring(actualFine)), "polizei")
   nativeHudSet("jail", "GEFAENGNIS: " .. playerName .. " — " .. (Config.JailName or "JVA"), 255, 50, 50)
   nativeHudSet("jail_timer", "Verbleibend: " .. math.ceil(jailSeconds/60) .. " Min", 100, 180, 255)
+  nativeHudSet("jail_fine", "Geldstrafe: " .. tostring(actualFine) .. " EUR", 255, 200, 50)
   DoScreenFadeIn(1000)
   releaseWarningShown = false
+  -- Jail-Panel NUI: EINMAL oeffnen mit Gesamtzeit + Geldstrafe
+  TriggerEvent('mtj_arrest:nui:jail', true, jailTotalSeconds, Config.JailName, Config.JailReason, actualFine)
   -- Jail-Countdown-Timer UI
   CreateThread(function()
     while jailSeconds > 0 and inJail do
       jailTime = jailSeconds
-      TriggerEvent('mtj_arrest:nui:jail', true, jailSeconds, Config.JailName, Config.JailReason)
+      -- NUR jail_tick senden (NICHT jailToggle wiederholt — das wuerde jailTotal zuruecksetzen!)
       local mins = math.floor(jailSeconds / 60)
       local secs = jailSeconds % 60
       nativeHudSet("jail_timer", ("Verbleibend: %02d:%02d"):format(mins, secs), 100, 180, 255)
@@ -1473,6 +1506,7 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
       TriggerEvent('mtj_arrest:nui:jail', false)
       nativeHudSet("jail", nil)
       nativeHudSet("jail_timer", nil)
+      nativeHudSet("jail_fine", nil)
       FreezeEntityPosition(player, false)
       SetEnableHandcuffs(player, false)
       inJail = false

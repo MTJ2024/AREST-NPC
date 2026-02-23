@@ -387,6 +387,16 @@
       safeText(el.jSub, d.subtitle || '');
       safeText(el.jTimer, fmt(state.jailTotal));
       if (el.jBar) el.jBar.style.width = '0%';
+      // Geldstrafe aktualisieren (tatsaechlicher Betrag vom Server)
+      var fineEl = $('#jail .fine-amount');
+      if (fineEl) {
+        var fine = Number(d.fine) || 0;
+        if (fine > 0) {
+          safeText(fineEl, fine.toLocaleString('de-DE') + '\u00A0\u20AC');
+        } else {
+          safeText(fineEl, '\u2014');
+        }
+      }
       setHidden(el.jail, false);
       if (el.jail) el.jail.classList.add('pulse-ui');
     } else {
