@@ -290,6 +290,12 @@ function IsCombatPhaseActive()
   return combatMaintenanceActive
 end
 
+-- Fuer wanted_level.lua: Gibt lastKnownWanted zurueck damit
+-- die Wanted-Pruefung nicht auf GTA's Race-Condition reinfaellt
+function GetMainLuaLastKnownWanted()
+  return lastKnownWanted
+end
+
 -- === RELATIONSHIP GROUP (Cops MÜSSEN den Spieler hassen, sonst keine Interaktion) ===
 local ARREST_COP_GROUP = nil
 CreateThread(function()
@@ -1531,8 +1537,8 @@ AddEventHandler('mtj_arrest:startScenario', function()
     dbg("startScenario: cooldown active, ignoring")
     return
   end
-  if GetPlayerWantedLevel(PlayerId()) == 0 then
-    dbg("startScenario abgebrochen: Kein Wanted Level!")
+  if GetPlayerWantedLevel(PlayerId()) == 0 and lastKnownWanted == 0 then
+    dbg("startScenario abgebrochen: Kein Wanted Level (GTA + lastKnownWanted beide 0)!")
     return
   end
   lastScenarioStart = now
@@ -1560,10 +1566,24 @@ AddEventHandler('mtj_arrest:startScenario', function()
   lastKnownWanted = GetPlayerWantedLevel(PlayerId())
   if lastKnownWanted < 1 then lastKnownWanted = Config.RequiredWantedLevel or 2 end
 
+  -- Erkennung: Ist dies ein Neustart waehrend laufender Verfolgung?
+  -- Wenn pursuitStartTime > 0 UND Cops noch existieren, ist es ein Continuation-Restart
+  local isRestart = pursuitStartTime > 0 and #cops > 0
+
   -- Polizeiakte vom Server laden (fuer status-basierte Texte)
   TriggerServerEvent('mtj_arrest:requestAkte')
 
   CreateThread(function()
+    if isRestart then
+      -- === CONTINUATION RESTART: Verfolgung laeuft weiter ===
+      -- Keine Vorwarnung, keine neuen Cops spawnen, direkt in Kampfphase
+      dbg("startScenario: CONTINUATION RESTART (pursuitStartTime>0, cops:", #cops, ") → direkt in Kampfphase")
+      setAmbientCopsIgnore(true)
+      -- Cops die noch leben sofort reaktivieren
+      reactivatePolice()
+      startCombatMaintenance()
+    else
+      -- === NEUER START: Volle Sequenz mit Vorwarnung ===
     -- ETAPPE 0: VORWARNUNG (grosse Anzeige BEVOR Polizei spawnt)
     local vw = Config.Vorwarnung
     if vw and vw.Aktiviert then
@@ -1631,11 +1651,13 @@ AddEventHandler('mtj_arrest:startScenario', function()
 
     -- ETAPPE 3: KI-Verhandlung und Compliance-Countdown
     runNegotiationAndCompliance()
+    end -- Ende: else (NEUER START)
   end)
 end)
 
 RegisterNetEvent('mtj_arrest:endScenario')
 AddEventHandler('mtj_arrest:endScenario', function()
+  local wasInPursuit = lastKnownWanted > 0
   scenarioActive = false
   canSurrender = false
   surrendered = false
@@ -1650,19 +1672,25 @@ AddEventHandler('mtj_arrest:endScenario', function()
   fluchtversuchTriggered = false
   vorwarnungActive = false
   scenarioStartPos = nil
-  -- lastKnownWanted wird NICHT auf 0 gesetzt!
-  -- Bei Stale-Timeout-Neustarts muss der Wanted-Level erhalten bleiben,
-  -- sonst droppt GTA den Level im Gap zwischen endScenario und startScenario.
-  -- Callers die lastKnownWanted=0 brauchen (Entkommen, playerSpawned, onResourceStop)
-  -- setzen es selbst VOR dem Aufruf von endScenario.
   evasionStartTime = 0
   evasionNotifiedAt = 0
   hideScenarioUI()
   hideVorwarnungUI()
   nativeHudClear()
-  clearCops()
-  setAmbientCopsIgnore(false)
-  dbg("endScenario: scenario ended, lastKnownWanted beibehalten:", lastKnownWanted)
+  -- Cops NUR loeschen wenn Verfolgung WIRKLICH vorbei ist
+  -- Bei Stale-Timeout-Neustarts (lastKnownWanted > 0) bleiben Cops bestehen!
+  -- Das verhindert das "alles wird geloescht" Problem bei laufender Verfolgung
+  if wasInPursuit then
+    -- Verfolgung laeuft noch → Cops behalten, sie kaempfen weiter
+    dbg("endScenario: Cops BEIBEHALTEN (lastKnownWanted > 0, Verfolgung laeuft noch)")
+    -- Cops trotzdem kampfbereit halten (Relationship bleibt HATE)
+  else
+    -- Wanted wirklich 0 → alles aufraeumen
+    clearCops()
+    setAmbientCopsIgnore(false)
+    dbg("endScenario: Cops GELOESCHT (lastKnownWanted = 0, Verfolgung vorbei)")
+  end
+  dbg("endScenario: scenario ended, lastKnownWanted:", lastKnownWanted)
 end)
 
 -- === E-TASTE / SURRENDER ===
@@ -1684,24 +1712,37 @@ CreateThread(function()
 end)
 
 -- === WANTED-LEVEL-ÜBERWACHUNG ===
+-- Prueft ob Wanted WIRKLICH auf 0 ist (nicht nur GTA Race-Condition)
+-- Erfordert 3 aufeinanderfolgende Checks mit Wanted=0 UND lastKnownWanted=0
+
+local wantedZeroStreak = 0 -- Zaehler fuer aufeinanderfolgende Wanted=0 Checks
 
 CreateThread(function()
   while true do
     Wait(1000)
     if scenarioActive then
-      if GetPlayerWantedLevel(PlayerId()) == 0 then
-        -- Wanted-Level wird vom WantedMaintenance-Thread aktiv gehalten.
-        -- Wenn es trotzdem 0 ist, warte kurz und pruefe erneut
-        -- (WantedMaintenance laeuft alle 500ms, 1500ms reicht fuer mindestens 2 Zyklen)
-        Wait(1500)
-        if GetPlayerWantedLevel(PlayerId()) == 0 and scenarioActive then
-          dbg("Wanted Level = 0 (auch nach Wartung), beende Szenario!")
-          lastKnownWanted = 0 -- Wanted wirklich weg
-          pursuitStartTime = 0 -- Verfolgung wirklich vorbei (entkommen)
+      local gtaWanted = GetPlayerWantedLevel(PlayerId())
+      if gtaWanted == 0 and lastKnownWanted == 0 then
+        -- Beide 0 → zaehle Streak hoch
+        wantedZeroStreak = wantedZeroStreak + 1
+        dbg("Wanted-Ueberwachung: Zero-Streak =", wantedZeroStreak)
+        if wantedZeroStreak >= 3 then
+          -- 3 Sekunden lang BEIDE auf 0 → Wanted ist wirklich weg
+          dbg("Wanted Level = 0 (bestaetigt nach 3 Checks), beende Szenario!")
+          lastKnownWanted = 0
+          pursuitStartTime = 0
+          wantedZeroStreak = 0
           TriggerEvent('mtj_arrest:endScenario')
         end
+      else
+        -- Mindestens einer > 0 → Reset Streak
+        if wantedZeroStreak > 0 then
+          dbg("Wanted-Ueberwachung: Zero-Streak reset (GTA:", gtaWanted, "lastKnown:", lastKnownWanted, ")")
+        end
+        wantedZeroStreak = 0
       end
     else
+      wantedZeroStreak = 0
       Wait(2000)
     end
   end
