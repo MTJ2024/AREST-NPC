@@ -6,8 +6,8 @@
 -- MTJ Arrest: Automatisches Spawnen von Police-NPCs ab 2 Sternen — skaliert nach Wanted-Level
 
 local activeCops = {}
-local spawnRadiusMin = 20.0
-local spawnRadiusMax = 40.0
+local spawnRadiusMin = 50.0
+local spawnRadiusMax = 100.0
 local policeModels = {
     "s_m_y_cop_01", "s_f_y_cop_01", "s_m_y_sheriff_01", "s_m_m_sheriff_01"
 }

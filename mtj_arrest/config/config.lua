@@ -60,7 +60,7 @@ Config.Verhandlung = {
 Config.Aktionsradius            = 60.0    -- Meter: Polizei muss SO NAH sein, bevor Info + Timer starten
 Config.AktionsradiusTimeout     = 20      -- Sekunden: Maximale Wartezeit auf Polizei-Ankunft
 Config.ComplianceWindow         = 11      -- Sekunden: Zeit zum Ergeben [E], bevor Polizei schiesst
-Config.RequiredWantedLevel      = 2       -- Ab diesem Wanted-Level startet das Szenario (1-5)
+Config.RequiredWantedLevel      = 2       -- Ab diesem Wanted-Level startet das Szenario (1-3)
 
 Config.UI = {
     -- Texte im Szenario-Panel
@@ -105,8 +105,8 @@ Config.FahrzeugePerWantedLevel = {
 }
 Config.PoliceCount              = 4       -- Fallback, falls CopsPerWantedLevel nicht greift
 Config.MaxActiveCops            = 15      -- Maximale Anzahl gleichzeitig aktiver Polizisten
-Config.PoliceSpawnRadius        = 60.0    -- Meter: Spawn-Radius um Spieler (max 60m wegen Kollisionsdaten)
-Config.MaxSpawnDistance          = 60.0    -- Legacy-Alias fuer Kompatibilitaet
+Config.PoliceSpawnRadius        = 100.0   -- Meter: Spawn-Radius um Spieler
+Config.MaxSpawnDistance          = 100.0    -- Legacy-Alias fuer Kompatibilitaet
 Config.PoliceChaseWanted        = true    -- true = Cops spawnen und verfolgen bei Wanted automatisch
 Config.DisableAmbientCopsAfterSurrender = true -- Ambient-Cops ignorieren Spieler nach Ergeben
 
@@ -117,13 +117,13 @@ Config.PoliceModels = {
     "s_m_m_sheriff_01",
 }
 Config.PoliceOffsets = {
-    vector3(8.0, 4.0, 0.0),
-    vector3(-6.0, 5.0, 0.0),
-    vector3(4.0, -7.0, 0.0),
-    vector3(-8.0, -5.0, 0.0),
-    vector3(12.0, 0.0, 0.0),
-    vector3(-12.0, 0.0, 0.0),
-    vector3(6.0, 10.0, 0.0),
+    vector3(70.0, 30.0, 0.0),
+    vector3(-60.0, 50.0, 0.0),
+    vector3(40.0, -70.0, 0.0),
+    vector3(-80.0, -50.0, 0.0),
+    vector3(90.0, 0.0, 0.0),
+    vector3(-90.0, 10.0, 0.0),
+    vector3(50.0, 80.0, 0.0),
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗

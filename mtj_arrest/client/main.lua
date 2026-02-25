@@ -274,9 +274,9 @@ CreateThread(function()
     SetRelationshipBetweenGroups(5, GetHashKey("PLAYER"), ARREST_COP_GROUP)
     dbg("ARREST_COP relationship group wiederverwendet")
   end
-  -- Max-Wanted-Level auf 5 setzen (GTA/FiveM begrenzt sonst oft auf 3!)
-  SetMaxWantedLevel(5)
-  dbg("SetMaxWantedLevel(5) gesetzt")
+  -- Max-Wanted-Level auf 3 setzen
+  SetMaxWantedLevel(3)
+  dbg("SetMaxWantedLevel(3) gesetzt")
 end)
 
 -- === WANTED-LEVEL WARTUNG (haelt Wanted-Level aktiv solange Szenario laeuft) ===
@@ -287,10 +287,10 @@ local lastMaxWantedCheck = 0
 CreateThread(function()
   while true do
     Wait(500)
-    -- SetMaxWantedLevel(5) alle 10 Sekunden erneuern (GTA/FiveM setzt es manchmal zurueck)
+    -- SetMaxWantedLevel(3) alle 10 Sekunden erneuern (GTA/FiveM setzt es manchmal zurueck)
     local now = GetGameTimer()
     if now - lastMaxWantedCheck > 10000 then
-      SetMaxWantedLevel(5)
+      SetMaxWantedLevel(3)
       lastMaxWantedCheck = now
     end
     if scenarioActive and not surrendered and not cuffed and not inJail then
@@ -544,11 +544,11 @@ local function randomPosAroundPlayer(minDist, maxDist)
       end
     end
   end
-  -- Fallback: Spawne direkt hinter dem Spieler (10-18m, nahe genug fuer zuverlaessige Z)
+  -- Fallback: Spawne hinter dem Spieler (50-100m Radius)
   dbg("randomPos: ALLE Versuche fehlgeschlagen, spawne nahe am Spieler")
   local heading = GetEntityHeading(ped)
   local rad = math.rad(heading + 180.0 + math.random(-45, 45))
-  local fallbackDist = 10.0 + math.random() * 8.0
+  local fallbackDist = 50.0 + math.random() * 50.0
   local fx = p.x + math.cos(rad) * fallbackDist
   local fy = p.y + math.sin(rad) * fallbackDist
   local fz = p.z
@@ -677,9 +677,8 @@ local function spawnCopsAroundPlayer()
     local model = Config.PoliceModels[((i - 1) % #Config.PoliceModels) + 1]
     local pos = vector3(ppos.x + off.x, ppos.y + off.y, ppos.z + (off.z or 0))
     -- Nur bei extrem nahen Offsets (<5m) auf Zufallsposition ausweichen
-    -- Config-Offsets (8-12m) direkt verwenden — nah genug fuer zuverlaessige Z-Ermittlung
     if #(pos - ppos) < 5.0 then
-      pos = randomPosAroundPlayer(15.0, 35.0)
+      pos = randomPosAroundPlayer(50.0, 100.0)
     end
     local ped = createCopAt(pos, model)
     if ped then table.insert(cops, ped) end
@@ -1063,7 +1062,7 @@ local function startCombatMaintenance()
       if toSpawn > 0 then
         dbg("Verstärkung: spawne", math.min(toSpawn, 4), "neue Cops (alive:", aliveCops, "target:", targetCount, "max:", maxActive, "nachlassen:", nachlassenFaktor, ")")
         for i = 1, math.min(toSpawn, 4) do -- Max 4 pro Tick (alle 1.5s)
-          local pos = randomPosAroundPlayer(20.0, 60.0)
+          local pos = randomPosAroundPlayer(50.0, 100.0)
           local model = Config.PoliceModels[math.random(1, #Config.PoliceModels)]
           local ped = createCopAt(pos, model)
           if ped then
@@ -1343,7 +1342,7 @@ local function checkFluchtversuch()
     local extraCops = fc.ExtraCops or 3
     for i = 1, extraCops do
       local model = Config.PoliceModels[((i - 1) % #Config.PoliceModels) + 1]
-      local pos = randomPosAroundPlayer(15.0, 30.0)
+      local pos = randomPosAroundPlayer(50.0, 100.0)
       local ped = createCopAt(pos, model)
       if ped then table.insert(cops, ped) end
     end
@@ -1714,7 +1713,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
   end
   lastScenarioStart = now
   scenarioActive = true
-  SetMaxWantedLevel(5) -- Sicherstellen dass 4+5 Sterne möglich sind
+  SetMaxWantedLevel(3) -- Wanted-Level auf max 3 Sterne begrenzen
   canSurrender = false -- Noch nicht ergeben erlaubt bis Cops da sind
   jailRequested = false
   surrendered = false
