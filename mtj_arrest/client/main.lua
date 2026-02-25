@@ -274,9 +274,9 @@ CreateThread(function()
     SetRelationshipBetweenGroups(5, GetHashKey("PLAYER"), ARREST_COP_GROUP)
     dbg("ARREST_COP relationship group wiederverwendet")
   end
-  -- Max-Wanted-Level auf 3 setzen
-  SetMaxWantedLevel(3)
-  dbg("SetMaxWantedLevel(3) gesetzt")
+  -- Max-Wanted-Level auf 5 setzen (GTA/FiveM begrenzt sonst oft auf 3!)
+  SetMaxWantedLevel(5)
+  dbg("SetMaxWantedLevel(5) gesetzt")
 end)
 
 -- === WANTED-LEVEL WARTUNG (haelt Wanted-Level aktiv solange Szenario laeuft) ===
@@ -287,10 +287,10 @@ local lastMaxWantedCheck = 0
 CreateThread(function()
   while true do
     Wait(500)
-    -- SetMaxWantedLevel(3) alle 10 Sekunden erneuern (GTA/FiveM setzt es manchmal zurueck)
+    -- SetMaxWantedLevel(5) alle 10 Sekunden erneuern (GTA/FiveM setzt es manchmal zurueck)
     local now = GetGameTimer()
     if now - lastMaxWantedCheck > 10000 then
-      SetMaxWantedLevel(3)
+      SetMaxWantedLevel(5)
       lastMaxWantedCheck = now
     end
     if scenarioActive and not surrendered and not cuffed and not inJail then
@@ -1713,7 +1713,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
   end
   lastScenarioStart = now
   scenarioActive = true
-  SetMaxWantedLevel(3) -- Wanted-Level auf max 3 Sterne begrenzen
+  SetMaxWantedLevel(5) -- Sicherstellen dass 4+5 Sterne möglich sind
   canSurrender = false -- Noch nicht ergeben erlaubt bis Cops da sind
   jailRequested = false
   surrendered = false
