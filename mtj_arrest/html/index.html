@@ -37,9 +37,6 @@
       <!-- Toast / Hinweise -->
       <div id="toast" class="toast hidden neon2" role="status" aria-live="polite">Hinweis</div>
 
-      <!-- Custom Notification (links mittig, über Minimap) -->
-      <div id="notify-stack" class="notify-stack"></div>
-
       <!-- Jail-Panel -->
       <section id="jail" class="card jail hidden" aria-live="polite">
         <div class="card-header">
@@ -73,88 +70,6 @@
         </ul>
         <div class="accent-line subtle"></div>
       </section>
-    </div>
-
-    <!-- ═══ Polizeiakte Vollbild-UI (GTA V Police Department Style) ═══ -->
-    <div id="akte-overlay" class="akte-overlay hidden">
-      <div class="akte-bg-img"></div>
-      <div class="akte-bg-overlay"></div>
-      <div class="akte-fullpage">
-        <!-- Oberer Header-Streifen -->
-        <div class="akte-top-bar">
-          <div class="akte-top-left">
-            <span class="akte-badge-icon">&#x1F6E1;&#xFE0F;</span>
-            <div>
-              <h1 class="akte-main-title">POLIZEIAKTE</h1>
-              <p class="akte-dept" id="akte-server">Los Santos Police Department</p>
-            </div>
-          </div>
-          <div class="akte-top-right">
-            <div class="akte-status-pill" id="akte-status-bar" data-status="unbescholten">
-              <span class="akte-status-dot"></span>
-              <span class="akte-status-text" id="akte-status">UNBESCHOLTEN</span>
-            </div>
-            <button class="akte-close-btn" id="akte-close">&#x2715;</button>
-          </div>
-        </div>
-
-        <!-- Haupt-Inhalt -->
-        <div class="akte-content">
-          <!-- Statistik-Karten -->
-          <div class="akte-cards">
-            <div class="akte-card">
-              <div class="akte-card-icon">&#x1F694;</div>
-              <div class="akte-card-val" id="akte-festnahmen">0</div>
-              <div class="akte-card-lbl">Festnahmen</div>
-            </div>
-            <div class="akte-card">
-              <div class="akte-card-icon">&#x23F1;&#xFE0F;</div>
-              <div class="akte-card-val" id="akte-haftzeit">0 Min</div>
-              <div class="akte-card-lbl">Gesamte Haftzeit</div>
-            </div>
-            <div class="akte-card">
-              <div class="akte-card-icon">&#x1F4B0;</div>
-              <div class="akte-card-val" id="akte-geldstrafe">0 &euro;</div>
-              <div class="akte-card-lbl">Geldstrafen</div>
-            </div>
-            <div class="akte-card">
-              <div class="akte-card-icon">&#x1F3C3;</div>
-              <div class="akte-card-val" id="akte-flucht">0</div>
-              <div class="akte-card-lbl">Fluchtversuche</div>
-            </div>
-          </div>
-
-          <!-- Detail-Bereich -->
-          <div class="akte-info-grid">
-            <div class="akte-info-row">
-              <span class="akte-info-icon">&#x1F4C5;</span>
-              <span class="akte-info-label">Letzte Festnahme</span>
-              <span class="akte-info-value" id="akte-letzte">&mdash;</span>
-            </div>
-            <div class="akte-info-row">
-              <span class="akte-info-icon">&#x2696;&#xFE0F;</span>
-              <span class="akte-info-label">Haftzeit-Multiplikator</span>
-              <span class="akte-info-value" id="akte-haft-mult">&times;1.0</span>
-            </div>
-            <div class="akte-info-row">
-              <span class="akte-info-icon">&#x1F4B8;</span>
-              <span class="akte-info-label">Geldstrafe-Multiplikator</span>
-              <span class="akte-info-value" id="akte-geld-mult">&times;1.0</span>
-            </div>
-            <div class="akte-info-row" id="akte-naechste-row">
-              <span class="akte-info-icon">&#x2B06;&#xFE0F;</span>
-              <span class="akte-info-label">N&auml;chste Stufe</span>
-              <span class="akte-info-value" id="akte-naechste">&mdash;</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="akte-bottom-bar">
-          <p class="akte-legal">Dieses Dokument ist Eigentum der Polizeibeh&ouml;rde. Unbefugte Weitergabe ist strafbar.</p>
-          <p class="akte-close-hint">Dr&uuml;cke <span class="akte-key-hint">ESC</span> zum Schlie&szlig;en</p>
-        </div>
-      </div>
     </div>
 
     <script src="app.js"></script>

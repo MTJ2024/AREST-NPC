@@ -12,80 +12,12 @@ local function dbg(...)
   print(("[mtj_arrest][DEBUG] %s"):format(table.concat(t, " ")))
 end
 
-local function nativeNotify(text, ntype)
-  -- Custom NUI Notification (links mittig, ueber Minimap)
-  SendNUIMessage({
-    action = "notify",
-    text = tostring(text),
-    type = ntype or "info"
-  })
-  dbg("nativeNotify sent:", tostring(text), "type:", ntype or "info")
-end
-
--- === GTA NATIVE 2D TEXT FALLBACK (100% zuverlaessig, kein NUI noetig) ===
--- Zeichnet Texte direkt auf den Bildschirm als Backup falls NUI ausfaellt
-local nativeHudLines = {}   -- { {text=, expire=, r=, g=, b=} }
-local nativeHudPersist = {} -- { key = {text=, r=, g=, b=} } (dauerhaft bis entfernt)
-
-local function nativeHudShow(text, durationSec, r, g, b)
-  table.insert(nativeHudLines, {
-    text = tostring(text or ""),
-    expire = GetGameTimer() + ((durationSec or 8) * 1000),
-    r = r or 255, g = g or 255, b = b or 255
-  })
-end
-
-local function nativeHudSet(key, text, r, g, b)
-  if text then
-    nativeHudPersist[key] = { text = tostring(text), r = r or 255, g = g or 255, b = b or 255 }
-  else
-    nativeHudPersist[key] = nil
-  end
-end
-
-local function nativeHudClear()
-  nativeHudLines = {}
-  nativeHudPersist = {}
-end
-
--- Native Text Draw Helper (GTA V)
-local function drawText2D(text, x, y, scale, r, g, b, a)
-  SetTextFont(4)
-  SetTextProportional(true)
-  SetTextScale(scale, scale)
-  SetTextColour(r or 255, g or 255, b or 255, a or 255)
-  SetTextDropShadow()
-  SetTextOutline()
-  SetTextEntry("STRING")
-  AddTextComponentString(tostring(text))
-  DrawText(x, y)
-end
-
--- HUD Render Thread (zeichnet JEDEN Frame)
-CreateThread(function()
-  while true do
-    Wait(0)
-    local now = GetGameTimer()
-    local y = 0.35 -- Startposition links-mitte
-
-    -- Persistente Zeilen (Vorwarnung, Szenario, Jail etc.)
-    for _, line in pairs(nativeHudPersist) do
-      drawText2D(line.text, 0.018, y, 0.55, line.r, line.g, line.b, 240)
-      y = y + 0.04
-    end
-
-    -- Temporaere Zeilen (Notifications)
-    for i = #nativeHudLines, 1, -1 do
-      if now > nativeHudLines[i].expire then
-        table.remove(nativeHudLines, i)
-      end
-    end
-    for _, line in ipairs(nativeHudLines) do
-      drawText2D(line.text, 0.018, y, 0.45, line.r, line.g, line.b, 220)
-      y = y + 0.035
-    end
-  end
-end)
+-- Native HUD helpers are no-ops: all edge-screen text display is disabled.
+-- Kept as stubs so the 50+ call sites throughout the file compile without changes.
+local function nativeNotify() end
+local function nativeHudShow() end
+local function nativeHudSet() end
+local function nativeHudClear() end
 
 -- State
 local playerName = GetPlayerName(PlayerId()) or "Unbekannt"
@@ -1230,28 +1162,10 @@ local function getScenarioHint()
   return Config.UI.ScenarioHint
 end
 
-updateCombatHUD = function()
-  local wanted = getEffectiveWanted()
-  local aliveCops = getAliveCopCount()
-  local clampedWanted = math.min(wanted, 5)
-  local stars = string.rep("★", clampedWanted) .. string.rep("☆", 5 - clampedWanted)
-  local pursuitSec = 0
-  if pursuitStartTime > 0 then
-    pursuitSec = math.floor((GetGameTimer() - pursuitStartTime) / 1000)
-  end
-  local mins = math.floor(pursuitSec / 60)
-  local secs = pursuitSec % 60
-  nativeHudSet("combat_stars", stars .. "  Wanted: " .. wanted, 255, 50, 50)
-  nativeHudSet("combat_cops", "Aktive Einheiten: " .. aliveCops .. " | Helis: " .. #helis .. " | Fahrzeuge: " .. #policeVehicles, 100, 180, 255)
-  nativeHudSet("combat_time", ("Verfolgung: %02d:%02d"):format(mins, secs), 255, 200, 50)
-end
+-- Combat HUD is disabled; no-ops avoid touching every call site.
+updateCombatHUD = function() end
 
-hideCombatHUD = function()
-  nativeHudSet("combat_stars", nil)
-  nativeHudSet("combat_cops", nil)
-  nativeHudSet("combat_time", nil)
-  nativeHudSet("combat_status", nil)
-end
+hideCombatHUD = function() end
 
 -- Alle Panels verstecken (gegenseitige Ausschliessung, nur 1 Panel gleichzeitig)
 local function hideAllUI()
@@ -1643,31 +1557,12 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes, fineAmount)
   end)
 end)
 
--- === POLIZEIAKTE BENACHRICHTIGUNG (vom Server) ===
+-- === POLIZEIAKTE STATUS (silent, nur intern) ===
 RegisterNetEvent('mtj_arrest:clientAkteInfo')
 AddEventHandler('mtj_arrest:clientAkteInfo', function(akte)
   if not akte then return end
   playerAkteStatus = akte.status or "unbescholten"
-  dbg("Polizeiakte empfangen: Status =", playerAkteStatus, "Festnahmen =", akte.festnahmen or 0)
-  -- Akte-Notification anzeigen wenn vorbestraft
-  if playerAkteStatus ~= "unbescholten" then
-    local pa = Config.Polizeiakte
-    if pa and pa.NachrichtAkte then
-      nativeNotify(pa.NachrichtAkte:format(playerAkteStatus, akte.festnahmen or 0, akte.fluchtversuche or 0), "warnung")
-    end
-  end
-end)
-
--- === STRAFREGISTER BENACHRICHTIGUNG ===
-RegisterNetEvent('mtj_arrest:clientVorstrafeInfo')
-AddEventHandler('mtj_arrest:clientVorstrafeInfo', function(arrestCount)
-  if not arrestCount or arrestCount <= 1 then return end
-  local sr = Config.Strafregister
-  if not sr or not sr.Aktiviert then return end
-  local vorstrafen = arrestCount - 1
-  local msg = sr.NachrichtVorstrafe or "~o~Strafregister~s~: %d Vorstrafe(n) — Strafe erhöht!"
-  nativeNotify(msg:format(vorstrafen), "warnung")
-  dbg("Strafregister: Vorstrafen =", vorstrafen)
+  dbg("Polizeiakte empfangen: Status =", playerAkteStatus)
 end)
 
 -- === SCENARIO-STATE ===
@@ -1966,40 +1861,6 @@ AddEventHandler('onResourceStop', function(res)
   clearPoliceVehicles()
   setAmbientCopsIgnore(false)
   dbg("onResourceStop: reset scenario state")
-end)
-
--- === DISPATCH SYSTEM: Verfolgungen anderer Spieler empfangen ===
-RegisterNetEvent('mtj_arrest:dispatch:notify')
-AddEventHandler('mtj_arrest:dispatch:notify', function(data)
-  if not data then return end
-  local myId = GetPlayerServerId(PlayerId())
-  if data.playerId == myId then return end
-  local dc = Config.Dispatch
-  if not dc or not dc.Aktiviert then return end
-  if data.type == "start" then
-    local stars = string.rep("★", data.wanted or 2)
-    nativeNotify(("~r~POLIZEIFUNK~s~: Verfolgungsjagd! %s | %s"):format(data.player or "?", stars), "polizei")
-    if data.coords and dc.BlipAktiv then
-      local blip = AddBlipForCoord(data.coords.x, data.coords.y, data.coords.z)
-      SetBlipSprite(blip, 58)
-      SetBlipScale(blip, 1.2)
-      SetBlipColour(blip, 1)
-      SetBlipFlashes(blip, true)
-      BeginTextCommandSetBlipName("STRING")
-      AddTextComponentString("Polizeieinsatz: " .. (data.player or "?"))
-      EndTextCommandSetBlipName(blip)
-      SetTimeout(30000, function()
-        if DoesBlipExist(blip) then RemoveBlip(blip) end
-      end)
-    end
-  elseif data.type == "end" then
-    local reason = data.reason or "unbekannt"
-    if reason == "verhaftet" then
-      nativeNotify(("~g~POLIZEIFUNK~s~: %s wurde verhaftet."):format(data.player or "?"), "erfolg")
-    elseif reason == "entkommen" then
-      nativeNotify(("~o~POLIZEIFUNK~s~: %s ist entkommen!"):format(data.player or "?"), "warnung")
-    end
-  end
 end)
 
 print("[mtj_arrest] main.lua loaded")
