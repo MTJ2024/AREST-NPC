@@ -205,6 +205,9 @@ CreateThread(function()
   dbg("SetMaxWantedLevel(5) gesetzt")
 end)
 
+-- Forward declaration: defined after helper functions below; captured as upvalue here.
+local isAnyCopNearPlayer
+
 -- === WANTED-LEVEL WARTUNG (haelt Wanted-Level aktiv solange Szenario laeuft) ===
 -- GTA V setzt Wanted auf 0 wenn keine Cops in Sichtlinie — dieses Thread verhindert das.
 -- Prinzip: "Solange Sterne, solange Aktion" — Wanted bleibt aktiv ab Szenario-Start.
@@ -456,10 +459,10 @@ local function randomPosAroundPlayer(minDist, maxDist)
     -- Collision am Zielpunkt laden
     RequestCollisionAtCoord(nx, ny, p.z)
     -- Methode 1: GetSafeCoordForPed (GTA sucht begehbare Position, flags=16: auf Gehweg)
-    local safeFound, sx, sy, sz = GetSafeCoordForPed(nx, ny, p.z, true, 16)
-    if safeFound then
+    local safeFound, safePos = GetSafeCoordForPed(nx, ny, p.z, true, 16)
+    if safeFound and safePos then
       dbg("randomPos: SafeCoord gefunden bei Versuch", attempt, "dist:", dist)
-      return vector3(sx, sy, sz)
+      return vector3(safePos.x, safePos.y, safePos.z)
     end
     -- Methode 2: GetGroundZFor_3dCoord mit mehreren Hoehen
     for _, zOff in ipairs({0.0, 10.0, 20.0, 50.0}) do
@@ -1197,7 +1200,7 @@ local function hideScenarioUI()
 end
 
 -- Prüft ob mindestens ein Cop innerhalb des Radius ist
-local function isAnyCopNearPlayer(radius)
+isAnyCopNearPlayer = function(radius)
   local ppos = GetEntityCoords(PlayerPedId())
   for _, ped in ipairs(cops) do
     if DoesEntityExist(ped) and not IsEntityDead(ped) then
