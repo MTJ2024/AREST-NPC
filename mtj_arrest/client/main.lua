@@ -192,13 +192,19 @@ CreateThread(function()
     ARREST_COP_GROUP = hash
     SetRelationshipBetweenGroups(5, hash, GetHashKey("PLAYER")) -- 5 = HATE
     SetRelationshipBetweenGroups(5, GetHashKey("PLAYER"), hash)
-    dbg("ARREST_COP relationship group erstellt (HATE)")
+    SetRelationshipBetweenGroups(0, hash, hash)                  -- 0 = COMPANION: Cops schiessen nicht auf sich selbst
+    SetRelationshipBetweenGroups(0, hash, GetHashKey("COP"))     -- ARREST_COP respektiert COP-Gruppe
+    SetRelationshipBetweenGroups(0, GetHashKey("COP"), hash)     -- COP-Gruppe respektiert ARREST_COP
+    dbg("ARREST_COP relationship group erstellt (HATE vs PLAYER, COMPANION vs COP)")
   else
     -- Fallback: Gruppe existiert schon
     ARREST_COP_GROUP = GetHashKey("ARREST_COP")
     SetRelationshipBetweenGroups(5, ARREST_COP_GROUP, GetHashKey("PLAYER"))
     SetRelationshipBetweenGroups(5, GetHashKey("PLAYER"), ARREST_COP_GROUP)
-    dbg("ARREST_COP relationship group wiederverwendet")
+    SetRelationshipBetweenGroups(0, ARREST_COP_GROUP, ARREST_COP_GROUP)
+    SetRelationshipBetweenGroups(0, ARREST_COP_GROUP, GetHashKey("COP"))
+    SetRelationshipBetweenGroups(0, GetHashKey("COP"), ARREST_COP_GROUP)
+    dbg("ARREST_COP relationship group wiederverwendet (COMPANION vs COP gesetzt)")
   end
   -- Max-Wanted-Level auf 5 setzen (GTA/FiveM begrenzt sonst oft auf 3!)
   SetMaxWantedLevel(5)
