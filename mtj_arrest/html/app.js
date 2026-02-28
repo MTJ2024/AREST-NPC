@@ -36,10 +36,6 @@
   function initDom() {
     if (state.initialized) return;
     el = {
-      vorwarnung: byId('vorwarnung'),
-      vwTitle: $('#vorwarnung .title'),
-      vwText: $('#vorwarnung .vorwarnung-text'),
-      vwCountdown: $('#vorwarnung .vorwarnung-countdown'),
       scenario: byId('scenario'),
       sTitle: $('#scenario .title'),
       sHint: $('#scenario .hint'),
@@ -64,7 +60,6 @@
     };
 
     // Initial hide to ensure clean state
-    setHidden(el.vorwarnung, true);
     setHidden(el.scenario, true);
     setHidden(el.toast, true);
     setHidden(el.jail, true);
@@ -274,7 +269,6 @@
 
   function evaluateUiVisibility() {
     const panels = [
-      el && el.vorwarnung && !el.vorwarnung.classList.contains('hidden'),
       el && el.scenario && !el.scenario.classList.contains('hidden'),
       el && el.jail && !el.jail.classList.contains('hidden'),
       el && el.aLog && !el.aLog.classList.contains('hidden'),
@@ -287,41 +281,11 @@
 
   /* ═══ Gegenseitige Panel-Ausschliessung: nur 1 Panel gleichzeitig ═══ */
   function hideAllPanels() {
-    setHidden(el.vorwarnung, true);
-    if (el.vorwarnung) el.vorwarnung.classList.remove('pulse-ui');
     setHidden(el.scenario, true);
     if (el.scenario) el.scenario.classList.remove('pulse-ui');
     setHidden(el.jail, true);
     if (el.jail) el.jail.classList.remove('pulse-ui');
     setHidden(el.aLog, true);
-  }
-
-  /* ═══ Vorwarnung (grosse Warnung vor Polizei-Einsatz) ═══ */
-  function handleVorwarnungToggle(d) {
-    if (d.show) {
-      hideAllPanels();
-      safeText(el.vwTitle, d.title || 'POLIZEI-WARNUNG');
-      if (el.vwText) {
-        el.vwText.innerHTML = '';
-        el.vwText.textContent = d.text || '';
-      }
-      if (d.countdown) {
-        safeText(el.vwCountdown, d.countdown + 's');
-      } else {
-        safeText(el.vwCountdown, '');
-      }
-      setHidden(el.vorwarnung, false);
-      if (el.vorwarnung) el.vorwarnung.classList.add('pulse-ui');
-    } else {
-      setHidden(el.vorwarnung, true);
-      if (el.vorwarnung) el.vorwarnung.classList.remove('pulse-ui');
-    }
-    evaluateUiVisibility();
-  }
-
-  function handleVorwarnungCountdown(d) {
-    const v = Number(d.value);
-    safeText(el.vwCountdown, (isFinite(v) ? v : 0) + 's');
   }
 
   function handleScenarioToggle(d) {
@@ -492,12 +456,6 @@
         break;
       case 'scenarioCountdown':
         handleScenarioCountdown(d);
-        break;
-      case 'vorwarnungToggle':
-        handleVorwarnungToggle(d);
-        break;
-      case 'vorwarnungCountdown':
-        handleVorwarnungCountdown(d);
         break;
       case 'toast':
         enqueueToast(d.text || '');

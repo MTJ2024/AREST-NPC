@@ -210,9 +210,7 @@ local function getEffectiveWanted()
   return 0
 end
 
--- === GLOBALER COP-ZAEHLER (fuer auto_cop_spawn.lua Koordination) ===
--- Zaehlt nur LEBENDE Cops im Radius von 100m um den Spieler
-function GetMainLuaAliveCopCount()
+local function getAliveCopCount()
   local count = 0
   local ppos = GetEntityCoords(PlayerPedId())
   for _, ped in ipairs(cops) do
@@ -242,10 +240,6 @@ end
 
 function IsArrestScenarioActive()
   return scenarioActive
-end
-
-function IsVorwarnungActive()
-  return false
 end
 
 function IsCombatPhaseActive()
@@ -1056,7 +1050,7 @@ local function startCombatMaintenance()
       end
       targetCount = math.floor(targetCount * nachlassenFaktor)
       local maxActive = Config.MaxActiveCops or 20
-      local aliveCops = GetMainLuaAliveCopCount()
+      local aliveCops = getAliveCopCount()
       targetCount = math.min(targetCount, maxActive)
       local toSpawn = math.min(targetCount - aliveCops, maxActive - aliveCops)
       if toSpawn > 0 then
@@ -1238,7 +1232,7 @@ end
 
 updateCombatHUD = function()
   local wanted = getEffectiveWanted()
-  local aliveCops = GetMainLuaAliveCopCount()
+  local aliveCops = getAliveCopCount()
   local clampedWanted = math.min(wanted, 5)
   local stars = string.rep("★", clampedWanted) .. string.rep("☆", 5 - clampedWanted)
   local pursuitSec = 0
@@ -1261,7 +1255,6 @@ end
 
 -- Alle Panels verstecken (gegenseitige Ausschliessung, nur 1 Panel gleichzeitig)
 local function hideAllUI()
-  TriggerEvent('mtj_arrest:nui:vorwarnung', false)
   TriggerEvent('mtj_arrest:nui:scenario', false)
   TriggerEvent('mtj_arrest:nui:jail', false)
   TriggerEvent('mtj_arrest:nui:arrest_log', false)
@@ -1287,23 +1280,6 @@ local function hideScenarioUI()
   nativeHudSet("scenario", nil)
   nativeHudSet("scenario_cd", nil)
   dbg("hideScenarioUI")
-end
-
--- Vorwarnung UI
-local function showVorwarnungUI(titel, text, countdown)
-  hideAllUI() -- Alle anderen Panels ausblenden
-  TriggerEvent('mtj_arrest:nui:vorwarnung', true, titel, text, countdown)
-  -- GTA Native Fallback
-  nativeHudSet("vorwarnung", (titel or "WARNUNG") .. ": " .. (text or ""):gsub("\n", " "), 243, 156, 18)
-  nativeHudSet("vorwarnung_cd", "Noch " .. (countdown or 5) .. "s", 255, 200, 100)
-  dbg("showVorwarnungUI: NUI + Native HUD")
-end
-
-local function hideVorwarnungUI()
-  TriggerEvent('mtj_arrest:nui:vorwarnung', false)
-  nativeHudSet("vorwarnung", nil)
-  nativeHudSet("vorwarnung_cd", nil)
-  dbg("hideVorwarnungUI")
 end
 
 -- Prüft ob mindestens ein Cop innerhalb des Radius ist
@@ -1763,36 +1739,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
       reactivatePolice()
       startCombatMaintenance()
     else
-      -- === NEUER START: Volle Sequenz mit Vorwarnung ===
-    -- ETAPPE 0: VORWARNUNG (grosse Anzeige BEVOR Polizei spawnt)
-    local vw = Config.Vorwarnung
-    if vw and vw.Aktiviert then
-      local vwDauer = vw.Dauer or 5
-      local vwTitel = vw.Titel or "POLIZEI-WARNUNG"
-      local vwText = vw.Text or "Stellen Sie sofort Ihre Waffen ab!"
-      showVorwarnungUI(vwTitel, vwText, vwDauer)
-      nativeNotify("~o~WARNUNG~s~ an " .. playerName .. ": " .. (vw.TextKurz or vwText), "warnung")
-      vorwarnungActive = true
-      dbg("startScenario: Vorwarnung angezeigt fuer", vwDauer, "Sekunden")
-
-      local remaining = vwDauer
-      while scenarioActive and remaining > 0 do
-        Wait(1000)
-        remaining = remaining - 1
-        if scenarioActive then
-          TriggerEvent('mtj_arrest:nui:vorwarnung_tick', remaining)
-          nativeHudSet("vorwarnung_cd", "Noch " .. remaining .. "s", 255, 200, 100)
-        end
-      end
-      hideVorwarnungUI()
-      vorwarnungActive = false
-
-      if not scenarioActive then
-        dbg("startScenario: Szenario waehrend Vorwarnung beendet")
-        return
-      end
-    end
-
+      -- === NEUER START ===
     -- ETAPPE 1: Polizei spawnen (Cops, Fahrzeuge, Helikopter — alles laut Config)
     clearCops()
     clearRoadblocks()
@@ -1856,7 +1803,6 @@ AddEventHandler('mtj_arrest:endScenario', function()
   evasionStartTime = 0
   evasionNotifiedAt = 0
   hideScenarioUI()
-  hideVorwarnungUI()
   hideCombatHUD()
   nativeHudClear()
   -- Cops NUR loeschen wenn Verfolgung WIRKLICH vorbei ist
@@ -1961,7 +1907,6 @@ AddEventHandler('playerSpawned', function()
   SetPlayerWantedLevelNow(PlayerId(), false)
   ClearPlayerWantedLevel(PlayerId())
   hideScenarioUI()
-  hideVorwarnungUI()
   hideCombatHUD()
   nativeHudClear()
   TriggerEvent('mtj_arrest:nui:jail', false)
@@ -2012,7 +1957,6 @@ AddEventHandler('onResourceStop', function(res)
   SetPlayerWantedLevelNow(PlayerId(), false)
   ClearPlayerWantedLevel(PlayerId())
   hideScenarioUI()
-  hideVorwarnungUI()
   hideCombatHUD()
   nativeHudClear()
   TriggerEvent('mtj_arrest:nui:jail', false)

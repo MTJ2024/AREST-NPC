@@ -29,9 +29,7 @@ client_scripts {
   'client/main.lua',
   'client/wanted_level.lua',
   'client/nui_focus_handlers.lua',
-  'client/auto_cop_spawn.lua',
   'client/controls.lua',
-  'client/external_police.lua',
   'client/polizeiakte_npc.lua',
   'client/debug.lua'
 }
@@ -39,7 +37,6 @@ client_scripts {
 server_scripts {
   'server/copyright_guard.lua',
   'server/polizeiakte.lua',
-  'server/police_players.lua',  
   'server/main.lua'
 }
 
