@@ -91,6 +91,7 @@ local function removeAllWeaponsComplete(ped)
 end
 
 -- Tod-Erkennung: Setzt diedDuringScenario wenn Spieler waehrend Einsatz stirbt
+-- und räumt Szenario-UI + Sterne sofort beim Tod auf (nicht erst bei playerSpawned)
 CreateThread(function()
   local wasDead = false
   while true do
@@ -103,6 +104,14 @@ CreateThread(function()
         diedDuringScenario = true
         dbg("Spieler waehrend Polizeieinsatz gestorben! diedDuringScenario=true")
       end
+      -- Szenario-UI und Wanted-Sterne SOFORT beim Tod entfernen
+      scenarioActive = false
+      canSurrender = false
+      SetPlayerWantedLevel(PlayerId(), 0, false)
+      SetPlayerWantedLevelNow(PlayerId(), false)
+      ClearPlayerWantedLevel(PlayerId())
+      TriggerEvent('mtj_arrest:nui:scenario', false)
+      dbg("Tod erkannt: Szenario-UI + Wanted-Sterne sofort entfernt")
     end
     wasDead = isDead
   end
