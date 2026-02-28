@@ -1243,8 +1243,7 @@ local function checkFluchtversuch()
     startCombatMaintenance()
     TriggerServerEvent('mtj_arrest:serverFluchtversuch')
     nativeNotify(fc.Nachricht or ("~r~FLUCHTVERSUCH~s~: " .. playerName .. " — Wanted-Level erhoeht!"), "warnung")
-    canSurrender = false
-    hideScenarioUI()
+    -- canSurrender bleibt true: Spieler kann nach Fluchtversuch weiterhin [E] druecken
   end
 end
 
@@ -1330,7 +1329,6 @@ local function runNegotiationAndCompliance()
 
     -- Nach allen Stufen: Zugriff (falls nicht ergeben)
     if scenarioActive and not surrendered and not cuffing and not cuffed and not inJail then
-      canSurrender = false
       nativeHudSet("combat_status", "ZUGRIFF! Feuer frei!", 255, 30, 30)
       nativeNotify("~r~ZUGRIFF~s~: Verhandlung mit " .. playerName .. " gescheitert!", "polizei")
       reactivatePolice()
@@ -1349,7 +1347,6 @@ local function runNegotiationAndCompliance()
         nativeHudSet("scenario_cd", "Letzte Chance: " .. complianceWindow .. "s — [E] Ergeben", 100, 180, 255)
         checkFluchtversuch()
         if complianceWindow <= 0 then
-          canSurrender = false
           nativeHudSet("combat_status", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
           reactivatePolice()
           startCombatMaintenance()
@@ -1716,17 +1713,36 @@ AddEventHandler('mtj_arrest:endScenario', function()
   dbg("endScenario: scenario ended, lastKnownWanted:", lastKnownWanted)
 end)
 
--- === E-TASTE / SURRENDER ===
+-- === E-TASTE / SURRENDER + AUTO-FESTNAHME ===
 
+local autoArrestLastCheck = 0
 CreateThread(function()
   while true do
     Wait(0)
     if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
+      -- [E] manuell ergeben
       if IsControlJustPressed(0, Config.Keys.Surrender) then
         dbg("Surrender via E/KeyMapping")
         surrendered = true
         canSurrender = false
         playCuffSequence()
+      end
+      -- Auto-Festnahme: Cop greift nah genug → automatisch festnehmen (alle 500ms pruefen)
+      local now = GetGameTimer()
+      if (now - autoArrestLastCheck) >= 500 then
+        autoArrestLastCheck = now
+        local ppos = GetEntityCoords(PlayerPedId())
+        for _, ped in ipairs(cops) do
+          if DoesEntityExist(ped) and not IsEntityDead(ped) then
+            if #(GetEntityCoords(ped) - ppos) <= 1.5 then
+              dbg("Auto-Festnahme: Cop nah genug → automatische Festnahme!")
+              surrendered = true
+              canSurrender = false
+              playCuffSequence()
+              break
+            end
+          end
+        end
       end
     else
       Wait(250)
