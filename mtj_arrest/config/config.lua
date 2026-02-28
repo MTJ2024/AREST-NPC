@@ -24,6 +24,61 @@ Config.WaffenBeiTod = {
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              WAFFEN-EINZUG BEI VERHAFTUNG (JAIL)                ║
+-- ║  Alle Waffen aus dieser Liste werden beim Einzug ins Gefängnis  ║
+-- ║  aus dem Inventar des Spielers entfernt (ESX + ox_inventory).   ║
+-- ║  Aktiviert = true  → Einzug aktiv                               ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.WaffenEinzug = {
+    Aktiviert = true,
+    -- Waffennamen wie sie im Inventar (ESX/ox) als Items erscheinen (Kleinbuchstaben)
+    Items = {
+        -- Pistolen
+        "weapon_pistol", "weapon_pistol_mk2", "weapon_combatpistol", "weapon_appistol",
+        "weapon_stungun", "weapon_pistol50", "weapon_snspistol", "weapon_snspistol_mk2",
+        "weapon_heavypistol", "weapon_vintagepistol", "weapon_flaregun", "weapon_marksmanpistol",
+        "weapon_revolver", "weapon_revolver_mk2", "weapon_doubleaction", "weapon_raypistol",
+        "weapon_ceramicpistol", "weapon_navyrevolver", "weapon_gadgetpistol", "weapon_pistolxm3",
+        -- SMGs
+        "weapon_microsmg", "weapon_smg", "weapon_smg_mk2", "weapon_assaultsmg",
+        "weapon_combatpdw", "weapon_machinepistol", "weapon_minismg", "weapon_raycarbine",
+        "weapon_tecpistol",
+        -- Schrotflinten
+        "weapon_pumpshotgun", "weapon_pumpshotgun_mk2", "weapon_sawnoffshotgun",
+        "weapon_assaultshotgun", "weapon_bullpupshotgun", "weapon_musket",
+        "weapon_heavyshotgun", "weapon_dbshotgun", "weapon_autoshotgun", "weapon_combatshotgun",
+        -- Sturmgewehre
+        "weapon_assaultrifle", "weapon_assaultrifle_mk2", "weapon_carbinerifle",
+        "weapon_carbinerifle_mk2", "weapon_advancedrifle", "weapon_specialcarbine",
+        "weapon_specialcarbine_mk2", "weapon_bullpuprifle", "weapon_bullpuprifle_mk2",
+        "weapon_compactrifle", "weapon_militaryrifle", "weapon_heavyrifle",
+        "weapon_tacticalrifle", "weapon_battlerifle",
+        -- Maschinengewehre
+        "weapon_mg", "weapon_combatmg", "weapon_combatmg_mk2", "weapon_gusenberg",
+        -- Scharfschützengewehre
+        "weapon_sniperrifle", "weapon_heavysniper", "weapon_heavysniper_mk2",
+        "weapon_marksmanrifle", "weapon_marksmanrifle_mk2", "weapon_precisionrifle",
+        -- Schwere Waffen
+        "weapon_rpg", "weapon_grenadelauncher", "weapon_grenadelauncher_smoke",
+        "weapon_minigun", "weapon_firework", "weapon_railgun", "weapon_hominglauncher",
+        "weapon_compactlauncher", "weapon_rayminigun", "weapon_emplauncher",
+        -- Wurfwaffen
+        "weapon_grenade", "weapon_bzgas", "weapon_molotov", "weapon_stickybomb",
+        "weapon_proxmine", "weapon_snowball", "weapon_pipebomb", "weapon_ball",
+        "weapon_smokegrenade", "weapon_flare",
+        -- Nahkampf
+        "weapon_knife", "weapon_nightstick", "weapon_hammer", "weapon_bat",
+        "weapon_golfclub", "weapon_crowbar", "weapon_bottle", "weapon_dagger",
+        "weapon_hatchet", "weapon_knuckle", "weapon_machete", "weapon_flashlight",
+        "weapon_switchblade", "weapon_poolcue", "weapon_wrench", "weapon_battleaxe",
+        "weapon_stone_hatchet",
+        -- Spezial
+        "weapon_petrolcan", "weapon_hazardcan", "weapon_fireextinguisher",
+        "weapon_fertilizercan",
+    },
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              KI-VERHANDLUNG (Negotiation vor Zugriff)           ║
 -- ║  Mehrstufige Verhandlung BEVOR Polizei schiesst:                ║
 -- ║  Stufe 1: Aufforderung — Stufe 2: Warnung — Stufe 3: Zugriff   ║

@@ -109,6 +109,66 @@ local function clearAllWeaponsAndItems(src)
   dbg(("[mtj_arrest] clearAllWeaponsAndItems finished for %d removed: ox=%d esx=%d"):format(src, removed_ox, removed_esx))
 end
 
+-- WAFFEN-EINZUG: Nur Waffen aus Config.WaffenEinzug.Items einziehen (ESX Loadout + ox/ESX Inventar)
+local function confiscateWeapons(src)
+  local cfg = Config.WaffenEinzug
+  if not cfg or not cfg.Aktiviert then return end
+  local weaponItems = cfg.Items or {}
+  local removed = 0
+
+  -- ESX: Waffen aus Loadout entfernen + explizit jeden Eintrag der Waffenliste aus Inventar
+  if ESX then
+    local xPlayer = ESX.GetPlayerFromId(src)
+    if xPlayer then
+      -- Loadout-Waffen (ESX tracked)
+      if xPlayer.getLoadout and xPlayer.removeWeapon then
+        local loadout = xPlayer:getLoadout()
+        if loadout then
+          for _, w in pairs(loadout) do
+            local wname = (w and (w.name or w.weapon)) or nil
+            if wname then
+              pcall(function() xPlayer:removeWeapon(wname); removed = removed + 1 end)
+            end
+          end
+        end
+      end
+      -- Jede Waffe aus der Konfigurationsliste explizit aus dem Inventar entfernen
+      if xPlayer.getInventoryItem and xPlayer.removeInventoryItem then
+        for _, itemName in ipairs(weaponItems) do
+          pcall(function()
+            local item = xPlayer:getInventoryItem(itemName)
+            if item and item.count and item.count > 0 then
+              xPlayer:removeInventoryItem(itemName, item.count)
+              removed = removed + item.count
+            end
+          end)
+        end
+      end
+    end
+  end
+
+  -- ox_inventory: Waffen-Items aus dem Waffensystem + explizit per Inventar-Item entfernen
+  if hasOx() then
+    local oxWeapons = exports.ox_inventory:GetPlayerWeapons(src)
+    if oxWeapons then
+      for _, weapon in pairs(oxWeapons) do
+        pcall(function() exports.ox_inventory:RemoveWeapon(src, weapon.name); removed = removed + 1 end)
+      end
+    end
+    for _, itemName in ipairs(weaponItems) do
+      pcall(function()
+        local count = exports.ox_inventory:GetItemCount(src, itemName)
+        if count and count > 0 then
+          exports.ox_inventory:RemoveItem(src, itemName, count)
+          removed = removed + count
+        end
+      end)
+    end
+  end
+
+  dbg(("[mtj_arrest] confiscateWeapons: %d Waffen eingezogen für Spieler %d"):format(removed, src))
+end
+
 -- Strafe abziehen: erst money, dann bank (ESX & ox_inventory)
 local function takeJailFine(src, fineOverride)
   if not Config.EnableJailFine then return end
@@ -276,6 +336,7 @@ AddEventHandler('mtj_arrest:serverBeginJail', function(minutes)
 
   dbg(("[mtj_arrest] clearAllWeaponsAndItems invoked by %d"):format(src))
   pcall(function() clearAllWeaponsAndItems(src) end)
+  pcall(function() confiscateWeapons(src) end)
   pcall(function() takeJailFine(src, fineAmount) end)
 
   -- Polizeiakte (Persistent): Festnahme eintragen
@@ -297,6 +358,7 @@ AddEventHandler('mtj_arrest:serverBeginJail', function(minutes)
   SetTimeout(1000, function()
     dbg(("[mtj_arrest] clearAllWeaponsAndItems invoked by %d (post-Teleport)"):format(src))
     pcall(function() clearAllWeaponsAndItems(src) end)
+    pcall(function() confiscateWeapons(src) end)
   end)
 
   -- Guard nach 8s freigeben
