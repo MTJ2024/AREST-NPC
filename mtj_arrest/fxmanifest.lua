@@ -29,7 +29,8 @@ client_scripts {
   'client/main.lua',
   'client/wanted_level.lua',
   'client/nui_focus_handlers.lua',
-  'client/controls.lua'
+  'client/controls.lua',
+  'client/polizeiakte_npc.lua'
 }
 
 server_scripts {

@@ -1633,6 +1633,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
       dbg("startScenario: CONTINUATION RESTART (pursuitStartTime>0, cops:", #cops, ") → direkt in Kampfphase")
       setAmbientCopsIgnore(true)
       showScenarioUI()
+      canSurrender = true -- Spieler kann auch im Restart [E] druecken
       -- Cops die noch leben sofort reaktivieren
       reactivatePolice()
       startCombatMaintenance()
