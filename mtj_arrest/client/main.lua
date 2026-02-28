@@ -167,15 +167,8 @@ local function getAliveCopCount()
     end
     if h.pilot and DoesEntityExist(h.pilot) and not IsEntityDead(h.pilot) then count = count + 1 end
   end
-  for _, pv in ipairs(policeVehicles) do
-    if pv.crew then
-      for _, c in ipairs(pv.crew) do
-        if DoesEntityExist(c) and not IsEntityDead(c) then
-          if #(GetEntityCoords(c) - ppos) <= RESPAWN_RADIUS then count = count + 1 end
-        end
-      end
-    end
-  end
+  -- Hinweis: Fahrzeug-Besatzung wird in der cops-Liste erfasst (spawnPoliceVehicle fügt sie dort ein),
+  -- daher KEIN zusätzlicher policeVehicles-Loop (sonst doppelte Zählung!).
   return count
 end
 
@@ -545,7 +538,8 @@ end
 
 local function setAmbientCopsIgnore(toggle)
   SetPoliceIgnorePlayer(PlayerId(), toggle)
-  dbg(toggle and "Ambient cops ignored" or "Ambient cops restored")
+  SetCreateRandomCops(not toggle) -- toggle=true → keine zufälligen GTA-AI-Cops; false → wiederherstellen
+  dbg(toggle and "Ambient cops suppressed (ignore + no random spawn)" or "Ambient cops restored")
 end
 
 local function createCopAt(pos, modelName)
@@ -605,7 +599,7 @@ end
 local function spawnCopsAroundPlayer()
   if not (Config and Config.PoliceOffsets and #Config.PoliceOffsets > 0) then dbg("No PoliceOffsets"); return end
   if not (Config and Config.PoliceModels and #Config.PoliceModels > 0) then dbg("No PoliceModels"); return end
-  local maxActive = Config.MaxActiveCops or 12
+  local maxActive = Config.MaxActiveCops or 15
   local wanted = getEffectiveWanted()
   local toSpawn = Config.PoliceCount or 7
   if Config.CopsPerWantedLevel and Config.CopsPerWantedLevel[wanted] then
@@ -956,7 +950,7 @@ local function startCombatMaintenance()
         elseif #(GetEntityCoords(ped) - ppos) > RESPAWN_RADIUS then
           DeleteEntity(ped)
           table.remove(cops, i)
-          dbg("Cop zu weit entfernt, entfernt (>200m)")
+          dbg("Cop zu weit entfernt, entfernt (>100m)")
         end
       end
 
@@ -999,7 +993,7 @@ local function startCombatMaintenance()
         targetCount = Config.CopsPerWantedLevel[wanted]
       end
       targetCount = math.floor(targetCount * nachlassenFaktor)
-      local maxActive = Config.MaxActiveCops or 20
+      local maxActive = Config.MaxActiveCops or 15
       local aliveCops = getAliveCopCount()
       targetCount = math.min(targetCount, maxActive)
       local toSpawn = math.min(targetCount - aliveCops, maxActive - aliveCops)
@@ -1648,7 +1642,10 @@ AddEventHandler('mtj_arrest:startScenario', function()
       startCombatMaintenance()
     else
       -- === NEUER START ===
-    -- ETAPPE 1: Polizei spawnen (Cops, Fahrzeuge, Helikopter — alles laut Config)
+    -- ETAPPE 1: GTA AI-Cops sofort unterdrücken + Bereich räumen, dann eigene Cops spawnen
+    setAmbientCopsIgnore(true)
+    local cp = GetEntityCoords(PlayerPedId())
+    ClearAreaOfCops(cp.x, cp.y, cp.z, 500.0, 0)
     clearCops()
     clearRoadblocks()
     spawnCopsAroundPlayer()
@@ -1670,7 +1667,6 @@ AddEventHandler('mtj_arrest:startScenario', function()
         Wait(200)
       end
     end
-    setAmbientCopsIgnore(true)
     dbg("startScenario: cops/vehicles/helis spawned, warte auf Ankunft...")
 
     -- ETAPPE 2: Warten bis mindestens ein Cop im Aktionsradius ist
