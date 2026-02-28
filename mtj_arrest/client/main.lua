@@ -1018,14 +1018,14 @@ local function startCombatMaintenance()
         end
       end
 
-      -- Polizeifahrzeuge spawnen (ab 2 Sterne) — nicht bei vollem Nachlassen
-      if wanted >= 2 and nachlassenFaktor > 0.3 then
+      -- Polizeifahrzeuge spawnen (ab 2 Sterne) — immer respawnen wenn zerstört
+      if wanted >= 2 then
         spawnPoliceVehicle()
       end
 
       -- Helikopter ab konfiguriertem Wanted-Level
       local heliLevel = Config.HeliWantedLevel or 3
-      if wanted >= heliLevel and nachlassenFaktor > 0.5 then
+      if wanted >= heliLevel then
         spawnPoliceHeli()
         for _, heli in ipairs(helis) do
           if heli.gunners then
@@ -1331,8 +1331,6 @@ local function runNegotiationAndCompliance()
     -- Nach allen Stufen: Zugriff (falls nicht ergeben)
     if scenarioActive and not surrendered and not cuffing and not cuffed and not inJail then
       canSurrender = false
-      -- Szenario-Panel AUSBLENDEN — Kampfphase braucht kein Countdown-Panel
-      hideScenarioUI()
       nativeHudSet("combat_status", "ZUGRIFF! Feuer frei!", 255, 30, 30)
       nativeNotify("~r~ZUGRIFF~s~: Verhandlung mit " .. playerName .. " gescheitert!", "polizei")
       reactivatePolice()
@@ -1352,8 +1350,6 @@ local function runNegotiationAndCompliance()
         checkFluchtversuch()
         if complianceWindow <= 0 then
           canSurrender = false
-          -- Szenario-Panel AUSBLENDEN — Kampfphase braucht kein Countdown-Panel
-          hideScenarioUI()
           nativeHudSet("combat_status", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
           reactivatePolice()
           startCombatMaintenance()
@@ -1447,7 +1443,7 @@ local function playCuffSequence()
   end
   TriggerEvent('mtj_arrest:nui:arrest_log', true, getArrestLogLines())
   Wait(3000)
-  TriggerEvent('mtj_arrest:nui:arrest_log', false)
+  -- Arrest-Log-Panel bleibt sichtbar (pulsiert weiter) bis Jail-Sequenz hideAllUI() aufruft
   nativeHudSet("arrest", nil)
   cuffing = false
   dbg("cuff sequence done")
@@ -1633,6 +1629,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
       -- Keine Vorwarnung, keine neuen Cops spawnen, direkt in Kampfphase
       dbg("startScenario: CONTINUATION RESTART (pursuitStartTime>0, cops:", #cops, ") → direkt in Kampfphase")
       setAmbientCopsIgnore(true)
+      showScenarioUI()
       -- Cops die noch leben sofort reaktivieren
       reactivatePolice()
       startCombatMaintenance()

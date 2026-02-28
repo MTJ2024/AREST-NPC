@@ -97,6 +97,7 @@
     setHidden(el.jail, true);
     if (el.jail) el.jail.classList.remove('pulse-ui');
     setHidden(el.aLog, true);
+    if (el.aLog) el.aLog.classList.remove('pulse-ui');
   }
 
   function handleScenarioToggle(d) {
@@ -148,8 +149,10 @@
         }
       }
       setHidden(el.aLog, false);
+      if (el.aLog) el.aLog.classList.add('pulse-ui');
     } else {
       setHidden(el.aLog, true);
+      if (el.aLog) el.aLog.classList.remove('pulse-ui');
     }
     evaluateUiVisibility();
   }

@@ -438,6 +438,10 @@ body {
   100% { opacity: 0; }
 }
 
+.card.arrest.pulse-ui {
+  animation: scenarioPulseSlow 11s ease-in-out infinite !important;
+}
+
 /* Jail-UI: GROSS (gleiche Groesse wie Szenario) + langsamer 11s Puls */
 .card.jail {
   min-width: 540px;
