@@ -839,6 +839,34 @@ body {
   border: 1px solid rgba(33,122,255,0.3);
   letter-spacing: 0.05em;
 }
+.akte-bottom-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 4px;
+}
+.akte-refresh-btn {
+  background: rgba(33,122,255,0.15);
+  color: var(--accent2);
+  border: 1px solid rgba(33,122,255,0.35);
+  border-radius: 8px;
+  padding: 7px 20px;
+  font-size: 0.88rem;
+  font-family: var(--font-main);
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.04em;
+}
+.akte-refresh-btn:hover {
+  background: rgba(33,122,255,0.32);
+  border-color: var(--accent2);
+  box-shadow: 0 0 14px rgba(33,122,255,0.28);
+}
+.akte-refresh-btn.loading {
+  opacity: 0.55;
+  pointer-events: none;
+}
 
 @keyframes akteFadeIn {
   0%   { opacity: 0; }

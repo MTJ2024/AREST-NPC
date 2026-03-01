@@ -6,6 +6,8 @@
  * ╚══════════════════════════════════════════════════════════════════════════╝
  */
 (() => {
+  const REFRESH_BTN_LABEL = '\uD83D\uDD04 Aktualisieren';
+  const REFRESH_BTN_LOADING = '\u23F3 ...';
   let el = {};
   const state = {
     jailTotal: 0,
@@ -123,14 +125,21 @@
     akteClosing = false;
     setUiVisible(true);
 
-    // Auto-Close Timer auf JS-Seite: nach 5s automatisch schliessen (Sicherheitsnetz)
+    // Auto-Close Timer auf JS-Seite: nach 60s automatisch schliessen (Sicherheitsnetz)
     if (akteAutoCloseTimer) clearTimeout(akteAutoCloseTimer);
     akteAutoCloseTimer = setTimeout(function() {
       var ov = byId('akte-overlay');
       if (ov && !ov.classList.contains('hidden')) {
         closePolizeiakte();
       }
-    }, 5000);
+    }, 60000);
+
+    // Refresh-Button zuruecksetzen falls noch im Lade-Zustand
+    var refreshBtn = byId('akte-refresh');
+    if (refreshBtn) {
+      refreshBtn.classList.remove('loading');
+      refreshBtn.textContent = REFRESH_BTN_LABEL;
+    }
   }
 
   var akteClosing = false;
@@ -172,9 +181,22 @@
     evaluateUiVisibility();
   }
 
-  // Close-Button & ESC & Klick ausserhalb
+  // Close-Button & Refresh-Button & ESC & Klick ausserhalb
   document.addEventListener('click', function(e) {
     if (e.target && (e.target.id === 'akte-close' || e.target.id === 'akte-overlay')) closePolizeiakte();
+    if (e.target && e.target.id === 'akte-refresh') {
+      var btn = e.target;
+      btn.classList.add('loading');
+      btn.textContent = REFRESH_BTN_LOADING;
+      fetch('https://mtj_arrest/refreshPolizeiakte', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      }).catch(function() {
+        btn.classList.remove('loading');
+        btn.textContent = REFRESH_BTN_LABEL;
+      });
+    }
   });
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {

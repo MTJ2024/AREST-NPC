@@ -186,6 +186,99 @@ _G.PolizeiakteMultiplier  = getAkteMultiplier
 _G.PolizeiakteGetIdentifier = getPlayerIdentifier
 
 -- ══════════════════════════════════════════════════════════════════
+--  ADMIN-HELFER: Akte zurücksetzen / Festnahmen setzen
+-- ══════════════════════════════════════════════════════════════════
+
+-- Akte eines Spielers vollständig zurücksetzen
+local function resetAkte(src)
+  local id = getPlayerIdentifier(src)
+  if not id then return false end
+  kvpSetInt(id, "festnahmen", 0)
+  kvpSetInt(id, "gesamt_haftzeit", 0)
+  kvpSetInt(id, "gesamt_geldstrafe", 0)
+  kvpSetInt(id, "fluchtversuche", 0)
+  kvpSetString(id, "letzte_festnahme", "")
+  kvpSetString(id, "status", "unbescholten")
+  dbg(("Akte zurueckgesetzt fuer %s"):format(id))
+  return true
+end
+
+-- Festnahmen auf bestimmten Wert setzen und Status neu berechnen
+local function setAkteFestnahmen(src, count)
+  local id = getPlayerIdentifier(src)
+  if not id then return false end
+  count = math.max(0, math.floor(tonumber(count) or 0))
+  kvpSetInt(id, "festnahmen", count)
+  local cfg = Config.Polizeiakte or {}
+  local stufen = cfg.Stufen or {}
+  local status = "unbescholten"
+  for i = #stufen, 1, -1 do
+    if count >= stufen[i].AbFestnahmen then
+      status = stufen[i].Status
+      break
+    end
+  end
+  kvpSetString(id, "status", status)
+  dbg(("Festnahmen auf %d gesetzt fuer %s — Status: %s"):format(count, id, status))
+  return true, status
+end
+
+_G.PolizeiakteReset         = resetAkte
+_G.PolizeiakteSetFestnahmen = setAkteFestnahmen
+
+-- ══════════════════════════════════════════════════════════════════
+--  ADMIN-BEFEHLE
+-- ══════════════════════════════════════════════════════════════════
+
+local function chatMsg(src, msg)
+  if src == 0 then
+    print(msg)
+  else
+    TriggerClientEvent('chat:addMessage', src, { args = {"[MTJ]", msg} })
+  end
+end
+
+-- /mtj_akte_reset [Spieler-ID]  — setzt die gesamte Akte auf 0 zurück
+RegisterCommand('mtj_akte_reset', function(src, args)
+  if src ~= 0 and not IsPlayerAceAllowed(src, 'command.mtj_akte_reset') then
+    chatMsg(src, "~r~Keine Berechtigung!")
+    return
+  end
+  local targetId = tonumber(args[1])
+  if not targetId then
+    chatMsg(src, "Verwendung: /mtj_akte_reset [Spieler-ID]")
+    return
+  end
+  if resetAkte(targetId) then
+    chatMsg(src, ("Akte von Spieler %d vollständig zurückgesetzt."):format(targetId))
+    TriggerClientEvent('chat:addMessage', targetId, { args = {"[MTJ]", "~g~Deine Polizeiakte wurde zurückgesetzt."} })
+  else
+    chatMsg(src, ("Spieler %d nicht gefunden oder kein Identifier."):format(targetId))
+  end
+end, true)
+
+-- /mtj_akte_set [Spieler-ID] [Festnahmen]  — setzt Festnahmen auf einen bestimmten Wert
+RegisterCommand('mtj_akte_set', function(src, args)
+  if src ~= 0 and not IsPlayerAceAllowed(src, 'command.mtj_akte_set') then
+    chatMsg(src, "~r~Keine Berechtigung!")
+    return
+  end
+  local targetId = tonumber(args[1])
+  local count    = tonumber(args[2])
+  if not targetId or not count then
+    chatMsg(src, "Verwendung: /mtj_akte_set [Spieler-ID] [Festnahmen]")
+    return
+  end
+  local ok, status = setAkteFestnahmen(targetId, count)
+  if ok then
+    chatMsg(src, ("Spieler %d: Festnahmen auf %d gesetzt (Status: %s)."):format(targetId, count, status))
+    TriggerClientEvent('chat:addMessage', targetId, { args = {"[MTJ]", ("~y~Deine Akte wurde aktualisiert: %d Festnahmen (%s)."):format(count, status)} })
+  else
+    chatMsg(src, ("Spieler %d nicht gefunden oder kein Identifier."):format(targetId))
+  end
+end, true)
+
+-- ══════════════════════════════════════════════════════════════════
 --  SERVER EVENT: Fluchtversuch vom Client melden
 -- ══════════════════════════════════════════════════════════════════
 
