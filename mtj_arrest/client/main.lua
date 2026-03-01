@@ -343,7 +343,9 @@ CreateThread(function()
           SetPlayerWantedLevelNow(PlayerId(), false)
           nativeNotify(esc.NachrichtEntkommen or "~g~ENTKOMMEN!~s~ Du hast die Polizei abgehängt!", "erfolg")
           nativeHudSet("evasion", nil)
+          wantedDeathLockUntil = GetGameTimer() + 5000 -- 5s Sperre gegen Sofort-Neustart
           TriggerServerEvent('mtj_arrest:dispatch:pursuitEnd', "entkommen")
+          TriggerEvent('mtj_arrest:endScenario')
         else
           -- Evasion laeuft: HUD-Feedback alle 5 Sekunden
           if now - evasionNotifiedAt >= 5000 then
@@ -359,9 +361,11 @@ CreateThread(function()
           elseif lastKnownWanted > 0 then
             wantedDropCount = wantedDropCount + 1
             if wantedDropCount >= 6 then
-              dbg("WantedMaintenance (evasion): Wanted seit 3s auf 0 — akzeptiere")
+              dbg("WantedMaintenance (evasion): Wanted seit 3s auf 0 — beende Szenario")
               lastKnownWanted = 0
               wantedDropCount = 0
+              wantedDeathLockUntil = GetGameTimer() + 5000
+              TriggerEvent('mtj_arrest:endScenario')
             end
           end
         end
@@ -385,10 +389,12 @@ CreateThread(function()
         elseif lastKnownWanted > 0 then
           wantedDropCount = wantedDropCount + 1
           if wantedDropCount >= 6 then
-            -- Anhaltender Drop (3s): Server/Spieler hat Wanted entfernt → akzeptieren!
-            dbg("WantedMaintenance: Wanted seit 3s auf 0 — akzeptiere, setze lastKnownWanted=0")
+            -- Anhaltender Drop (3s): Server/Spieler hat Wanted entfernt → sofort Szenario beenden
+            dbg("WantedMaintenance: Wanted seit 3s auf 0 — beende Szenario sofort")
             lastKnownWanted = 0
             wantedDropCount = 0
+            wantedDeathLockUntil = GetGameTimer() + 5000 -- 5s Sperre gegen Sofort-Neustart
+            TriggerEvent('mtj_arrest:endScenario')
           end
         end
       end
@@ -767,13 +773,13 @@ local function spawnPoliceVehicle()
   if not crewHash then dbg("police vehicle crew model load failed"); return end
 
   local ppos = GetEntityCoords(PlayerPedId())
-  -- Spawn-Position suchen: 200-300m entfernt, nicht auf Bergen oder Gebaeuden
+  -- Spawn-Position suchen: 80-150m entfernt, nicht auf Bergen oder Gebaeuden
   local MAX_HEIGHT_DIFF_WITH_ROAD = 30.0  -- Max. Hoehenunterschied zum Spieler bei Strassenposition
   local MAX_HEIGHT_DIFF_FALLBACK  = 15.0  -- Max. Hoehenunterschied bei flachem Gelände (ohne Strasse)
   local spawnPos = nil
   for attempt = 1, 8 do
     local angle = math.random() * 2 * math.pi
-    local dist = 200.0 + math.random() * 100.0 -- 200-300m entfernt
+    local dist = 80.0 + math.random() * 70.0 -- 80-150m entfernt (schnelle Ankunft, innerhalb 350m Radius)
     local candidate = vector3(ppos.x + math.cos(angle) * dist, ppos.y + math.sin(angle) * dist, ppos.z)
     RequestCollisionAtCoord(candidate.x, candidate.y, candidate.z)
     Wait(150)
@@ -841,7 +847,7 @@ local function spawnPoliceVehicle()
       SetPedKeepTask(ped, true)
       if seat == -1 then
         -- Fahrer: zum Spieler fahren
-        TaskVehicleDriveToCoordLongrange(ped, veh, ppos.x, ppos.y, ppos.z, 30.0, 262144 + 16, 5.0)
+        TaskVehicleDriveToCoordLongrange(ped, veh, ppos.x, ppos.y, ppos.z, 30.0, POLICE_CHASE_DRIVING_MODE, 5.0)
       else
         -- Beifahrer: schießen
         TaskCombatPed(ped, playerPed, 0, 16)
@@ -946,8 +952,10 @@ local hideCombatHUD
 -- Waehrend der Verfolgung hat der Spieler einen unsichtbaren GPS-Sender.
 -- Alle Polizeifahrzeuge und Helikopter werden kontinuierlich zu seiner
 -- aktuellen Position navigiert. Stoppt automatisch wenn Wanted = 0.
-local GPS_VEH_INTERVAL  = 2000  -- Fahrzeug-Navi alle 2 Sekunden aktualisieren
+local GPS_VEH_INTERVAL  = 1000  -- Fahrzeug-Navi jede Sekunde aktualisieren
 local GPS_HELI_INTERVAL = 4000  -- Heli-Mission alle 4 Sekunden erneuern
+-- GTAV nativer Polizei-Verfolgung Fahrstil (aggressiv, Ampeln ignorieren, Hindernisse umfahren)
+local POLICE_CHASE_DRIVING_MODE = 786603
 
 local function startGpsTracker()
   if gpsTrackerActive then return end
@@ -970,7 +978,7 @@ local function startGpsTracker()
             local vdist = #(GetEntityCoords(pv.vehicle) - ppos)
             if vdist > 8.0 then
               TaskVehicleDriveToCoordLongrange(driver, pv.vehicle,
-                ppos.x, ppos.y, ppos.z, 30.0, 262144 + 16, 5.0)
+                ppos.x, ppos.y, ppos.z, 30.0, POLICE_CHASE_DRIVING_MODE, 5.0)
             end
           end
         end
@@ -1771,6 +1779,12 @@ AddEventHandler('mtj_arrest:endScenario', function()
   hideScenarioUI()
   hideCombatHUD()
   nativeHudClear()
+  -- Spieler-Freeze aufheben wenn er gerade in einer Festnahme-Animation war
+  -- (verhindert ewige Bewegungseinschraenkung wenn Sterne waehrend Festnahme weggehen)
+  if not inJail then
+    FreezeEntityPosition(PlayerPedId(), false)
+    SetEnableHandcuffs(PlayerPedId(), false)
+  end
   -- Cops NUR loeschen wenn Verfolgung WIRKLICH vorbei ist
   -- Bei Stale-Timeout-Neustarts (lastKnownWanted > 0) bleiben Cops bestehen!
   -- Das verhindert das "alles wird geloescht" Problem bei laufender Verfolgung
@@ -1825,7 +1839,7 @@ end)
 -- Prueft ob Wanted WIRKLICH auf 0 ist (nicht nur GTA Race-Condition)
 -- Erfordert 3 aufeinanderfolgende Checks mit Wanted=0 UND lastKnownWanted=0
 
-local wantedZeroStreak = 0 -- Zaehler fuer aufeinanderfolgende Wanted=0 Checks
+local wantedZeroStreak = 0 -- Zaehler fuer aufeinanderfolgende Wanted=0 Checks (Sicherheitsnetz)
 
 CreateThread(function()
   while true do
@@ -1833,22 +1847,17 @@ CreateThread(function()
     if scenarioActive then
       local gtaWanted = GetPlayerWantedLevel(PlayerId())
       if gtaWanted == 0 and lastKnownWanted == 0 then
-        -- Beide 0 → zaehle Streak hoch
+        -- Beide 0: primärer Pfad ist WantedMaintenance; dieser Thread ist reines Sicherheitsnetz.
+        -- 1 Sekunde Wartezeit reicht, da WantedMaintenance bereits 3s Grace-Period abgewartet hat.
         wantedZeroStreak = wantedZeroStreak + 1
-        dbg("Wanted-Ueberwachung: Zero-Streak =", wantedZeroStreak)
-        if wantedZeroStreak >= 3 then
-          -- 3 Sekunden lang BEIDE auf 0 → Wanted ist wirklich weg
-          dbg("Wanted Level = 0 (bestaetigt nach 3 Checks), beende Szenario!")
-          lastKnownWanted = 0
+        if wantedZeroStreak >= 1 then
+          dbg("Wanted-Ueberwachung (Sicherheitsnetz): Wanted = 0, beende Szenario")
           pursuitStartTime = 0
           wantedZeroStreak = 0
+          wantedDeathLockUntil = GetGameTimer() + 5000
           TriggerEvent('mtj_arrest:endScenario')
         end
       else
-        -- Mindestens einer > 0 → Reset Streak
-        if wantedZeroStreak > 0 then
-          dbg("Wanted-Ueberwachung: Zero-Streak reset (GTA:", gtaWanted, "lastKnown:", lastKnownWanted, ")")
-        end
         wantedZeroStreak = 0
       end
     else
