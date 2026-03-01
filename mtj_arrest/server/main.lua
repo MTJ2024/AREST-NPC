@@ -437,3 +437,103 @@ AddEventHandler('mtj_arrest:serverFluchtversuch', function()
   end
   dbg(("[mtj_arrest] Fluchtversuch registriert fuer Spieler %d"):format(src))
 end)
+
+-- ══════════════════════════════════════════════════════════════════
+--  KRIMINALLEVEL SENKEN: Spieler zahlt um Festnahmen zu reduzieren
+-- ══════════════════════════════════════════════════════════════════
+
+RegisterNetEvent('mtj_arrest:reduceKriminalLevel')
+AddEventHandler('mtj_arrest:reduceKriminalLevel', function()
+  local src = source
+  local cfg = Config.PolizeiakteNPC and Config.PolizeiakteNPC.KriminalLevelSenken
+  if not cfg or not cfg.Aktiviert then
+    TriggerClientEvent('mtj_arrest:kriminalLevelFail', src)
+    return
+  end
+
+  local akte = PolizeiakteGet and PolizeiakteGet(src)
+  if not akte then
+    TriggerClientEvent('mtj_arrest:kriminalLevelFail', src)
+    return
+  end
+
+  local mindest = cfg.MindestFestnahmen or 0
+  if akte.festnahmen <= mindest then
+    TriggerClientEvent('mtj_arrest:kriminalLevelFail', src)
+    TriggerClientEvent('chat:addMessage', src, {
+      color = {255, 100, 100}, multiline = true,
+      args = {"[MTJ]", "Kriminallevel kann nicht weiter gesenkt werden."}
+    })
+    return
+  end
+
+  local kosten = cfg.KostenProFestnahme or 10000
+  local paid   = false
+
+  -- ox_inventory
+  if hasOx() then
+    local getMoney = function(acc)
+      local ok, val = pcall(function() return exports.ox_inventory:GetItem(src, acc) end)
+      if ok and val and val.count then return tonumber(val.count) or 0 end
+      return 0
+    end
+    local removeMoney = function(acc, amount)
+      pcall(function() exports.ox_inventory:RemoveItem(src, acc, amount) end)
+    end
+    local cash = getMoney("money")
+    local bank = getMoney("bank")
+    if cash + bank >= kosten then
+      local fromCash = math.min(cash, kosten)
+      local fromBank = kosten - fromCash
+      if fromCash > 0 then removeMoney("money", fromCash) end
+      if fromBank > 0 then removeMoney("bank",  fromBank) end
+      paid = true
+    end
+  end
+
+  -- ESX
+  if not paid and ESX then
+    local xPlayer = ESX.GetPlayerFromId(src)
+    if xPlayer and xPlayer.getAccount then
+      local cash = (xPlayer.getAccount('money') and xPlayer.getAccount('money').money) or 0
+      local bank = (xPlayer.getAccount('bank')  and xPlayer.getAccount('bank').money)  or 0
+      if cash + bank >= kosten then
+        local fromCash = math.min(cash, kosten)
+        local fromBank = kosten - fromCash
+        if fromCash > 0 then xPlayer.removeAccountMoney('money', fromCash) end
+        if fromBank > 0 then xPlayer.removeAccountMoney('bank',  fromBank) end
+        paid = true
+      end
+    end
+  end
+
+  if not paid then
+    TriggerClientEvent('mtj_arrest:kriminalLevelFail', src)
+    TriggerClientEvent('chat:addMessage', src, {
+      color = {255, 100, 100}, multiline = true,
+      args = {"[MTJ]", ("Nicht genug Geld. Benoetigt: %d EUR"):format(kosten)}
+    })
+    return
+  end
+
+  -- Festnahmen um 1 reduzieren
+  local newFestnahmen = math.max(mindest, akte.festnahmen - 1)
+  if PolizeiakteSetFestnahmen then
+    PolizeiakteSetFestnahmen(src, newFestnahmen)
+  end
+
+  TriggerClientEvent('chat:addMessage', src, {
+    color = {50, 255, 50}, multiline = true,
+    args = {"[MTJ]", ("Kriminallevel gesenkt! Festnahmen: %d → %d (-%d EUR)"):format(akte.festnahmen, newFestnahmen, kosten)}
+  })
+
+  -- Aktualisierte vollstaendige Akte an Client senden
+  if PolizeiakteBuildFull then
+    local updatedAkte = PolizeiakteBuildFull(src)
+    if updatedAkte then
+      TriggerClientEvent('mtj_arrest:clientFullAkte', src, updatedAkte)
+    end
+  end
+
+  dbg(("[mtj_arrest] Kriminallevel gesenkt fuer Spieler %d: %d → %d (-%d)"):format(src, akte.festnahmen, newFestnahmen, kosten))
+end)

@@ -384,6 +384,13 @@ Config.PolizeiakteNPC = {
         Farbe           = 3,                                       -- Farbe (3 = blau)
         Name            = "Polizeiakte",                           -- Name auf der Karte
     },
+
+    -- Kriminallevel senken: Spieler kann Festnahmen gegen Geld reduzieren
+    KriminalLevelSenken = {
+        Aktiviert           = true,     -- true = Spieler kann Level am NPC senken
+        KostenProFestnahme  = 10000,    -- Kosten in € pro Festnahme-Reduktion
+        MindestFestnahmen   = 0,        -- Mindest-Festnahmen die erhalten bleiben (0 = alles loeschbar)
+    },
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗

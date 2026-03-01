@@ -6,6 +6,9 @@
 -- NUI Focus-Handler: Szenario/Arrest-Log dürfen NIE den Fokus blockieren (E soll funktionieren)
 
 local function setFocusSafe()
+  -- Polizeiakte NUI-Focus NICHT freigeben wenn die Akte gerade geoeffnet ist,
+  -- sonst koennte der Spieler die Akte nicht mehr schliessen.
+  if IsPolizeiakteOpen and IsPolizeiakteOpen() then return end
   SetNuiFocus(false, false)
   SetNuiFocusKeepInput(false)
 end

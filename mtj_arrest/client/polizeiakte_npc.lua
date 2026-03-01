@@ -9,6 +9,8 @@ local akteNpc = nil
 local akteBlip = nil
 local akteOpen = false
 
+-- Global fuer nui_focus_handlers.lua: verhindert dass SetNuiFocus(false) die Akte-Session killt
+function IsPolizeiakteOpen() return akteOpen end
 local function loadModel(model)
   local hash = type(model) == "number" and model or GetHashKey(model)
   if not IsModelInCdimage(hash) then return nil end
@@ -196,6 +198,20 @@ RegisterNUICallback('refreshPolizeiakte', function(data, cb)
   akteOpenTime = GetGameTimer()
   TriggerServerEvent('mtj_arrest:requestFullAkte')
   cb('ok')
+end)
+
+-- NUI Callback: Kriminallevel senken anfordern
+RegisterNUICallback('reduceKriminalLevel', function(data, cb)
+  if not akteOpen then cb('error'); return end
+  akteOpenTime = GetGameTimer() -- Timeout zuruecksetzen
+  TriggerServerEvent('mtj_arrest:reduceKriminalLevel')
+  cb('ok')
+end)
+
+-- Server: Kriminallevel-Reduktion fehlgeschlagen → Button wieder freigeben
+RegisterNetEvent('mtj_arrest:kriminalLevelFail')
+AddEventHandler('mtj_arrest:kriminalLevelFail', function()
+  SendNUIMessage({ action = "kriminalLevelFail" })
 end)
 
 -- Sicherheitsnetz: Alle 2 Sekunden pruefen ob NUI-Focus haengt

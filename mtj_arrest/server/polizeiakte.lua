@@ -302,14 +302,10 @@ AddEventHandler('mtj_arrest:requestAkte', function()
 end)
 
 -- Vollständige Akte für NPC-Einsicht (mit Stufen-Details)
-RegisterNetEvent('mtj_arrest:requestFullAkte')
-AddEventHandler('mtj_arrest:requestFullAkte', function()
-  local src = source
+-- Helper: vollständige Akte-Nutzdaten aufbauen (wird auch von reduceKriminalLevel genutzt)
+local function buildFullAkte(src)
   local akte = getAkte(src)
-  if not akte then
-    TriggerClientEvent('mtj_arrest:clientFullAkte', src, nil)
-    return
-  end
+  if not akte then return nil end
 
   -- Stufen-Info hinzufügen
   local cfg = Config.Polizeiakte or {}
@@ -337,6 +333,25 @@ AddEventHandler('mtj_arrest:requestFullAkte', function()
   akte.naechsteStufeAb = naechsteStufe and naechsteStufe.AbFestnahmen or nil
   akte.serverName = cfg.ServerName or "GreenZone420 PD"
 
+  -- Kriminallevel-Reduktions-Info fuer den Client
+  local reduceCfg = (Config.PolizeiakteNPC or {}).KriminalLevelSenken
+  akte.kriminalLevelSenkenAktiviert = reduceCfg and reduceCfg.Aktiviert or false
+  akte.kostenProFestnahme = reduceCfg and reduceCfg.KostenProFestnahme or 10000
+  akte.mindestFestnahmen  = reduceCfg and reduceCfg.MindestFestnahmen  or 0
+
+  return akte
+end
+
+_G.PolizeiakteBuildFull = buildFullAkte
+
+RegisterNetEvent('mtj_arrest:requestFullAkte')
+AddEventHandler('mtj_arrest:requestFullAkte', function()
+  local src = source
+  local akte = buildFullAkte(src)
+  if not akte then
+    TriggerClientEvent('mtj_arrest:clientFullAkte', src, nil)
+    return
+  end
   TriggerClientEvent('mtj_arrest:clientFullAkte', src, akte)
   dbg(("Vollständige Akte gesendet an Spieler %d"):format(src))
 end)

@@ -140,6 +140,18 @@
       refreshBtn.classList.remove('loading');
       refreshBtn.textContent = REFRESH_BTN_LABEL;
     }
+
+    // Reduce-Button: sichtbar wenn Feature aktiv und Festnahmen > Mindest
+    var reduceBtn = byId('akte-reduce');
+    if (reduceBtn) {
+      var canReduce = !!akte.kriminalLevelSenkenAktiviert &&
+                      (akte.festnahmen || 0) > (akte.mindestFestnahmen || 0);
+      reduceBtn.style.display = canReduce ? '' : 'none';
+      reduceBtn.disabled = false;
+      reduceBtn.classList.remove('loading');
+      var cost = (akte.kostenProFestnahme || 0).toLocaleString('de-DE');
+      reduceBtn.textContent = '\u2B07 Kriminallevel senken (' + cost + '\u00A0\u20AC)';
+    }
   }
 
   var akteClosing = false;
@@ -181,7 +193,7 @@
     evaluateUiVisibility();
   }
 
-  // Close-Button & Refresh-Button & ESC & Klick ausserhalb
+  // Close-Button & Refresh-Button & Reduce-Button & ESC & Klick ausserhalb
   document.addEventListener('click', function(e) {
     if (e.target && (e.target.id === 'akte-close' || e.target.id === 'akte-overlay')) closePolizeiakte();
     if (e.target && e.target.id === 'akte-refresh') {
@@ -195,6 +207,20 @@
       }).catch(function() {
         btn.classList.remove('loading');
         btn.textContent = REFRESH_BTN_LABEL;
+      });
+    }
+    if (e.target && e.target.id === 'akte-reduce') {
+      var reduceBtn = e.target;
+      if (reduceBtn.disabled) return;
+      reduceBtn.disabled = true;
+      reduceBtn.classList.add('loading');
+      fetch('https://mtj_arrest/reduceKriminalLevel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      }).catch(function() {
+        reduceBtn.disabled = false;
+        reduceBtn.classList.remove('loading');
       });
     }
   });
@@ -418,6 +444,10 @@
         break;
       case 'polizeiakteClose':
         forceHideAkte();
+        break;
+      case 'kriminalLevelFail':
+        var btn = byId('akte-reduce');
+        if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
         break;
       case 'mtj_debug_state':
       case 'mtj_debug_log':
