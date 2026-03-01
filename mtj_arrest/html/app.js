@@ -82,82 +82,11 @@
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 
-  function enqueueToast(text) {
-    const t = (text != null ? String(text) : '').trim();
-    if (!t) return;
-    state.toastQueue.push(t);
-    if (!state.toastShowing) showNextToast();
-  }
+  function enqueueToast(text) { /* deaktiviert */ }
+  function showNextToast() { /* deaktiviert */ }
 
-  function showNextToast() {
-    if (state.toastShowing) return;
-    const text = state.toastQueue.shift();
-    if (!text) return;
-
-    state.toastShowing = true;
-    safeText(el.toast, text);
-    el.toast.classList.add('show');
-    setHidden(el.toast, false);
-
-    const DURATION = 6000;
-    setTimeout(() => {
-      el.toast.classList.remove('show');
-      setHidden(el.toast, true);
-      state.toastShowing = false;
-      if (state.toastQueue.length > 0) {
-        setTimeout(showNextToast, 150);
-      }
-    }, DURATION);
-  }
-
-  /* ═══ Custom Notification (links mittig) ═══ */
-  const NOTIFY_ICONS = {
-    polizei: '🚨',
-    erfolg:  '✅',
-    warnung: '⚠️',
-    info:    'ℹ️',
-  };
-  const NOTIFY_DURATION = 8000;
-  const NOTIFY_MAX = 5;
-
-  function showNotify(text, type) {
-    if (!el.notifyStack) return;
-    type = type || 'info';
-    const icon = NOTIFY_ICONS[type] || NOTIFY_ICONS.info;
-
-    // Clean GTA formatting codes (~r~, ~s~, ~g~, ~b~ etc.)
-    const cleanText = String(text || '').replace(/~[a-zA-Z]~/g, '');
-
-    const item = document.createElement('div');
-    item.className = 'notify-item type-' + type;
-
-    const iconSpan = document.createElement('span');
-    iconSpan.className = 'notify-icon';
-    iconSpan.textContent = icon;
-
-    const textSpan = document.createElement('span');
-    textSpan.className = 'notify-text';
-    textSpan.textContent = cleanText;
-
-    item.appendChild(iconSpan);
-    item.appendChild(textSpan);
-
-    el.notifyStack.appendChild(item);
-    setUiVisible(true);
-
-    // Limit max visible
-    while (el.notifyStack.children.length > NOTIFY_MAX) {
-      el.notifyStack.removeChild(el.notifyStack.firstChild);
-    }
-
-    setTimeout(() => {
-      item.classList.add('out');
-      setTimeout(() => {
-        if (item.parentNode) item.parentNode.removeChild(item);
-        evaluateUiVisibility();
-      }, 400);
-    }, NOTIFY_DURATION);
-  }
+  /* ═══ Custom Notification (links mittig) — deaktiviert ═══ */
+  function showNotify(text, type) { /* deaktiviert: nur Einsatz- und Knast-Panel */ }
 
   /* ═══ Polizeiakte Vollbild-UI ═══ */
   function handlePolizeiakteOpen(akte) {
@@ -271,9 +200,6 @@
     const panels = [
       el && el.scenario && !el.scenario.classList.contains('hidden'),
       el && el.jail && !el.jail.classList.contains('hidden'),
-      el && el.aLog && !el.aLog.classList.contains('hidden'),
-      el && el.toast && !el.toast.classList.contains('hidden'),
-      el && el.notifyStack && el.notifyStack.children.length > 0,
     ];
     const anyVisible = panels.some(Boolean);
     setUiVisible(anyVisible);
@@ -324,22 +250,8 @@
   }
 
   function handleArrestLog(d) {
-    if (d.show) {
-      hideAllPanels();
-      safeText(el.aLogTitle, d.title || 'Festnahmeprotokoll');
-      if (el.aLogLines) {
-        el.aLogLines.innerHTML = '';
-        const lines = Array.isArray(d.lines) ? d.lines : [];
-        for (const line of lines) {
-          const li = document.createElement('li');
-          li.textContent = String(line);
-          el.aLogLines.appendChild(li);
-        }
-      }
-      setHidden(el.aLog, false);
-    } else {
-      setHidden(el.aLog, true);
-    }
+    // Festnahmeprotokoll deaktiviert: nur Einsatz- und Knast-Panel werden angezeigt
+    setHidden(el.aLog, true);
     evaluateUiVisibility();
   }
 

@@ -12,15 +12,7 @@ local function dbg(...)
   print(("[mtj_arrest][DEBUG] %s"):format(table.concat(t, " ")))
 end
 
-local function nativeNotify(text, ntype)
-  -- Custom NUI Notification (links mittig, ueber Minimap)
-  SendNUIMessage({
-    action = "notify",
-    text = tostring(text),
-    type = ntype or "info"
-  })
-  dbg("nativeNotify sent:", tostring(text), "type:", ntype or "info")
-end
+local function nativeNotify(text, ntype) end -- deaktiviert: nur Einsatz- und Knast-Anzeige
 
 -- === GTA NATIVE 2D TEXT FALLBACK (100% zuverlaessig, kein NUI noetig) ===
 -- Zeichnet Texte direkt auf den Bildschirm als Backup falls NUI ausfaellt
@@ -377,9 +369,7 @@ CreateThread(function()
           if now - evasionNotifiedAt >= 5000 then
             evasionNotifiedAt = now
             local hudMsg = (esc.NachrichtEvasion or "~b~Polizei verliert dich...~s~ Noch %ds bis Entkommen!"):format(remaining)
-            -- Strip GTA color codes for native HUD (NUI gets the formatted version)
-            nativeHudSet("evasion", hudMsg:gsub("~[a-zA-Z]~", ""), 100, 180, 255)
-            dbg("Evasion:", remaining, "s verbleibend")
+            dbg("Evasion:", remaining, "s verbleibend", hudMsg)
           end
           -- Wanted trotzdem halten (Spieler ist noch nicht frei!) — mit Grace Period
           local wanted = GetPlayerWantedLevel(PlayerId())
@@ -1014,19 +1004,14 @@ local function startCombatMaintenance()
           -- Nachlassen-Benachrichtigungen
           if progress > 0 and nachlassenNotifiedStage < 1 then
             nachlassenNotifiedStage = 1
-            nativeNotify(nl.NachrichtStart or "~y~Die Polizei verliert langsam die Kontrolle...", "info")
-            nativeHudSet("nachlassen", "Polizeidruck lässt nach...", 255, 200, 50)
             dbg("Nachlassen gestartet nach", math.floor(pursuitElapsed), "s Verfolgung")
           end
           if progress >= 0.5 and nachlassenNotifiedStage < 2 then
             nachlassenNotifiedStage = 2
-            nativeNotify(nl.NachrichtMitte or "~o~Der Verfolgungsdruck laesst nach! Nutze deine Chance!", "warnung")
-            nativeHudSet("nachlassen", "Polizeidruck sinkt!", 255, 150, 30)
             dbg("Nachlassen 50%: Druck halbiert")
           end
           if progress >= 1.0 and nachlassenNotifiedStage < 3 then
             nachlassenNotifiedStage = 3
-            nativeNotify(nl.NachrichtEnde or "~g~Die Polizei zieht sich zurueck! Jetzt entkommen!", "erfolg")
             nativeHudSet("nachlassen", nil)
             dbg("Nachlassen 100%: Keine Verstaerkung mehr")
           end
@@ -1270,19 +1255,7 @@ local function getScenarioHint()
 end
 
 updateCombatHUD = function()
-  local wanted = getEffectiveWanted()
-  local aliveCops = GetMainLuaAliveCopCount()
-  local clampedWanted = math.min(wanted, 5)
-  local stars = string.rep("★", clampedWanted) .. string.rep("☆", 5 - clampedWanted)
-  local pursuitSec = 0
-  if pursuitStartTime > 0 then
-    pursuitSec = math.floor((GetGameTimer() - pursuitStartTime) / 1000)
-  end
-  local mins = math.floor(pursuitSec / 60)
-  local secs = pursuitSec % 60
-  nativeHudSet("combat_stars", stars .. "  Wanted: " .. wanted, 255, 50, 50)
-  nativeHudSet("combat_cops", "Aktive Einheiten: " .. aliveCops .. " | Helis: " .. #helis .. " | Fahrzeuge: " .. #policeVehicles, 100, 180, 255)
-  nativeHudSet("combat_time", ("Verfolgung: %02d:%02d"):format(mins, secs), 255, 200, 50)
+  -- Vorwarner-Anzeige deaktiviert: nur Einsatz- und Knast-Panel werden angezeigt
 end
 
 hideCombatHUD = function()
@@ -1296,7 +1269,6 @@ end
 local function hideAllUI()
   TriggerEvent('mtj_arrest:nui:scenario', false)
   TriggerEvent('mtj_arrest:nui:jail', false)
-  TriggerEvent('mtj_arrest:nui:arrest_log', false)
   hideCombatHUD()
   nativeHudClear()
   dbg("hideAllUI: alle Panels versteckt")
@@ -1501,9 +1473,7 @@ local function playCuffSequence()
   else
     nativeNotify("~r~Festnahme~s~: " .. playerName .. " wird verhaftet!", "polizei")
   end
-  TriggerEvent('mtj_arrest:nui:arrest_log', true, getArrestLogLines())
   Wait(3000)
-  TriggerEvent('mtj_arrest:nui:arrest_log', false)
   nativeHudSet("arrest", nil)
   cuffing = false
   dbg("cuff sequence done")
