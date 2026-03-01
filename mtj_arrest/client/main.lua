@@ -1107,8 +1107,8 @@ local function startCombatMaintenance()
         end
       end
 
-      -- Polizeifahrzeuge spawnen (ab 3 Sterne) — nicht bei vollem Nachlassen
-      if wanted >= 3 and nachlassenFaktor > 0.3 then
+      -- Polizeifahrzeuge spawnen (laut Config.FahrzeugePerWantedLevel) — nicht bei vollem Nachlassen
+      if nachlassenFaktor > 0.3 then
         spawnPoliceVehicle()
       end
 
@@ -1689,12 +1689,10 @@ AddEventHandler('mtj_arrest:startScenario', function()
     spawnCopsAroundPlayer()
     -- Fahrzeuge und Helikopter sofort spawnen (laut Config pro Wanted-Level)
     local initWanted = getEffectiveWanted()
-    if initWanted >= 3 then
-      local maxVeh = getMaxVehiclesForWanted()
-      for v = 1, maxVeh do
-        spawnPoliceVehicle()
-        Wait(200)
-      end
+    local maxVeh = getMaxVehiclesForWanted()
+    for v = 1, maxVeh do
+      spawnPoliceVehicle()
+      Wait(200)
     end
     local heliLevel = Config.HeliWantedLevel or 3
     if initWanted >= heliLevel then
