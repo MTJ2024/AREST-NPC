@@ -5,10 +5,15 @@
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 -- mtj_arrest: Debug-Befehle (nur für Entwickler)
 
--- Startet das Festnahme-Szenario wie im echten Ablauf
+-- Startet das Festnahme-Szenario wie im echten Ablauf (setzt Wanted=2 für den Test)
 RegisterCommand('mtj_test_start', function()
-  print("[mtj_arrest][TEST] Trigger mtj_arrest:startScenario (event)")
-  TriggerEvent('mtj_arrest:startScenario')
+  print("[mtj_arrest][TEST] Setze Wanted=2 und triggere startScenario")
+  SetPlayerWantedLevel(PlayerId(), 2, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  CreateThread(function()
+    Wait(200) -- Kurze Pause damit GTA den Wanted-Level verarbeitet, bevor das Szenario startet
+    TriggerEvent('mtj_arrest:startScenario')
+  end)
 end, false)
 
 -- Zeigt das Arrest-Log-UI für 5 Sekunden an (Testanzeige)
@@ -25,12 +30,8 @@ RegisterCommand('mtj_test_arrestlog', function()
   end)
 end, false)
 
--- Zeigt Handschellen-Visuals für 8 Sekunden (zum Testen)
+-- Erzwingt Handschellen-Sequenz für 8 Sekunden (Test)
 RegisterCommand('mtj_test_cuff', function()
-  print("[mtj_arrest][TEST] cuff visuals (local) for 8s")
-  TriggerEvent('mtj_arrest:controls:cuffed', true, GetPlayerServerId(PlayerId()))
-  Citizen.SetTimeout(8000, function()
-    TriggerEvent('mtj_arrest:controls:cuffed', false, GetPlayerServerId(PlayerId()))
-    print("[mtj_arrest][TEST] uncuffed")
-  end)
+  print("[mtj_arrest][TEST] Force cuff via mtj_arrest:forceSurrender")
+  TriggerEvent('mtj_arrest:forceSurrender')
 end, false)

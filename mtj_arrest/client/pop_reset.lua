@@ -9,16 +9,14 @@
 --  /mtj_popoff -> stellt Peds/Traffic auf 0 (zum Testen)
 --  /mtj_cops   -> toggelt SetPoliceIgnorePlayer off/on (zeigt Status)
 
-local forceThread = nil
+local forceToken = 0   -- Inkrement stoppt den vorherigen Thread
 local copsIgnored = false
 
 local function setDensities(ped, veh, rndVeh, scenarioPed)
-  ped = ped or 1.0
-  veh = veh or 1.0
-  rndVeh = rndVeh or 1.0
+  ped        = ped        or 1.0
+  veh        = veh        or 1.0
+  rndVeh     = rndVeh     or 1.0
   scenarioPed = scenarioPed or 1.0
-
-  -- Diese natives müssen pro Frame gesetzt werden:
   SetPedDensityMultiplierThisFrame(ped)
   SetScenarioPedDensityMultiplierThisFrame(scenarioPed, scenarioPed)
   SetVehicleDensityMultiplierThisFrame(veh)
@@ -33,13 +31,11 @@ local function setRandomCops(enable)
 end
 
 local function ensureForSeconds(seconds, enable)
-  if forceThread then
-    TerminateThread(forceThread)
-    forceThread = nil
-  end
+  forceToken = forceToken + 1
+  local myToken = forceToken
   local untilTime = GetGameTimer() + (math.max(1, seconds) * 1000)
-  forceThread = Citizen.CreateThread(function()
-    while GetGameTimer() < untilTime do
+  CreateThread(function()
+    while GetGameTimer() < untilTime and myToken == forceToken do
       if enable then
         setDensities(1.0, 1.0, 1.0, 1.0)
         setRandomCops(true)
@@ -49,7 +45,6 @@ local function ensureForSeconds(seconds, enable)
       end
       Wait(0)
     end
-    forceThread = nil
   end)
 end
 

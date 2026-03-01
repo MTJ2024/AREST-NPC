@@ -951,6 +951,7 @@ local GPS_HELI_INTERVAL = 4000  -- Heli-Mission alle 4 Sekunden erneuern
 
 local function startGpsTracker()
   if gpsTrackerActive then return end
+  if not scenarioActive then return end  -- Kein Start wenn Szenario bereits beendet
   gpsTrackerActive = true
   dbg("GPS-Tracker: gestartet")
   CreateThread(function()
@@ -1802,6 +1803,22 @@ CreateThread(function()
       Wait(250)
     end
   end
+end)
+
+-- Erzwungene Übergabe via /mtj_force_surrender Befehl
+AddEventHandler('mtj_arrest:forceSurrender', function()
+  if not scenarioActive then
+    dbg("forceSurrender: kein aktives Szenario")
+    return
+  end
+  if surrendered or cuffing or cuffed or inJail then
+    dbg("forceSurrender: Guard aktiv — nicht ausfuehrbar")
+    return
+  end
+  dbg("forceSurrender: Erzwungene Übergabe")
+  surrendered = true
+  canSurrender = false
+  playCuffSequence()
 end)
 
 -- === WANTED-LEVEL-ÜBERWACHUNG ===
