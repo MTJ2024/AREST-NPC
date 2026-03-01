@@ -76,13 +76,11 @@ CreateThread(function()
     while true do
         Wait(1500)
 
-        -- Waehrend Vorwarnung: NICHT spawnen (main.lua braucht Kontrolle)
         -- Waehrend aktivem Szenario aber NICHT Kampfphase: main.lua uebernimmt
         -- Waehrend Kampfphase: auto_cop_spawn darf supplementaer spawnen
-        local vwActive = (IsVorwarnungActive and IsVorwarnungActive()) or false
         local scenActive = (IsArrestScenarioActive and IsArrestScenarioActive()) or false
         local combatActive = (IsCombatPhaseActive and IsCombatPhaseActive()) or false
-        if vwActive or (scenActive and not combatActive) then
+        if scenActive and not combatActive then
             -- Tote entfernen, aber NICHT nachspawnen
             for i = #activeCops, 1, -1 do
                 local cop = activeCops[i]

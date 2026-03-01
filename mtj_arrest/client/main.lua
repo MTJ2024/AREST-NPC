@@ -68,7 +68,7 @@ CreateThread(function()
     local now = GetGameTimer()
     local y = 0.35 -- Startposition links-mitte
 
-    -- Persistente Zeilen (Vorwarnung, Szenario, Jail etc.)
+    -- Persistente Zeilen (Szenario, Jail etc.)
     for _, line in pairs(nativeHudPersist) do
       drawText2D(line.text, 0.018, y, 0.55, line.r, line.g, line.b, 240)
       y = y + 0.04
@@ -242,10 +242,6 @@ end
 
 function IsArrestScenarioActive()
   return scenarioActive
-end
-
-function IsVorwarnungActive()
-  return false
 end
 
 function IsCombatPhaseActive()
@@ -789,20 +785,38 @@ local function spawnPoliceVehicle()
   if not crewHash then dbg("police vehicle crew model load failed"); return end
 
   local ppos = GetEntityCoords(PlayerPedId())
-  local angle = math.random() * 2 * math.pi
-  local dist = 60.0 + math.random() * 30.0 -- 60-90m entfernt
-  local spawnPos = vector3(ppos.x + math.cos(angle) * dist, ppos.y + math.sin(angle) * dist, ppos.z)
-  -- Collision laden fuer zuverlaessige Bodenhoehe
-  RequestCollisionAtCoord(spawnPos.x, spawnPos.y, spawnPos.z)
-  Wait(150)
-  -- Bodenhöhe finden
-  local found, gz = GetGroundZFor_3dCoord(spawnPos.x, spawnPos.y, spawnPos.z + 50.0, 0)
-  if found then
-    spawnPos = vector3(spawnPos.x, spawnPos.y, gz + 0.5)
-  else
-    -- Fallback: Spieler-Z verwenden
-    spawnPos = vector3(spawnPos.x, spawnPos.y, ppos.z + 0.5)
-    dbg("spawnPoliceVehicle: GroundZ fehlgeschlagen, verwende Spieler-Z")
+  -- Spawn-Position suchen: 150-200m entfernt, nicht auf Bergen oder Gebaeuden
+  local MAX_HEIGHT_DIFF_WITH_ROAD = 30.0  -- Max. Hoehenunterschied zum Spieler bei Strassenposition
+  local MAX_HEIGHT_DIFF_FALLBACK  = 15.0  -- Max. Hoehenunterschied bei flachem Gelände (ohne Strasse)
+  local spawnPos = nil
+  for attempt = 1, 8 do
+    local angle = math.random() * 2 * math.pi
+    local dist = 150.0 + math.random() * 50.0 -- 150-200m entfernt
+    local candidate = vector3(ppos.x + math.cos(angle) * dist, ppos.y + math.sin(angle) * dist, ppos.z)
+    RequestCollisionAtCoord(candidate.x, candidate.y, candidate.z)
+    Wait(150)
+    local found, gz = GetGroundZFor_3dCoord(candidate.x, candidate.y, candidate.z + 100.0, 0)
+    if found then
+      -- Hoehenunterschied zum Spieler pruefen (verhindert Spawns auf Bergen/Haeuserdaechern)
+      local heightDiff = math.abs(gz - ppos.z)
+      local onRoad = IsPointOnRoad(candidate.x, candidate.y, gz, 0)
+      if heightDiff <= MAX_HEIGHT_DIFF_WITH_ROAD and onRoad then
+        spawnPos = vector3(candidate.x, candidate.y, gz + 0.5)
+        break
+      end
+      -- Secundaer-Fallback: Gelände ist sehr flach (kein Berg/Dach), auch ohne Strasse akzeptabel
+      -- z.B. Parkplaetze, Wiesen oder Industriegelaende neben Strassen
+      if heightDiff <= MAX_HEIGHT_DIFF_FALLBACK then
+        spawnPos = vector3(candidate.x, candidate.y, gz + 0.5)
+        break
+      end
+    end
+  end
+  if not spawnPos then
+    -- Letzte Fallback: nahe am Spieler (garantiert flach)
+    local angle = math.random() * 2 * math.pi
+    spawnPos = vector3(ppos.x + math.cos(angle) * 80.0, ppos.y + math.sin(angle) * 80.0, ppos.z + 0.5)
+    dbg("spawnPoliceVehicle: kein guter Spawn gefunden, spawne 80m vom Spieler")
   end
 
   local heading = math.deg(math.atan(ppos.y - spawnPos.y, ppos.x - spawnPos.x)) - 90.0
@@ -1086,8 +1100,8 @@ local function startCombatMaintenance()
         end
       end
 
-      -- Polizeifahrzeuge spawnen (ab 2 Sterne) — nicht bei vollem Nachlassen
-      if wanted >= 2 and nachlassenFaktor > 0.3 then
+      -- Polizeifahrzeuge spawnen (ab 3 Sterne) — nicht bei vollem Nachlassen
+      if wanted >= 3 and nachlassenFaktor > 0.3 then
         spawnPoliceVehicle()
       end
 
@@ -1258,7 +1272,6 @@ end
 
 -- Alle Panels verstecken (gegenseitige Ausschliessung, nur 1 Panel gleichzeitig)
 local function hideAllUI()
-  TriggerEvent('mtj_arrest:nui:vorwarnung', false)
   TriggerEvent('mtj_arrest:nui:scenario', false)
   TriggerEvent('mtj_arrest:nui:jail', false)
   TriggerEvent('mtj_arrest:nui:arrest_log', false)
@@ -1284,23 +1297,6 @@ local function hideScenarioUI()
   nativeHudSet("scenario", nil)
   nativeHudSet("scenario_cd", nil)
   dbg("hideScenarioUI")
-end
-
--- Vorwarnung UI
-local function showVorwarnungUI(titel, text, countdown)
-  hideAllUI() -- Alle anderen Panels ausblenden
-  TriggerEvent('mtj_arrest:nui:vorwarnung', true, titel, text, countdown)
-  -- GTA Native Fallback
-  nativeHudSet("vorwarnung", (titel or "WARNUNG") .. ": " .. (text or ""):gsub("\n", " "), 243, 156, 18)
-  nativeHudSet("vorwarnung_cd", "Noch " .. (countdown or 5) .. "s", 255, 200, 100)
-  dbg("showVorwarnungUI: NUI + Native HUD")
-end
-
-local function hideVorwarnungUI()
-  TriggerEvent('mtj_arrest:nui:vorwarnung', false)
-  nativeHudSet("vorwarnung", nil)
-  nativeHudSet("vorwarnung_cd", nil)
-  dbg("hideVorwarnungUI")
 end
 
 -- Prüft ob mindestens ein Cop innerhalb des Radius ist
@@ -1375,100 +1371,34 @@ local function makeCopsShout()
   end
 end
 
--- === KI-VERHANDLUNG (Mehrstufige Verhandlung vor Zugriff) ===
--- Ersetzt den simplen ComplianceWindow-Countdown mit Verhandlungsstufen
+-- === COMPLIANCE-COUNTDOWN (Countdown vor Zugriff) ===
 local function runNegotiationAndCompliance()
   canSurrender = true
   showScenarioUI()
   makeCopsShout()
   nativeNotify("~r~POLIZEI~s~ an " .. playerName .. ": " .. getScenarioHint(), "polizei")
 
-  local vh = Config.Verhandlung
-  if vh and vh.Aktiviert and vh.Stufen then
-    -- Mehrstufige KI-Verhandlung
-    dbg("KI-Verhandlung gestartet mit", #vh.Stufen, "Stufen")
-    complianceCountdownThreadActive = true
-    for si, stufe in ipairs(vh.Stufen) do
-      if not scenarioActive or not canSurrender or surrendered or cuffing or cuffed or inJail then
-        break
+  complianceCountdownThreadActive = true
+  while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
+    Wait(1000)
+    if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
+      complianceWindow = complianceWindow - 1
+      TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
+      nativeHudSet("scenario_cd", "Letzte Chance: " .. complianceWindow .. "s — [E] Ergeben", 100, 180, 255)
+      checkFluchtversuch()
+      if complianceWindow <= 0 then
+        canSurrender = false
+        hideScenarioUI()
+        nativeHudSet("combat_status", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
+        reactivatePolice()
+        startCombatMaintenance()
+        dbg("Surrender window abgelaufen!")
       end
-      local text = stufe.Text or "Ergeben Sie sich!"
-      local farbe = stufe.Farbe or {255, 255, 255}
-      local speech = stufe.Speech
-      local dauer = stufe.Dauer or 5
-
-      -- Stufe anzeigen
-      nativeHudSet("scenario", text, farbe[1], farbe[2], farbe[3])
-      nativeNotify(text, "polizei")
-      nativeHudSet("scenario_cd", "Verhandlung Stufe " .. si .. "/" .. #vh.Stufen .. " — [E] Ergeben", farbe[1], farbe[2], farbe[3])
-      dbg("Verhandlung Stufe", si, ":", text)
-
-      -- Cops rufen passend
-      if speech then
-        for _, ped in pairs(cops) do
-          if DoesEntityExist(ped) and not IsEntityDead(ped) then
-            local ok, err = pcall(function()
-              PlayPedAmbientSpeechNative(ped, speech, "SPEECH_PARAMS_FORCE_SHOUTED_CRITICAL")
-            end)
-            if not ok then dbg("Verhandlung Speech-Fehler:", err) end
-            break -- Nur ein Cop ruft pro Stufe
-          end
-        end
-      end
-
-      -- Countdown dieser Stufe (letzte Stufe = 0 = sofort Zugriff)
-      if dauer > 0 then
-        local remaining = dauer
-        while remaining > 0 and scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail do
-          Wait(1000)
-          remaining = remaining - 1
-          complianceWindow = complianceWindow - 1
-          if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
-            TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
-            nativeHudSet("scenario_cd", "Stufe " .. si .. ": " .. remaining .. "s — [E] Ergeben", farbe[1], farbe[2], farbe[3])
-            checkFluchtversuch()
-          end
-        end
-      end
+    else
+      break
     end
-
-    -- Nach allen Stufen: Zugriff (falls nicht ergeben)
-    if scenarioActive and not surrendered and not cuffing and not cuffed and not inJail then
-      canSurrender = false
-      -- Szenario-Panel AUSBLENDEN — Kampfphase braucht kein Countdown-Panel
-      hideScenarioUI()
-      nativeHudSet("combat_status", "ZUGRIFF! Feuer frei!", 255, 30, 30)
-      nativeNotify("~r~ZUGRIFF~s~: Verhandlung mit " .. playerName .. " gescheitert!", "polizei")
-      reactivatePolice()
-      startCombatMaintenance()
-      dbg("KI-Verhandlung gescheitert → Zugriff!")
-    end
-    complianceCountdownThreadActive = false
-  else
-    -- Fallback: einfacher Countdown ohne Verhandlungsstufen
-    complianceCountdownThreadActive = true
-    while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
-      Wait(1000)
-      if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
-        complianceWindow = complianceWindow - 1
-        TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
-        nativeHudSet("scenario_cd", "Letzte Chance: " .. complianceWindow .. "s — [E] Ergeben", 100, 180, 255)
-        checkFluchtversuch()
-        if complianceWindow <= 0 then
-          canSurrender = false
-          -- Szenario-Panel AUSBLENDEN — Kampfphase braucht kein Countdown-Panel
-          hideScenarioUI()
-          nativeHudSet("combat_status", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
-          reactivatePolice()
-          startCombatMaintenance()
-          dbg("Surrender window abgelaufen!")
-        end
-      else
-        break
-      end
-    end
-    complianceCountdownThreadActive = false
   end
+  complianceCountdownThreadActive = false
 end
 
 
@@ -1753,50 +1683,21 @@ AddEventHandler('mtj_arrest:startScenario', function()
   CreateThread(function()
     if isRestart then
       -- === CONTINUATION RESTART: Verfolgung laeuft weiter ===
-      -- Keine Vorwarnung, keine neuen Cops spawnen, direkt in Kampfphase
+      -- Keine neuen Cops spawnen, direkt in Kampfphase
       dbg("startScenario: CONTINUATION RESTART (pursuitStartTime>0, cops:", #cops, ") → direkt in Kampfphase")
       setAmbientCopsIgnore(true)
       -- Cops die noch leben sofort reaktivieren
       reactivatePolice()
       startCombatMaintenance()
     else
-      -- === NEUER START: Volle Sequenz mit Vorwarnung ===
-    -- ETAPPE 0: VORWARNUNG (grosse Anzeige BEVOR Polizei spawnt)
-    local vw = Config.Vorwarnung
-    if vw and vw.Aktiviert then
-      local vwDauer = vw.Dauer or 5
-      local vwTitel = vw.Titel or "POLIZEI-WARNUNG"
-      local vwText = vw.Text or "Stellen Sie sofort Ihre Waffen ab!"
-      showVorwarnungUI(vwTitel, vwText, vwDauer)
-      nativeNotify("~o~WARNUNG~s~ an " .. playerName .. ": " .. (vw.TextKurz or vwText), "warnung")
-      vorwarnungActive = true
-      dbg("startScenario: Vorwarnung angezeigt fuer", vwDauer, "Sekunden")
-
-      local remaining = vwDauer
-      while scenarioActive and remaining > 0 do
-        Wait(1000)
-        remaining = remaining - 1
-        if scenarioActive then
-          TriggerEvent('mtj_arrest:nui:vorwarnung_tick', remaining)
-          nativeHudSet("vorwarnung_cd", "Noch " .. remaining .. "s", 255, 200, 100)
-        end
-      end
-      hideVorwarnungUI()
-      vorwarnungActive = false
-
-      if not scenarioActive then
-        dbg("startScenario: Szenario waehrend Vorwarnung beendet")
-        return
-      end
-    end
-
+      -- === NEUER START: Polizei spawnen ===
     -- ETAPPE 1: Polizei spawnen (Cops, Fahrzeuge, Helikopter — alles laut Config)
     clearCops()
     clearRoadblocks()
     spawnCopsAroundPlayer()
     -- Fahrzeuge und Helikopter sofort spawnen (laut Config pro Wanted-Level)
     local initWanted = getEffectiveWanted()
-    if initWanted >= 2 then
+    if initWanted >= 3 then
       local maxVeh = getMaxVehiclesForWanted()
       for v = 1, maxVeh do
         spawnPoliceVehicle()
@@ -1825,9 +1726,9 @@ AddEventHandler('mtj_arrest:startScenario', function()
       dbg("startScenario: Szenario waehrend Warten beendet")
       return
     end
-    dbg("startScenario: Cops angekommen, starte Verhandlung + Timer")
+    dbg("startScenario: Cops angekommen, starte Compliance-Countdown")
 
-    -- ETAPPE 3: KI-Verhandlung und Compliance-Countdown
+    -- ETAPPE 3: Compliance-Countdown
     runNegotiationAndCompliance()
     end -- Ende: else (NEUER START)
   end)
@@ -1853,7 +1754,6 @@ AddEventHandler('mtj_arrest:endScenario', function()
   evasionStartTime = 0
   evasionNotifiedAt = 0
   hideScenarioUI()
-  hideVorwarnungUI()
   hideCombatHUD()
   nativeHudClear()
   -- Cops NUR loeschen wenn Verfolgung WIRKLICH vorbei ist
@@ -1958,7 +1858,6 @@ AddEventHandler('playerSpawned', function()
   SetPlayerWantedLevelNow(PlayerId(), false)
   ClearPlayerWantedLevel(PlayerId())
   hideScenarioUI()
-  hideVorwarnungUI()
   hideCombatHUD()
   nativeHudClear()
   TriggerEvent('mtj_arrest:nui:jail', false)
@@ -2009,7 +1908,6 @@ AddEventHandler('onResourceStop', function(res)
   SetPlayerWantedLevelNow(PlayerId(), false)
   ClearPlayerWantedLevel(PlayerId())
   hideScenarioUI()
-  hideVorwarnungUI()
   hideCombatHUD()
   nativeHudClear()
   TriggerEvent('mtj_arrest:nui:jail', false)

@@ -24,36 +24,6 @@ Config.WaffenBeiTod = {
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗
--- ║              KI-VERHANDLUNG (Negotiation vor Zugriff)           ║
--- ║  Mehrstufige Verhandlung BEVOR Polizei schiesst:                ║
--- ║  Stufe 1: Aufforderung — Stufe 2: Warnung — Stufe 3: Zugriff   ║
--- ║  Spieler kann jederzeit [E] zum Ergeben druecken                ║
--- ╚══════════════════════════════════════════════════════════════════╝
-Config.Verhandlung = {
-    Aktiviert           = true,     -- true = KI-Verhandlung aktiv
-    Stufen = {
-        {   -- Stufe 1: Aufforderung (ruhiger Ton)
-            Dauer   = 5,            -- Sekunden
-            Text    = "POLIZEI! Legen Sie sofort Ihre Waffen ab!",
-            Farbe   = {255, 200, 50},   -- Gelb/Orange
-            Speech  = "ARREST_PLAYER",  -- GTA Speech Kontext
-        },
-        {   -- Stufe 2: Warnung (aggressiver)
-            Dauer   = 5,
-            Text    = "LETZTE WARNUNG! Ergeben Sie sich SOFORT oder wir schiessen!",
-            Farbe   = {255, 100, 30},   -- Orange/Rot
-            Speech  = "CHALLENGE_THREATEN",
-        },
-        {   -- Stufe 3: Zugriff (Cops schiessen)
-            Dauer   = 0,            -- 0 = Sofort Zugriff, kein weiteres Warten
-            Text    = "ZUGRIFF! Feuer frei!",
-            Farbe   = {255, 30, 30},    -- Rot
-            Speech  = "DRAW_GUN",
-        },
-    },
-}
-
--- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              POLIZEI-EINSATZ ANZEIGE (SZENARIO-UI)              ║
 -- ║  Wann und wie die "POLIZEI-EINSATZ" Info angezeigt wird         ║
 -- ╚══════════════════════════════════════════════════════════════════╝
@@ -98,15 +68,15 @@ Config.HelisPerWantedLevel = {
 }
 Config.FahrzeugePerWantedLevel = {
     [1] = 0,                    -- 1 Stern:  kein Fahrzeug
-    [2] = 1,                    -- 2 Sterne: 1 Polizeifahrzeug
+    [2] = 0,                    -- 2 Sterne: kein Fahrzeug
     [3] = 2,                    -- 3 Sterne: 2 Polizeifahrzeuge
     [4] = 3,                    -- 4 Sterne: 3 Polizeifahrzeuge
     [5] = 4,                    -- 5 Sterne: 4 Polizeifahrzeuge
 }
 Config.PoliceCount              = 4       -- Fallback, falls CopsPerWantedLevel nicht greift
 Config.MaxActiveCops            = 15      -- Maximale Anzahl gleichzeitig aktiver Polizisten
-Config.PoliceSpawnRadius        = 60.0    -- Meter: Spawn-Radius um Spieler (max 60m wegen Kollisionsdaten)
-Config.MaxSpawnDistance          = 60.0    -- Legacy-Alias fuer Kompatibilitaet
+Config.PoliceSpawnRadius        = 200.0   -- Meter: Spawn-Radius um Spieler
+Config.MaxSpawnDistance          = 200.0   -- Legacy-Alias fuer Kompatibilitaet
 Config.PoliceChaseWanted        = true    -- true = Cops spawnen und verfolgen bei Wanted automatisch
 Config.DisableAmbientCopsAfterSurrender = true -- Ambient-Cops ignorieren Spieler nach Ergeben
 
