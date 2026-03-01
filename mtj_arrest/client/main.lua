@@ -191,6 +191,8 @@ local lastKnownWanted = 0 -- Letzter bekannter Wanted-Level (fuer Wiederherstell
 local evasionStartTime = 0 -- GameTimer wann Evasion-Countdown begann (0 = nicht aktiv)
 local evasionNotifiedAt = 0 -- Letzter Zeitpunkt einer Evasion-HUD-Nachricht
 local wantedDropCount = 0 -- Zaehlt wie oft WantedMaintenance Wanted=0 gelesen hat (Grace Period)
+local gpsTrackerActive = false  -- GPS-Tracker-Thread laeuft
+local gpsLastHeliUpdate = 0     -- Letztes Heli-Mission-Update (GameTimer)
 
 -- Gibt den effektiven Wanted-Level zurueck: GTA-Wert ODER lastKnownWanted als Fallback.
 -- GTA V setzt Wanted manchmal kurz auf 0 wenn keine Cops sichtbar sind.
@@ -940,11 +942,63 @@ end
 local updateCombatHUD
 local hideCombatHUD
 
+-- === GPS-TRACKER: GTA Online Style ===
+-- Waehrend der Verfolgung hat der Spieler einen unsichtbaren GPS-Sender.
+-- Alle Polizeifahrzeuge und Helikopter werden kontinuierlich zu seiner
+-- aktuellen Position navigiert. Stoppt automatisch wenn Wanted = 0.
+local GPS_VEH_INTERVAL  = 2000  -- Fahrzeug-Navi alle 2 Sekunden aktualisieren
+local GPS_HELI_INTERVAL = 4000  -- Heli-Mission alle 4 Sekunden erneuern
+
+local function startGpsTracker()
+  if gpsTrackerActive then return end
+  gpsTrackerActive = true
+  dbg("GPS-Tracker: gestartet")
+  CreateThread(function()
+    while scenarioActive and not inJail do
+      Wait(GPS_VEH_INTERVAL)
+      if not scenarioActive then break end
+      local playerPed = PlayerPedId()
+      local ppos      = GetEntityCoords(playerPed)
+      local now       = GetGameTimer()
+
+      -- Polizeifahrzeuge: Fahrer immer zur aktuellen Spielerposition navigieren
+      for _, pv in ipairs(policeVehicles) do
+        if pv.vehicle and DoesEntityExist(pv.vehicle) and not IsEntityDead(pv.vehicle) then
+          local driver = GetPedInVehicleSeat(pv.vehicle, -1)
+          if driver ~= 0 and DoesEntityExist(driver) and not IsEntityDead(driver) then
+            local vdist = #(GetEntityCoords(pv.vehicle) - ppos)
+            if vdist > 8.0 then
+              TaskVehicleDriveToCoordLongrange(driver, pv.vehicle,
+                ppos.x, ppos.y, ppos.z, 30.0, 262144 + 16, 5.0)
+            end
+          end
+        end
+      end
+
+      -- Helikopter: Pilot-Mission periodisch erneuern damit Heli immer ueber dem Spieler bleibt
+      if (now - gpsLastHeliUpdate) >= GPS_HELI_INTERVAL then
+        gpsLastHeliUpdate = now
+        for _, h in ipairs(helis) do
+          if h.vehicle and DoesEntityExist(h.vehicle) and not IsEntityDead(h.vehicle) then
+            if h.pilot and DoesEntityExist(h.pilot) and not IsEntityDead(h.pilot) then
+              TaskHeliMission(h.pilot, h.vehicle, 0, playerPed,
+                0.0, 0.0, 0.0, 9, 50.0, 40.0, -1.0, 0, 10, -1.0, 0)
+            end
+          end
+        end
+      end
+    end
+    gpsTrackerActive = false
+    dbg("GPS-Tracker: gestoppt")
+  end)
+end
+
 local function startCombatMaintenance()
   if combatMaintenanceActive then return end
   combatMaintenanceActive = true
   combatStartTime = GetGameTimer()
   nachlassenNotifiedStage = 0
+  startGpsTracker() -- GPS-Tracker starten: Cops + Helis immer zum Spieler navigieren
   CreateThread(function()
     local pistolHash = GetHashKey("WEAPON_PISTOL")
     local heliWeaponHash = GetHashKey(Config.HeliWeapon or "WEAPON_CARBINERIFLE")
@@ -1711,6 +1765,8 @@ AddEventHandler('mtj_arrest:endScenario', function()
   scenarioStartPos = nil
   evasionStartTime = 0
   evasionNotifiedAt = 0
+  gpsTrackerActive = false  -- GPS-Tracker freigeben fuer naechstes Szenario
+  gpsLastHeliUpdate = 0
   hideScenarioUI()
   hideCombatHUD()
   nativeHudClear()
@@ -1806,6 +1862,8 @@ AddEventHandler('playerSpawned', function()
   lastKnownWanted = 0
   evasionStartTime = 0
   evasionNotifiedAt = 0
+  gpsTrackerActive = false
+  gpsLastHeliUpdate = 0
   releaseWarningShown = false
   inJail = false
   wantedDeathLockUntil = 0 -- Sperre beim Respawn aufheben
@@ -1858,6 +1916,8 @@ AddEventHandler('onResourceStop', function(res)
   lastKnownWanted = 0
   evasionStartTime = 0
   evasionNotifiedAt = 0
+  gpsTrackerActive = false
+  gpsLastHeliUpdate = 0
   releaseWarningShown = false
   inJail = false
   deadBodies = {}
