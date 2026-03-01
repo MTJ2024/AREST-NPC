@@ -368,8 +368,6 @@ CreateThread(function()
           if wanted > 0 then
             lastKnownWanted = wanted
             wantedDropCount = 0
-            SetPlayerWantedLevel(PlayerId(), wanted, false)
-            SetPlayerWantedLevelNow(PlayerId(), false)
           elseif lastKnownWanted > 0 then
             wantedDropCount = wantedDropCount + 1
             if wantedDropCount < 6 then
@@ -399,8 +397,6 @@ CreateThread(function()
         if wanted > 0 then
           lastKnownWanted = wanted
           wantedDropCount = 0
-          SetPlayerWantedLevel(PlayerId(), wanted, false)
-          SetPlayerWantedLevelNow(PlayerId(), false)
         elseif lastKnownWanted > 0 then
           wantedDropCount = wantedDropCount + 1
           if wantedDropCount < 6 then
