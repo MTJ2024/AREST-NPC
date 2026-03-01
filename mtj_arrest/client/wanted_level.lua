@@ -41,34 +41,43 @@ end
 CreateThread(function()
   while true do
     Wait(2000)
-    local wanted = getWantedRobust()
-    if wanted >= Config.RequiredWantedLevel then
-      consecutiveZeroChecks = 0  -- Wanted aktiv → Reset Zero-Counter
-      if not scenarioTriggered then
-        -- Normaler Start: Szenario triggern
-        scenarioTriggered = true
-        lastTriggerTime = GetGameTimer()
-        TriggerEvent('mtj_arrest:startScenario')
-      else
-        -- Stuck-Erkennung: Wenn Szenario laenger als STALE_TIMEOUT aktiv
-        -- und Wanted immer noch > 0, Reset + Neustart
-        local elapsed = GetGameTimer() - lastTriggerTime
-        if elapsed > SCENARIO_STALE_TIMEOUT_MS then
-          scenarioTriggered = false
-          lastTriggerTime = 0
-          -- endScenario zum Aufraeumen, dann Neustart im naechsten Tick
-          TriggerEvent('mtj_arrest:endScenario')
-        end
-      end
+    -- Wanted-Sperre nach Tod pruefen (5 Sekunden nach Tod kein Re-Trigger)
+    -- GetWantedDeathLockUntil ist in main.lua definiert, defensive Pruefung fuer Ladereihenfolge
+    local deathLock = (GetWantedDeathLockUntil and GetWantedDeathLockUntil()) or 0
+    local deathLockActive = deathLock > 0 and GetGameTimer() < deathLock
+    if deathLockActive then
+      consecutiveZeroChecks = 0
+      scenarioTriggered = false
     else
-      -- Wanted = 0: Nur resetten wenn MEHRFACH hintereinander 0 gelesen
-      -- Verhindert False-Positives durch GTA Race Conditions
-      if scenarioTriggered then
-        consecutiveZeroChecks = consecutiveZeroChecks + 1
-        if consecutiveZeroChecks >= ZERO_CHECKS_REQUIRED then
-          scenarioTriggered = false
-          lastTriggerTime = 0
-          consecutiveZeroChecks = 0
+      local wanted = getWantedRobust()
+      if wanted >= Config.RequiredWantedLevel then
+        consecutiveZeroChecks = 0  -- Wanted aktiv → Reset Zero-Counter
+        if not scenarioTriggered then
+          -- Normaler Start: Szenario triggern
+          scenarioTriggered = true
+          lastTriggerTime = GetGameTimer()
+          TriggerEvent('mtj_arrest:startScenario')
+        else
+          -- Stuck-Erkennung: Wenn Szenario laenger als STALE_TIMEOUT aktiv
+          -- und Wanted immer noch > 0, Reset + Neustart
+          local elapsed = GetGameTimer() - lastTriggerTime
+          if elapsed > SCENARIO_STALE_TIMEOUT_MS then
+            scenarioTriggered = false
+            lastTriggerTime = 0
+            -- endScenario zum Aufraeumen, dann Neustart im naechsten Tick
+            TriggerEvent('mtj_arrest:endScenario')
+          end
+        end
+      else
+        -- Wanted = 0: Nur resetten wenn MEHRFACH hintereinander 0 gelesen
+        -- Verhindert False-Positives durch GTA Race Conditions
+        if scenarioTriggered then
+          consecutiveZeroChecks = consecutiveZeroChecks + 1
+          if consecutiveZeroChecks >= ZERO_CHECKS_REQUIRED then
+            scenarioTriggered = false
+            lastTriggerTime = 0
+            consecutiveZeroChecks = 0
+          end
         end
       end
     end

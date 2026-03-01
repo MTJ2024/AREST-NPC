@@ -158,7 +158,10 @@ local function removeAllWeaponsComplete(ped)
   SetCurrentPedWeapon(ped, GetHashKey("WEAPON_UNARMED"), true)
 end
 
--- Tod-Erkennung: Setzt diedDuringScenario wenn Spieler waehrend Einsatz stirbt
+-- Tod-Erkennung: Beendet Szenario sofort wenn Spieler stirbt
+local wantedDeathLockUntil = 0 -- GameTimer-Zeitstempel bis zu dem Wanted gesperrt ist
+function GetWantedDeathLockUntil() return wantedDeathLockUntil end
+
 CreateThread(function()
   local wasDead = false
   while true do
@@ -167,10 +170,29 @@ CreateThread(function()
     local isDead = IsEntityDead(ped)
     if isDead and not wasDead then
       -- Spieler ist gerade gestorben
+      diedDuringScenario = scenarioActive
       if scenarioActive then
-        diedDuringScenario = true
-        dbg("Spieler waehrend Polizeieinsatz gestorben! diedDuringScenario=true")
+        dbg("Spieler waehrend Polizeieinsatz gestorben → Szenario beenden")
+        scenarioActive = false
+        canSurrender = false
+        complianceWindow = 0
+        combatMaintenanceActive = false
+        -- Cops und Fahrzeuge sofort aufraeumen
+        clearCops()
+        clearRoadblocks()
+        clearHelis()
+        clearPoliceVehicles()
+        setAmbientCopsIgnore(false)
       end
+      -- Wanted auf 0 + 5-Sekunden-Sperre (verhindert sofortigen Neustart)
+      SetPlayerWantedLevel(PlayerId(), 0, false)
+      SetPlayerWantedLevelNow(PlayerId(), false)
+      ClearPlayerWantedLevel(PlayerId())
+      lastKnownWanted = 0
+      wantedDeathLockUntil = GetGameTimer() + 5000
+      dbg("Spieler gestorben: Wanted=0, Sperre bis", wantedDeathLockUntil)
+      -- Szenario-Event feuern damit wanted_level.lua reset erhaelt
+      TriggerEvent('mtj_arrest:endScenario')
     end
     wasDead = isDead
   end
@@ -1850,6 +1872,7 @@ AddEventHandler('playerSpawned', function()
   evasionNotifiedAt = 0
   releaseWarningShown = false
   inJail = false
+  wantedDeathLockUntil = 0 -- Sperre beim Respawn aufheben
   deadBodies = {} -- Leichen-Cleanup zurücksetzen
   FreezeEntityPosition(PlayerPedId(), false)
   SetEnableHandcuffs(PlayerPedId(), false)

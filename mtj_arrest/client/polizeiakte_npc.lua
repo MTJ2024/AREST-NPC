@@ -218,3 +218,24 @@ end)
 AddEventHandler('playerSpawned', function()
   if akteOpen then forceCloseAkte() end
 end)
+
+-- NPC bei Tod des Spielers entfernen
+CreateThread(function()
+  local wasDead = false
+  while true do
+    Wait(500)
+    local isDead = IsEntityDead(PlayerPedId())
+    if isDead and not wasDead then
+      if akteOpen then forceCloseAkte() end
+      if akteNpc and DoesEntityExist(akteNpc) then
+        DeleteEntity(akteNpc)
+        akteNpc = nil
+      end
+      if akteBlip and DoesBlipExist(akteBlip) then
+        RemoveBlip(akteBlip)
+        akteBlip = nil
+      end
+    end
+    wasDead = isDead
+  end
+end)
