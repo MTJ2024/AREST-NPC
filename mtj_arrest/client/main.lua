@@ -184,7 +184,7 @@ local fluchtversuchTriggered = false -- Fluchtversuch nur einmal pro Szenario
 local releaseWarningShown = false -- Entlassungswarnung nur einmal
 local playerAkteStatus = "unbescholten" -- Polizeiakte-Status (vom Server geladen)
 local policeVehicles = {} -- Gespawnte Polizeifahrzeuge
-local RESPAWN_RADIUS = 100.0 -- Cops zaehlen und verwalten im 100m Radius
+local RESPAWN_RADIUS = 350.0 -- Cops verwalten im 350m Radius (GTA Online style: Nachspawn im Radius)
 
 local diedDuringScenario = false -- Spieler ist waehrend Polizeieinsatz gestorben
 local lastKnownWanted = 0 -- Letzter bekannter Wanted-Level (fuer Wiederherstellung bei GTA-Reset)
@@ -767,13 +767,13 @@ local function spawnPoliceVehicle()
   if not crewHash then dbg("police vehicle crew model load failed"); return end
 
   local ppos = GetEntityCoords(PlayerPedId())
-  -- Spawn-Position suchen: 150-200m entfernt, nicht auf Bergen oder Gebaeuden
+  -- Spawn-Position suchen: 200-300m entfernt, nicht auf Bergen oder Gebaeuden
   local MAX_HEIGHT_DIFF_WITH_ROAD = 30.0  -- Max. Hoehenunterschied zum Spieler bei Strassenposition
   local MAX_HEIGHT_DIFF_FALLBACK  = 15.0  -- Max. Hoehenunterschied bei flachem Gelände (ohne Strasse)
   local spawnPos = nil
   for attempt = 1, 8 do
     local angle = math.random() * 2 * math.pi
-    local dist = 150.0 + math.random() * 50.0 -- 150-200m entfernt
+    local dist = 200.0 + math.random() * 100.0 -- 200-300m entfernt
     local candidate = vector3(ppos.x + math.cos(angle) * dist, ppos.y + math.sin(angle) * dist, ppos.z)
     RequestCollisionAtCoord(candidate.x, candidate.y, candidate.z)
     Wait(150)
@@ -1043,7 +1043,7 @@ local function startCombatMaintenance()
       local minAccuracy = (nl and nl.MinGenauigkeit) or 5
       local nachlassenAccuracy = math.floor(40 * nachlassenFaktor + minAccuracy * (1.0 - nachlassenFaktor))
 
-      -- Tote und zu weit entfernte Cops aus Liste entfernen (200m Radius)
+      -- Tote und zu weit entfernte Cops aus Liste entfernen (350m Radius)
       local ppos = GetEntityCoords(playerPed)
       for i = #cops, 1, -1 do
         local ped = cops[i]
@@ -1053,7 +1053,7 @@ local function startCombatMaintenance()
         elseif #(GetEntityCoords(ped) - ppos) > RESPAWN_RADIUS then
           DeleteEntity(ped)
           table.remove(cops, i)
-          dbg("Cop zu weit entfernt, entfernt (>200m)")
+          dbg("Cop zu weit entfernt, entfernt (>350m)")
         end
       end
 
