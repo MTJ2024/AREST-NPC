@@ -132,6 +132,11 @@ end
 local wantedDeathLockUntil = 0 -- GameTimer-Zeitstempel bis zu dem Wanted gesperrt ist
 function GetWantedDeathLockUntil() return wantedDeathLockUntil end
 
+-- Vorwaerts-Deklarationen: Diese local-Variablen werden in Threads verwendet,
+-- die vor den eigentlichen Funktionsdefinitionen im Code stehen.
+-- Ohne Vorwaerts-Deklaration wuerde Lua sie als globale Variablen suchen (nil).
+local clearHelis, clearPoliceVehicles, clearCops, clearRoadblocks, setAmbientCopsIgnore, isAnyCopNearPlayer
+
 CreateThread(function()
   local wasDead = false
   while true do
@@ -509,11 +514,11 @@ local function randomPosAroundPlayer(minDist, maxDist)
     local ny = p.y + math.sin(angle) * dist
     -- Collision am Zielpunkt laden
     RequestCollisionAtCoord(nx, ny, p.z)
-    -- Methode 1: GetSafeCoordForPed (GTA sucht begehbare Position, flags=16: auf Gehweg)
-    local safeFound, sx, sy, sz = GetSafeCoordForPed(nx, ny, p.z, true, 16)
-    if safeFound then
+    -- Methode 1: GetSafeCoordForPed (FiveM gibt einen vector3 zurueck, nicht 3 Floats)
+    local safeFound, safePos = GetSafeCoordForPed(nx, ny, p.z, true, 16)
+    if safeFound and safePos then
       dbg("randomPos: SafeCoord gefunden bei Versuch", attempt, "dist:", dist)
-      return vector3(sx, sy, sz)
+      return safePos
     end
     -- Methode 2: GetGroundZFor_3dCoord mit mehreren Hoehen
     for _, zOff in ipairs({0.0, 10.0, 20.0, 50.0}) do
@@ -537,7 +542,7 @@ local function randomPosAroundPlayer(minDist, maxDist)
   return vector3(fx, fy, fz)
 end
 
-local function clearHelis()
+clearHelis = function()
   for _, heli in ipairs(helis) do
     if heli.gunners then
       for _, g in ipairs(heli.gunners) do
@@ -551,7 +556,7 @@ local function clearHelis()
   dbg("clearHelis")
 end
 
-local function clearPoliceVehicles()
+clearPoliceVehicles = function()
   for _, pv in ipairs(policeVehicles) do
     if pv.crew then
       for _, c in ipairs(pv.crew) do
@@ -564,7 +569,7 @@ local function clearPoliceVehicles()
   dbg("clearPoliceVehicles")
 end
 
-local function clearCops()
+clearCops = function()
   for _, ped in ipairs(cops) do
     if DoesEntityExist(ped) then
       SetPedKeepTask(ped, false)
@@ -579,7 +584,7 @@ local function clearCops()
   dbg("clearCops")
 end
 
-local function setAmbientCopsIgnore(toggle)
+setAmbientCopsIgnore = function(toggle)
   SetPoliceIgnorePlayer(PlayerId(), toggle)
   dbg(toggle and "Ambient cops ignored" or "Ambient cops restored")
 end
@@ -930,7 +935,7 @@ local function spawnRoadblock()
   dbg("Roadblock gespawnt bei", bx, by, bz)
 end
 
-local function clearRoadblocks()
+clearRoadblocks = function()
   for _, rb in ipairs(roadblocks) do
     if rb.crew then
       for _, c in ipairs(rb.crew) do
@@ -1325,7 +1330,7 @@ local function hideScenarioUI()
 end
 
 -- Prüft ob mindestens ein Cop innerhalb des Radius ist
-local function isAnyCopNearPlayer(radius)
+isAnyCopNearPlayer = function(radius)
   local ppos = GetEntityCoords(PlayerPedId())
   for _, ped in ipairs(cops) do
     if DoesEntityExist(ped) and not IsEntityDead(ped) then
