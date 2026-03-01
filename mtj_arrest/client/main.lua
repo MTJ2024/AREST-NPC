@@ -53,31 +53,9 @@ local function drawText2D(text, x, y, scale, r, g, b, a)
   DrawText(x, y)
 end
 
--- HUD Render Thread (zeichnet JEDEN Frame)
-CreateThread(function()
-  while true do
-    Wait(0)
-    local now = GetGameTimer()
-    local y = 0.35 -- Startposition links-mitte
-
-    -- Persistente Zeilen (Szenario, Jail etc.)
-    for _, line in pairs(nativeHudPersist) do
-      drawText2D(line.text, 0.018, y, 0.55, line.r, line.g, line.b, 240)
-      y = y + 0.04
-    end
-
-    -- Temporaere Zeilen (Notifications)
-    for i = #nativeHudLines, 1, -1 do
-      if now > nativeHudLines[i].expire then
-        table.remove(nativeHudLines, i)
-      end
-    end
-    for _, line in ipairs(nativeHudLines) do
-      drawText2D(line.text, 0.018, y, 0.45, line.r, line.g, line.b, 220)
-      y = y + 0.035
-    end
-  end
-end)
+-- nativeHud Render-Thread deaktiviert: gleichzeitige GTA-Text-Native-Aufrufe aus
+-- mehreren Wait(0)-Threads (nativeHud + DrawText3D im NPC-Loop) korruptierten
+-- gegenseitig den Draw-Zustand und verursachten Crashes. NUI übernimmt alle Anzeigen.
 
 -- State
 local playerName = GetPlayerName(PlayerId()) or "Unbekannt"
@@ -378,10 +356,7 @@ CreateThread(function()
             wantedDropCount = 0
           elseif lastKnownWanted > 0 then
             wantedDropCount = wantedDropCount + 1
-            if wantedDropCount < 6 then
-              SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
-              SetPlayerWantedLevelNow(PlayerId(), false)
-            else
+            if wantedDropCount >= 6 then
               dbg("WantedMaintenance (evasion): Wanted seit 3s auf 0 — akzeptiere")
               lastKnownWanted = 0
               wantedDropCount = 0
@@ -407,11 +382,7 @@ CreateThread(function()
           wantedDropCount = 0
         elseif lastKnownWanted > 0 then
           wantedDropCount = wantedDropCount + 1
-          if wantedDropCount < 6 then
-            -- Kurzer Drop (GTA Race Condition): Wiederherstellen
-            SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
-            SetPlayerWantedLevelNow(PlayerId(), false)
-          else
+          if wantedDropCount >= 6 then
             -- Anhaltender Drop (3s): Server/Spieler hat Wanted entfernt → akzeptieren!
             dbg("WantedMaintenance: Wanted seit 3s auf 0 — akzeptiere, setze lastKnownWanted=0")
             lastKnownWanted = 0
@@ -433,10 +404,7 @@ CreateThread(function()
           wantedDropCount = 0
         elseif wanted == 0 then
           wantedDropCount = wantedDropCount + 1
-          if wantedDropCount < 6 then
-            SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
-            SetPlayerWantedLevelNow(PlayerId(), false)
-          else
+          if wantedDropCount >= 6 then
             dbg("WantedMaintenance (gap): Wanted seit 3s auf 0 — akzeptiere")
             lastKnownWanted = 0
             wantedDropCount = 0

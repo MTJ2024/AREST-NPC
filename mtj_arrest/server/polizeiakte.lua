@@ -9,7 +9,7 @@
 -- ║  Verwendet FiveM Server KVP (kein MySQL nötig)                  ║
 -- ╚══════════════════════════════════════════════════════════════════╝
 
-local DEBUG = true
+local DEBUG = false
 local function dbg(...)
   if not DEBUG then return end
   local t = {}

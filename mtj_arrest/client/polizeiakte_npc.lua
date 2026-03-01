@@ -145,7 +145,7 @@ end
 
 -- Akte-Daten vom Server empfangen -> UI oeffnen
 local akteOpenTime = 0
-local AKTE_TIMEOUT = 5000 -- 5 Sekunden max offen (NUI-Focus darf nie haengen)
+local AKTE_TIMEOUT = 60000 -- 60 Sekunden max offen
 
 local function forceCloseAkte()
   -- IMMER ausfuehren, auch wenn akteOpen==false (Sicherheitsnetz)
@@ -184,6 +184,14 @@ end)
 -- NUI Callback: Akte schliessen (JS fetch erfolgreich)
 RegisterNUICallback('closePolizeiakte', function(data, cb)
   forceCloseAkte()
+  cb('ok')
+end)
+
+-- NUI Callback: Akte aktualisieren (Refresh-Button im UI)
+RegisterNUICallback('refreshPolizeiakte', function(data, cb)
+  -- Timeout zuruecksetzen damit Akte offen bleibt waehrend Daten geladen werden
+  akteOpenTime = GetGameTimer()
+  TriggerServerEvent('mtj_arrest:requestFullAkte')
   cb('ok')
 end)
 

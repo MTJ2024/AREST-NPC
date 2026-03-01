@@ -3,8 +3,7 @@
 -- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
 -- ║  Plagiatschutz aktiv — Unbefugte Nutzung wird erkannt und gemeldet.    ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
-print("[mtj_arrest][DEBUG] debug.lua loaded")
-print("[mtj_arrest][DEBUG] Hinweis: playCuffSequence ist lokal in main.lua; externer Hook nicht möglich ohne Anpassung.")
+-- mtj_arrest: Debug-Befehle (nur für Entwickler)
 
 -- Startet das Festnahme-Szenario wie im echten Ablauf
 RegisterCommand('mtj_test_start', function()
