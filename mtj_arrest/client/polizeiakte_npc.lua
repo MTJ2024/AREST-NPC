@@ -156,6 +156,9 @@ local function forceCloseAkte()
   SendNUIMessage({ action = "polizeiakteClose" })
 end
 
+-- Script-Refresh: Akte schliessen wenn /mtj_refresh gerufen wird
+AddEventHandler('mtj_arrest:refreshScript', forceCloseAkte)
+
 RegisterNetEvent('mtj_arrest:clientFullAkte')
 AddEventHandler('mtj_arrest:clientFullAkte', function(akte)
   if not akte then

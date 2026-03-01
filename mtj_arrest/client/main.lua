@@ -184,7 +184,7 @@ local fluchtversuchTriggered = false -- Fluchtversuch nur einmal pro Szenario
 local releaseWarningShown = false -- Entlassungswarnung nur einmal
 local playerAkteStatus = "unbescholten" -- Polizeiakte-Status (vom Server geladen)
 local policeVehicles = {} -- Gespawnte Polizeifahrzeuge
-local RESPAWN_RADIUS = 350.0 -- Cops verwalten im 350m Radius (GTA Online style: Nachspawn im Radius)
+local RESPAWN_RADIUS = 350.0 -- Cops verwalten im 350m Radius (GTA Online style: Respawn im Radius)
 
 local diedDuringScenario = false -- Spieler ist waehrend Polizeieinsatz gestorben
 local lastKnownWanted = 0 -- Letzter bekannter Wanted-Level (fuer Wiederherstellung bei GTA-Reset)
@@ -1860,7 +1860,10 @@ end)
 
 -- === AUTOHIDE UI, falls Spieler stirbt oder despawnt ===
 
-AddEventHandler('playerSpawned', function()
+-- ═══════════════════════════════════════════════════════════════
+-- RESET SCRIPT STATE — gemeinsamer Reset für Refresh, Spawn, Stop
+-- ═══════════════════════════════════════════════════════════════
+local function resetScriptState()
   scenarioActive = false
   canSurrender = false
   surrendered = false
@@ -1883,60 +1886,7 @@ AddEventHandler('playerSpawned', function()
   gpsLastHeliUpdate = 0
   releaseWarningShown = false
   inJail = false
-  wantedDeathLockUntil = 0 -- Sperre beim Respawn aufheben
-  deadBodies = {} -- Leichen-Cleanup zurücksetzen
-  FreezeEntityPosition(PlayerPedId(), false)
-  SetEnableHandcuffs(PlayerPedId(), false)
-  -- Wanted-Level auf 0 setzen (GTA behält Wanted nach Tod bei!)
-  SetPlayerWantedLevel(PlayerId(), 0, false)
-  SetPlayerWantedLevelNow(PlayerId(), false)
-  ClearPlayerWantedLevel(PlayerId())
-  hideScenarioUI()
-  hideCombatHUD()
-  nativeHudClear()
-  TriggerEvent('mtj_arrest:nui:jail', false)
-  clearCops()
-  clearRoadblocks()
-  clearHelis()
-  clearPoliceVehicles()
-  setAmbientCopsIgnore(false)
-  -- Waffen NUR entfernen wenn Spieler waehrend Polizeieinsatz gestorben ist
-  local wbt = Config.WaffenBeiTod
-  if wbt and wbt.Aktiviert and diedDuringScenario then
-    removeAllWeaponsComplete(PlayerPedId())
-    TriggerServerEvent('mtj_arrest:serverClearWeapons')
-    nativeNotify(wbt.Nachricht or ("Waffen von " .. playerName .. " nach dem Polizeieinsatz sichergestellt!"), "warnung")
-    dbg("playerSpawned: Waffen bei Einsatz-Tod entfernt (Client + Server)")
-  end
-  diedDuringScenario = false -- Flag zuruecksetzen
-  playerName = GetPlayerName(PlayerId()) or "Unbekannt"
-  dbg("playerSpawned: reset scenario state + wanted level auf 0")
-end)
-
-AddEventHandler('onResourceStop', function(res)
-  if res ~= GetCurrentResourceName() then return end
-  scenarioActive = false
-  canSurrender = false
-  surrendered = false
-  cuffed = false
-  cuffing = false
-  jailRequested = false
-  complianceWindow = 0
-  complianceCountdownThreadActive = false
-  combatMaintenanceActive = false
-  combatStartTime = 0
-  nachlassenNotifiedStage = 0
-  pursuitStartTime = 0
-  wantedDropCount = 0
-  fluchtversuchTriggered = false
-  scenarioStartPos = nil
-  lastKnownWanted = 0
-  evasionStartTime = 0
-  evasionNotifiedAt = 0
-  gpsTrackerActive = false
-  gpsLastHeliUpdate = 0
-  releaseWarningShown = false
-  inJail = false
+  wantedDeathLockUntil = 0
   deadBodies = {}
   FreezeEntityPosition(PlayerPedId(), false)
   SetEnableHandcuffs(PlayerPedId(), false)
@@ -1952,7 +1902,34 @@ AddEventHandler('onResourceStop', function(res)
   clearHelis()
   clearPoliceVehicles()
   setAmbientCopsIgnore(false)
-  dbg("onResourceStop: reset scenario state")
+end
+
+-- Refresh-Event: kann von /mtj_refresh oder externen Systemen gefeuert werden
+AddEventHandler('mtj_arrest:refreshScript', function()
+  resetScriptState()
+  nativeNotify("~g~[MTJ] Script-Zustand zurückgesetzt!", "erfolg")
+  dbg("mtj_arrest:refreshScript: resetScriptState() aufgerufen")
+end)
+
+AddEventHandler('playerSpawned', function()
+  resetScriptState()
+  -- Waffen NUR entfernen wenn Spieler waehrend Polizeieinsatz gestorben ist
+  local wbt = Config.WaffenBeiTod
+  if wbt and wbt.Aktiviert and diedDuringScenario then
+    removeAllWeaponsComplete(PlayerPedId())
+    TriggerServerEvent('mtj_arrest:serverClearWeapons')
+    nativeNotify(wbt.Nachricht or ("Waffen von " .. playerName .. " nach dem Polizeieinsatz sichergestellt!"), "warnung")
+    dbg("playerSpawned: Waffen bei Einsatz-Tod entfernt (Client + Server)")
+  end
+  diedDuringScenario = false
+  playerName = GetPlayerName(PlayerId()) or "Unbekannt"
+  dbg("playerSpawned: resetScriptState() + wanted auf 0")
+end)
+
+AddEventHandler('onResourceStop', function(res)
+  if res ~= GetCurrentResourceName() then return end
+  resetScriptState()
+  dbg("onResourceStop: resetScriptState() aufgerufen")
 end)
 
 -- === DISPATCH SYSTEM: Verfolgungen anderer Spieler empfangen ===
