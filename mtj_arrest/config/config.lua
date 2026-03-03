@@ -62,11 +62,21 @@ Config.GuardReleaseTime = 8
 Config.RequiredWantedLevel = 1
 
 -- Akte NPC (Polizist am Schalter bei der Wache – zeigt deine Festnahme-Akte)
+-- Position: Innenhof Mission Row Police Department (MRPD), nahe Haupteingang
+-- Auf der Karte sichtbar als blauer Polizei-Stern-Blip "Ermittlungsakte"
 Config.AkteNPC = {
     Position = vector3(449.5, -986.3, 30.7), -- Mission Row PD Eingang
     Heading = 3.0,
     Model = "s_f_y_cop_01",
-    InteractRadius = 3.0
+    InteractRadius = 3.0,
+    -- Minimap-Blip
+    BlipSprite = 60,              -- Polizei-Abzeichen
+    BlipColor  = 3,               -- Blau
+    BlipName   = "Ermittlungsakte",
+    BlipScale  = 0.8,
+    -- 3D-Bodenmarker
+    MarkerColor = {r=40, g=120, b=255, a=120},
+    MarkerRadius = 1.5,
 }
 
 -- Debug

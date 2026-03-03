@@ -2,6 +2,7 @@
 -- Drücke [E] in der Nähe, um deine Festnahme-Akte einzusehen.
 
 local aktePed          = nil
+local akteBlip         = nil   -- Minimap-Blip für den Akte-NPC
 local akteOpen         = false
 local isScenarioActive = false  -- gesetzt, wenn Szenario läuft
 local isPlayerInJail   = false  -- gesetzt, wenn Spieler im Knast ist
@@ -80,6 +81,19 @@ function spawnAkteNPC()
     TaskStartScenarioInPlace(aktePed, "WORLD_HUMAN_STAND_GUARD", 0, true)
   end
   SetModelAsNoLongerNeeded(model)
+
+  -- Minimap-Blip am NPC erstellen
+  if akteBlip and DoesBlipExist(akteBlip) then RemoveBlip(akteBlip) end
+  if DoesEntityExist(aktePed) then
+    akteBlip = AddBlipForEntity(aktePed)
+    SetBlipSprite(akteBlip, cfg.BlipSprite or 60)
+    SetBlipColour(akteBlip, cfg.BlipColor  or 3)
+    SetBlipScale(akteBlip,  cfg.BlipScale  or 0.8)
+    SetBlipAsShortRange(akteBlip, false)
+    BeginTextCommandSetBlipName("STRING")
+    AddTextComponentSubstringPlayerName(cfg.BlipName or "Ermittlungsakte")
+    EndTextCommandSetBlipName(akteBlip)
+  end
 end
 
 -- Beim Resource-Start (Spieler schon in der Welt)
@@ -141,6 +155,42 @@ CreateThread(function()
   end
 end)
 
+-- === 3D-Bodenmarker am NPC ===
+
+CreateThread(function()
+  -- Konfigurationswerte einmalig lesen
+  local mcfg   = Config.AkteNPC
+  local r      = (mcfg.MarkerColor and mcfg.MarkerColor.r) or 40
+  local g      = (mcfg.MarkerColor and mcfg.MarkerColor.g) or 120
+  local b      = (mcfg.MarkerColor and mcfg.MarkerColor.b) or 255
+  local a      = (mcfg.MarkerColor and mcfg.MarkerColor.a) or 120
+  local radius = mcfg.MarkerRadius or 1.5
+  local renderDist = 40.0
+
+  while true do
+    if aktePed and DoesEntityExist(aktePed) then
+      local ppos = GetEntityCoords(PlayerPedId())
+      local npos = GetEntityCoords(aktePed)
+
+      if #(ppos - npos) <= renderDist then
+        -- Marker-Typ 1 = Zylinder auf dem Boden
+        DrawMarker(1,
+          npos.x, npos.y, npos.z - 0.05,
+          0.0, 0.0, 0.0,
+          0.0, 0.0, 0.0,
+          radius, radius, 0.8,
+          r, g, b, a,
+          false, false, 2, false, nil, nil, false)
+        Wait(0)
+      else
+        Wait(500)
+      end
+    else
+      Wait(1000)
+    end
+  end
+end)
+
 -- === Akte-Daten vom Server empfangen ===
 
 RegisterNetEvent('mtj_arrest:cl:showAkte')
@@ -153,6 +203,10 @@ end)
 
 AddEventHandler('onResourceStop', function(res)
   if res ~= GetCurrentResourceName() then return end
+  if akteBlip and DoesBlipExist(akteBlip) then
+    RemoveBlip(akteBlip)
+    akteBlip = nil
+  end
   if aktePed and DoesEntityExist(aktePed) then
     DeleteEntity(aktePed)
     aktePed = nil
