@@ -892,6 +892,52 @@ body {
   cursor: not-allowed;
 }
 
+/* ── Gestaffelte Reduktionskosten ── */
+.akte-stufen-wrap {
+  margin: 0 0 10px 0;
+  padding: 12px 18px;
+  background: rgba(255,163,30,0.06);
+  border: 1px solid rgba(255,163,30,0.18);
+  border-radius: 10px;
+  text-align: left;
+}
+.akte-stufen-wrap.hidden { display: none; }
+.akte-stufen-title {
+  font-size: 0.82rem;
+  color: #ffa31a;
+  margin: 0 0 8px 0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.akte-stufen-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.akte-stufe-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,163,30,0.08);
+  border: 1px solid rgba(255,163,30,0.2);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.75);
+  white-space: nowrap;
+}
+.akte-stufe-row.active {
+  background: rgba(255,163,30,0.22);
+  border-color: #ffa31a;
+  color: #ffa31a;
+  font-weight: 600;
+  box-shadow: 0 0 8px rgba(255,163,30,0.2);
+}
+.akte-stufe-badge {
+  font-size: 0.75rem;
+  opacity: 0.55;
+}
+
 @keyframes akteFadeIn {
   0%   { opacity: 0; }
   100% { opacity: 1; }

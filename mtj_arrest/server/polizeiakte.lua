@@ -333,11 +333,24 @@ local function buildFullAkte(src)
   akte.naechsteStufeAb = naechsteStufe and naechsteStufe.AbFestnahmen or nil
   akte.serverName = cfg.ServerName or "GreenZone420 PD"
 
-  -- Kriminallevel-Reduktions-Info fuer den Client
+  -- Kriminallevel-Reduktions-Info fuer den Client (gestaffelt)
   local reduceCfg = (Config.PolizeiakteNPC or {}).KriminalLevelSenken
   akte.kriminalLevelSenkenAktiviert = reduceCfg and reduceCfg.Aktiviert or false
-  akte.kostenProFestnahme = reduceCfg and reduceCfg.KostenProFestnahme or 10000
-  akte.mindestFestnahmen  = reduceCfg and reduceCfg.MindestFestnahmen  or 0
+  akte.mindestFestnahmen = reduceCfg and reduceCfg.MindestFestnahmen or 0
+
+  -- Aktuelle Kosten basierend auf aktuellen Festnahmen (hoechste passende Stufe)
+  -- Stufen MUESSEN aufsteigend nach AbFestnahmen sortiert sein (Pflicht, nicht optional)
+  local reduktionsStufen = reduceCfg and reduceCfg.Stufen or {}
+  local aktuelleKosten = 0
+  for _, s in ipairs(reduktionsStufen) do
+    if akte.festnahmen >= s.AbFestnahmen then
+      aktuelleKosten = s.Kosten or 0
+    end
+  end
+  -- Kein Fallback auf Stufe 1 wenn aktuelleKosten=0: bedeutet Festnahmen < erste Schwelle
+  akte.aktuelleReduktionsKosten = aktuelleKosten
+  -- Komplette Stufen-Tabelle fuer die UI-Anzeige
+  akte.reduktionsStufen = reduktionsStufen
 
   return akte
 end

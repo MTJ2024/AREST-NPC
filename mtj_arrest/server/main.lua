@@ -487,8 +487,17 @@ AddEventHandler('mtj_arrest:reduceKriminalLevel', function()
     return
   end
 
-  local kosten = cfg.KostenProFestnahme or 10000
-  local paid   = false
+  -- Gestaffelte Kosten: hoechste passende Stufe basierend auf aktuellen Festnahmen
+  -- Stufen MUESSEN aufsteigend nach AbFestnahmen sortiert sein (Pflicht)
+  local stufen = cfg.Stufen or {}
+  local kosten = 0
+  for _, s in ipairs(stufen) do
+    if akte.festnahmen >= s.AbFestnahmen then
+      kosten = s.Kosten or 0
+    end
+  end
+  if kosten == 0 then kosten = cfg.KostenProFestnahme or 10000 end -- Fallback fuer leere Stufen-Tabelle
+  local paid = false
 
   -- ox_inventory
   if hasOx() then

@@ -15,6 +15,21 @@ local lastTriggerTime = 0
 local SCENARIO_STALE_TIMEOUT_MS = 600000 -- 10 Minuten: Szenario laeuft so lange wie Wanted aktiv ist
 local consecutiveZeroChecks = 0  -- Zaehlt wie oft hintereinander Wanted=0 gelesen wurde
 local ZERO_CHECKS_REQUIRED = 3  -- 3x hintereinander Wanted=0 (= 6 Sekunden) bevor Reset
+local isExempt = false  -- true = Spieler ist exempt (Police/Admin), kein Szenario
+
+-- Exempt-Status vom Server empfangen
+RegisterNetEvent('mtj_arrest:cl:setExempt')
+AddEventHandler('mtj_arrest:cl:setExempt', function(exempt)
+  isExempt = exempt == true
+  if isExempt then
+    -- Wanted sofort entfernen und laufendes Szenario abbrechen
+    SetPlayerWantedLevel(PlayerId(), 0, false)
+    SetPlayerWantedLevelNow(PlayerId(), false)
+    ClearPlayerWantedLevel(PlayerId())
+    scenarioTriggered = false
+    TriggerEvent('mtj_arrest:endScenario')
+  end
+end)
 
 -- Listen for scenario end to allow re-triggering
 AddEventHandler('mtj_arrest:endScenario', function()
@@ -25,6 +40,8 @@ AddEventHandler('playerSpawned', function()
   scenarioTriggered = false
   lastTriggerTime = 0
   consecutiveZeroChecks = 0
+  -- Exempt-Status neu vom Server abfragen (Job koennte sich geaendert haben)
+  TriggerServerEvent('mtj_arrest:sv:checkExempt')
 end)
 
 -- Robuste Wanted-Pruefung: Liest GTA-Wanted UND main.lua's lastKnownWanted
@@ -51,8 +68,13 @@ CreateThread(function()
     else
       local wanted = getWantedRobust()
       if wanted >= Config.RequiredWantedLevel then
-        consecutiveZeroChecks = 0  -- Wanted aktiv → Reset Zero-Counter
-        if not scenarioTriggered then
+        -- Exempt-Spieler (Police/Admin) bekommen kein Szenario
+        if isExempt then
+          SetPlayerWantedLevel(PlayerId(), 0, false)
+          SetPlayerWantedLevelNow(PlayerId(), false)
+          ClearPlayerWantedLevel(PlayerId())
+          consecutiveZeroChecks = 0
+        elseif not scenarioTriggered then
           -- Normaler Start: Szenario triggern
           scenarioTriggered = true
           lastTriggerTime = GetGameTimer()

@@ -143,14 +143,42 @@
 
     // Reduce-Button: sichtbar wenn Feature aktiv und Festnahmen > Mindest
     var reduceBtn = byId('akte-reduce');
+    var stufenWrap = byId('akte-stufen-wrap');
+    var stufenList = byId('akte-stufen-list');
     if (reduceBtn) {
       var canReduce = !!akte.kriminalLevelSenkenAktiviert &&
                       (akte.festnahmen || 0) > (akte.mindestFestnahmen || 0);
       reduceBtn.style.display = canReduce ? '' : 'none';
       reduceBtn.disabled = false;
       reduceBtn.classList.remove('loading');
-      var cost = (akte.kostenProFestnahme || 0).toLocaleString('de-DE');
+      var currentCost = akte.aktuelleReduktionsKosten || 0;
+      var cost = currentCost.toLocaleString('de-DE');
       reduceBtn.textContent = '\u2B07 Kriminallevel senken (' + cost + '\u00A0\u20AC)';
+    }
+
+    // Stufentabelle rendern
+    if (stufenWrap && stufenList) {
+      var stufen = akte.reduktionsStufen;
+      if (akte.kriminalLevelSenkenAktiviert && stufen && stufen.length > 0) {
+        stufenList.innerHTML = '';
+        var currentFestnahmen = akte.festnahmen || 0;
+        stufen.forEach(function(s, i) {
+          var isActive = currentFestnahmen >= s.AbFestnahmen &&
+            (i === stufen.length - 1 || currentFestnahmen < stufen[i + 1].AbFestnahmen);
+          var row = document.createElement('div');
+          row.className = 'akte-stufe-row' + (isActive ? ' active' : '');
+          var badge = isActive ? '\u25B6 ' : '';
+          var bis = (i < stufen.length - 1)
+            ? ('ab ' + s.AbFestnahmen + ' bis ' + (stufen[i + 1].AbFestnahmen - 1))
+            : ('ab ' + s.AbFestnahmen + '+');
+          row.innerHTML = badge + '<span class="akte-stufe-badge">' + bis + ' Festnahmen:</span> '
+            + (s.Kosten || 0).toLocaleString('de-DE') + '\u00A0\u20AC';
+          stufenList.appendChild(row);
+        });
+        stufenWrap.classList.remove('hidden');
+      } else {
+        stufenWrap.classList.add('hidden');
+      }
     }
   }
 

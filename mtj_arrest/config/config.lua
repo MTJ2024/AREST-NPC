@@ -421,7 +421,7 @@ Config.PolizeiakteNPC = {
         Aktiviert           = true,     -- true = Spieler kann Level am NPC senken
         MindestFestnahmen   = 0,        -- Mindest-Festnahmen die erhalten bleiben (0 = alles loeschbar)
         -- Stufen: AbFestnahmen = Schwelle ab der diese Kosten gelten
-        -- Tipp: Stufen aufsteigend sortieren (kleinste AbFestnahmen zuerst)
+        -- PFLICHT: aufsteigend nach AbFestnahmen sortieren, sonst falsche Kostenberechnung!
         Stufen = {
             { AbFestnahmen = 1,  Kosten = 2500  },   -- 1-2 Festnahmen:  2.500 EUR pro Reduktion
             { AbFestnahmen = 3,  Kosten = 5000  },   -- 3-4 Festnahmen:  5.000 EUR
@@ -430,6 +430,19 @@ Config.PolizeiakteNPC = {
             { AbFestnahmen = 20, Kosten = 50000 },   -- 20+ Festnahmen:  50.000 EUR
         },
     },
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              JOB-WHITELIST (Exemption vom Wanted-System)        ║
+-- ║  Spieler mit diesen Jobs oder Admin-Ace erhalten KEINEN         ║
+-- ║  Wanted-Level und das Szenario startet nicht fuer sie.          ║
+-- ║  Aktiviert = false  →  alle Spieler sind betroffen              ║
+-- ║  Aktiviert = true   →  Jobs/Admins sind exempt                  ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.JobWhitelist = {
+    Aktiviert   = true,
+    Jobs        = { "police", "sheriff", "fib", "swat" },  -- ESX-Jobnamen
+    AdminAce    = "command.mtj_admin",                     -- Ace-Permission fuer Admin-Exempt
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗
