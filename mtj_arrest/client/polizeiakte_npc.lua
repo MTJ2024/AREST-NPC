@@ -23,10 +23,12 @@ local function loadModel(model)
   return hash
 end
 
--- NPC spawnen
-CreateThread(function()
+-- NPC spawnen (Funktion fuer Start und Respawn)
+local function spawnAkteNpc()
   local cfg = Config.PolizeiakteNPC
   if not cfg or not cfg.Aktiviert then return end
+  -- Nicht doppelt spawnen
+  if akteNpc and DoesEntityExist(akteNpc) then return end
 
   local pos = cfg.Position
   local heading = cfg.Heading or 180.0
@@ -38,31 +40,19 @@ CreateThread(function()
     return
   end
 
-  -- Kollisionsdaten laden bevor Bodenhoehe abgefragt wird
+  -- Kollisionsdaten am NPC-Standort laden und kurz warten
   RequestCollisionAtCoord(pos.x, pos.y, pos.z)
-  local colTimeout = GetGameTimer() + 5000
-  while not HasCollisionLoadedAroundEntity(PlayerPedId()) do
-    if GetGameTimer() > colTimeout then break end
-    Wait(50)
-  end
-  -- Mehrere Z-Werte probieren fuer zuverlaessige Bodenerkennung
+  Wait(200)
+
+  -- Bodenhoehe ermitteln mit Fallback auf Config-Z
   local groundZ = pos.z
-  local found = false
   for zOffset = 0.0, 10.0, 2.0 do
     local ok, gz = GetGroundZFor_3dCoord(pos.x, pos.y, pos.z + zOffset, false)
     if ok then
       groundZ = gz
-      found = true
       break
     end
     Wait(50)
-  end
-  -- Fallback: Spieler-Z verwenden wenn nichts gefunden
-  if not found then
-    local pz = GetEntityCoords(PlayerPedId()).z
-    if math.abs(pz - pos.z) < 20.0 then
-      groundZ = pz
-    end
   end
 
   akteNpc = CreatePed(4, hash, pos.x, pos.y, groundZ, heading, false, true)
@@ -76,8 +66,8 @@ CreateThread(function()
   TaskStartScenarioInPlace(akteNpc, cfg.Scenario or "WORLD_HUMAN_CLIPBOARD", 0, true)
   SetModelAsNoLongerNeeded(hash)
 
-  -- Blip auf der Karte
-  if cfg.Blip then
+  -- Blip auf der Karte (nur wenn noch keiner existiert)
+  if cfg.Blip and (not akteBlip or not DoesBlipExist(akteBlip)) then
     akteBlip = AddBlipForCoord(pos.x, pos.y, pos.z)
     SetBlipSprite(akteBlip, cfg.Blip.Sprite or 60)
     SetBlipDisplay(akteBlip, 4)
@@ -90,6 +80,11 @@ CreateThread(function()
   end
 
   print("[mtj_arrest] Polizeiakte-NPC gespawnt")
+end
+
+-- NPC beim Start spawnen
+CreateThread(function()
+  spawnAkteNpc()
 end)
 
 -- Interaktions-Loop (E drücken in der Nähe)
@@ -244,16 +239,21 @@ end)
 
 AddEventHandler('playerSpawned', function()
   if akteOpen then forceCloseAkte() end
+  -- NPC neu spawnen falls er durch Tod oder Streaming verloren ging
+  CreateThread(function()
+    Wait(1000) -- kurz warten bis Welt geladen ist
+    spawnAkteNpc()
+  end)
 end)
 
--- NPC bei Tod des Spielers entfernen
+-- Bei Tod NPC/Blip entfernen (werden bei Respawn neu gespawnt); Akte-UI bleibt offen
 CreateThread(function()
   local wasDead = false
   while true do
     Wait(500)
     local isDead = IsEntityDead(PlayerPedId())
     if isDead and not wasDead then
-      if akteOpen then forceCloseAkte() end
+      -- NPC und Blip entfernen damit sie bei Respawn sauber neu gespawnt werden
       if akteNpc and DoesEntityExist(akteNpc) then
         DeleteEntity(akteNpc)
         akteNpc = nil

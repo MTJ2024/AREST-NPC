@@ -30,12 +30,13 @@ Config.WaffenBeiTod = {
 Config.Aktionsradius            = 60.0    -- Meter: Polizei muss SO NAH sein, bevor Info + Timer starten
 Config.AktionsradiusTimeout     = 20      -- Sekunden: Maximale Wartezeit auf Polizei-Ankunft
 Config.ComplianceWindow         = 11      -- Sekunden: Zeit zum Ergeben [E], bevor Polizei schiesst
-Config.RequiredWantedLevel      = 2       -- Ab diesem Wanted-Level startet das Szenario (1-5)
+Config.RequiredWantedLevel      = 1       -- Ab diesem Wanted-Level startet das Szenario (1-5)
 
 Config.UI = {
     -- Texte im Szenario-Panel
     ScenarioHint    = "Du bist umzingelt! Drücke [E], um dich zu ergeben.",
     SurrenderKeyText = "[E]",
+    ScenarioHintKleindelikt = "Kleindelikt! Drücke [E] um die Strafe zu akzeptieren und frei zu kommen.",
 
     -- Texte im Festnahme-Protokoll
     ArrestLogLines  = {
@@ -53,7 +54,7 @@ Config.UI = {
 -- ║              POLIZEI-SPAWNING (Anzahl pro Wanted-Level)         ║
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.CopsPerWantedLevel = {
-    [1] = 0,                    -- 1 Stern:  kein Einsatz (unterhalb RequiredWantedLevel)
+    [1] = 2,                    -- 1 Stern:  2 Polizisten (Kleindelikt-Einsatz)
     [2] = 4,                    -- 2 Sterne: 4 Polizisten
     [3] = 6,                    -- 3 Sterne: 6 Polizisten
     [4] = 10,                   -- 4 Sterne: 10 Polizisten (grosse Einsatzkraefte)
@@ -153,6 +154,34 @@ Config.JailFineMessage          = "Dir wurden %s€ als Strafe abgezogen!"
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.AntiDoubleJailTime       = 5       -- Sekunden: Schutz gegen doppeltes Einsperren
 Config.GuardReleaseTime         = 8       -- Sekunden: Freigabe des Anti-Doppel-Guards
+Config.RespawnGraceSek          = 10      -- Sekunden: kein Wanted-Neustart nach Tod/Respawn
+
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              TOD-STRAFE (Stufenstrafe bei Tod im Einsatz)       ║
+-- ║  Wenn der Spieler waehrend eines Polizeieinsatzes stirbt,       ║
+-- ║  wird eine gestaffelte Geldstrafe faellig (je nach Sternzahl).  ║
+-- ║  Keine Waffenentfernung noetig — Strafe reicht als Konsequenz.  ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.TodStrafe = {
+    Aktiviert           = true,
+    StrafeProStern = {
+        [1] = 500,            -- 1 Stern:  500 EUR
+        [2] = 1000,           -- 2 Sterne: 1.000 EUR
+        [3] = 2500,           -- 3 Sterne: 2.500 EUR
+        [4] = 5000,           -- 4 Sterne: 5.000 EUR
+        [5] = 10000,          -- 5 Sterne: 10.000 EUR
+    },
+    Nachricht = "~r~Tod im Einsatz~s~: Strafe von %d EUR (Fahndungsstufe %d ★)",
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              KLEINDELIKT (1-2 Sterne: Strafe statt Knast)       ║
+-- ║  Bei 1-2 Sternen: Spieler kann [E] drücken → Strafe zahlen     ║
+-- ║  und sofort frei kommen (kein Knast, wanted = 0)                ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.KleindeliktSchwelle      = 2       -- Bis zu diesem Wanted-Level gilt Kleindelikt-Regel
+Config.KleindeliktStrafe        = 500     -- Geldstrafe in EUR beim Kleindelikt
+Config.KleindeliktNachricht     = "~g~Kleindelikt~s~: Strafe von %d EUR ausgestellt. Du bist auf freiem Fuß!"
 
 -- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              NACHLASSEN (Verfolgungsdruck laesst nach)          ║

@@ -146,6 +146,18 @@ CreateThread(function()
     if isDead and not wasDead then
       -- Spieler ist gerade gestorben
       diedDuringScenario = scenarioActive
+      -- Tod-Strafe: gestaffelte Geldstrafe basierend auf Wanted-Level
+      local ts = Config.TodStrafe
+      if ts and ts.Aktiviert and scenarioActive then
+        local wanted = math.max(1, math.max(lastKnownWanted, GetPlayerWantedLevel(PlayerId())))
+        local fine = ts.StrafeProStern and ts.StrafeProStern[wanted] or 0
+        if fine > 0 then
+          TriggerServerEvent('mtj_arrest:serverTodStrafe', fine, wanted)
+          local msg = (ts.Nachricht or "~r~Tod im Einsatz~s~: Strafe von %d EUR"):format(fine, wanted)
+          nativeNotify(msg, "warnung")
+          dbg("Tod-Strafe: wanted=" .. wanted .. " fine=" .. fine)
+        end
+      end
       if scenarioActive then
         dbg("Spieler waehrend Polizeieinsatz gestorben → Szenario beenden")
         scenarioActive = false
@@ -1283,6 +1295,11 @@ function deescalateAllPolice()
 end
 
 local function getScenarioHint()
+  local wanted = getEffectiveWanted()
+  local schwelle = Config.KleindeliktSchwelle or 2
+  if wanted <= schwelle then
+    return Config.UI.ScenarioHintKleindelikt or "Kleindelikt! Drücke [E] um Strafe zu akzeptieren und frei zu kommen."
+  end
   local pa = Config.Polizeiakte
   if pa and pa.ScenarioHintPerStatus and pa.ScenarioHintPerStatus[playerAkteStatus] then
     return pa.ScenarioHintPerStatus[playerAkteStatus]
@@ -1318,7 +1335,14 @@ local function showScenarioUI()
   -- Entferne GTA Farbcodes fuer Native HUD
   local cleanHint = hint:gsub("~[^~]+~", "")
   nativeHudSet("scenario", "POLIZEI-EINSATZ: " .. cleanHint, 255, 50, 50)
-  nativeHudSet("scenario_cd", "Letzte Chance: " .. (Config.ComplianceWindow or 10) .. "s — [E] Ergeben", 100, 180, 255)
+  local wanted = getEffectiveWanted()
+  local schwelle = Config.KleindeliktSchwelle or 2
+  if wanted <= schwelle then
+    local fine = Config.KleindeliktStrafe or 500
+    nativeHudSet("scenario_cd", "[E] Strafe akzeptieren: " .. fine .. " EUR — frei kommen", 50, 220, 100)
+  else
+    nativeHudSet("scenario_cd", "Letzte Chance: " .. (Config.ComplianceWindow or 10) .. "s — [E] Ergeben", 100, 180, 255)
+  end
   dbg("showScenarioUI: NUI + Native HUD")
 end
 
@@ -1414,7 +1438,15 @@ local function runNegotiationAndCompliance()
     if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
       complianceWindow = complianceWindow - 1
       TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
-      nativeHudSet("scenario_cd", "Letzte Chance: " .. complianceWindow .. "s — [E] Ergeben", 100, 180, 255)
+      -- Countdown-Text je nach Wanted-Level
+      local curWanted = getEffectiveWanted()
+      local schwelle = Config.KleindeliktSchwelle or 2
+      if curWanted <= schwelle then
+        local fine = Config.KleindeliktStrafe or 500
+        nativeHudSet("scenario_cd", "[E] Strafe akzeptieren: " .. fine .. " EUR — frei kommen (" .. complianceWindow .. "s)", 50, 220, 100)
+      else
+        nativeHudSet("scenario_cd", "Letzte Chance: " .. complianceWindow .. "s — [E] Ergeben", 100, 180, 255)
+      end
       checkFluchtversuch()
       if complianceWindow <= 0 then
         canSurrender = false
@@ -1442,6 +1474,76 @@ local function getArrestLogLines()
 end
 
 -- Szenario-Hint basierend auf Akte-Status
+-- === KLEINDELIKT-ABLAUF (1-2 Sterne: Strafe vor Ort, dann frei) ===
+local function playFineSequence()
+  if cuffing or cuffed or inJail then
+    dbg("playFineSequence: guard (cuffing/cuffed/inJail) -> abort")
+    return
+  end
+  if not scenarioActive then
+    dbg("playFineSequence: scenarioActive=false -> abort")
+    return
+  end
+  cuffing = true
+  deescalateAllPolice()  -- Alle Cops sofort entschaerfen
+  forceExitVehicleIfIn()
+  if not scenarioActive then cuffing = false; return end
+
+  local player = PlayerPedId()
+  local ppos = GetEntityCoords(player)
+
+  -- Naechsten Cop finden
+  local nearest, bestD = nil, 9999
+  for _, ped in ipairs(cops) do
+    if DoesEntityExist(ped) and not IsEntityDead(ped) then
+      local d = #(GetEntityCoords(ped) - ppos)
+      if d < bestD then nearest, bestD = ped, d end
+    end
+  end
+
+  -- Cop laeuft zum Spieler
+  if nearest and DoesEntityExist(nearest) and bestD > 2.0 then
+    TaskGoToEntity(nearest, player, -1, 1.2, 1.0, 1073741824, 0)
+    local timeout = GetGameTimer() + 8000
+    while #(GetEntityCoords(nearest) - GetEntityCoords(player)) > 2.2 and GetGameTimer() < timeout do
+      Wait(100)
+      if not scenarioActive then cuffing = false; return end
+    end
+  end
+  if not scenarioActive then cuffing = false; return end
+
+  -- Kurze Haende-hoch-Animation
+  if loadAnimDict("random@arrests") then
+    TaskPlayAnim(player, "random@arrests", "idle_2_hands_up", 8.0, -8.0, 3000, 49, 0, false, false, false)
+    Wait(2500)
+    if not scenarioActive then cuffing = false; return end
+  end
+
+  -- Strafe ausstellen und Spieler freilassen
+  local fine = Config.KleindeliktStrafe or 500
+  local msg = (Config.KleindeliktNachricht or "~g~Kleindelikt~s~: Strafe von %d EUR ausgestellt. Du bist auf freiem Fuß!"):format(fine)
+  hideScenarioUI()
+  hideAllUI()
+  nativeHudSet("fine_notice", "KLEINDELIKT: Strafe " .. fine .. " EUR — Auf freiem Fuß!", 50, 220, 100)
+  nativeNotify(msg, "erfolg")
+
+  TriggerServerEvent('mtj_arrest:serverFineOnly', fine)
+  TriggerServerEvent('mtj_arrest:dispatch:pursuitEnd', "entlassen")
+
+  -- Wanted sofort auf 0 setzen
+  SetPlayerWantedLevel(PlayerId(), 0, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  ClearPlayerWantedLevel(PlayerId())
+  lastKnownWanted = 0
+  wantedDeathLockUntil = GetGameTimer() + 5000
+
+  Wait(3000)
+  nativeHudSet("fine_notice", nil)
+  cuffing = false
+  TriggerEvent('mtj_arrest:endScenario')
+  dbg("playFineSequence: Kleindelikt abgeschlossen, Spieler frei")
+end
+
 -- === FESTNAHME-ABLAUF ===
 local function playCuffSequence()
   if cuffing or cuffed or inJail then
@@ -1453,6 +1555,7 @@ local function playCuffSequence()
     return
   end
   cuffing = true
+  deescalateAllPolice()  -- SOFORT alle Cops entschaerfen: kein Schiessen mehr nach Ergeben
   forceExitVehicleIfIn()
   if not scenarioActive then cuffing = false; return end
   local player = PlayerPedId()
@@ -1816,7 +1919,14 @@ CreateThread(function()
         dbg("Surrender via E/KeyMapping")
         surrendered = true
         canSurrender = false
-        playCuffSequence()
+        local wanted = getEffectiveWanted()
+        local schwelle = Config.KleindeliktSchwelle or 2
+        if wanted <= schwelle then
+          dbg("Kleindelikt-Flow (wanted=" .. wanted .. " <= schwelle=" .. schwelle .. ")")
+          playFineSequence()
+        else
+          playCuffSequence()
+        end
       end
     else
       Wait(250)
@@ -1837,7 +1947,13 @@ AddEventHandler('mtj_arrest:forceSurrender', function()
   dbg("forceSurrender: Erzwungene Übergabe")
   surrendered = true
   canSurrender = false
-  playCuffSequence()
+  local wanted = getEffectiveWanted()
+  local schwelle = Config.KleindeliktSchwelle or 2
+  if wanted <= schwelle then
+    playFineSequence()
+  else
+    playCuffSequence()
+  end
 end)
 
 -- === WANTED-LEVEL-ÜBERWACHUNG ===
@@ -1927,6 +2043,8 @@ end)
 
 AddEventHandler('playerSpawned', function()
   resetScriptState()
+  -- Sperre nach Wiederbelebung: kein Wanted-Neustart fuer RespawnGraceSek Sekunden
+  wantedDeathLockUntil = GetGameTimer() + ((Config.RespawnGraceSek or 10) * 1000)
   -- Waffen NUR entfernen wenn Spieler waehrend Polizeieinsatz gestorben ist
   local wbt = Config.WaffenBeiTod
   if wbt and wbt.Aktiviert and diedDuringScenario then

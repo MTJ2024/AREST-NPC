@@ -307,6 +307,26 @@ AddEventHandler('mtj_arrest:serverBeginJail', function(minutes)
   end)
 end)
 
+-- Kleindelikt: nur Geldstrafe, kein Knast
+RegisterNetEvent('mtj_arrest:serverFineOnly')
+AddEventHandler('mtj_arrest:serverFineOnly', function(fineAmount)
+  local src = source
+  local fine = tonumber(fineAmount) or Config.KleindeliktStrafe or 500
+  if fine < 1 then return end
+  pcall(function() takeJailFine(src, fine) end)
+  dbg(("[mtj_arrest] Kleindelikt-Strafe %d EUR fuer Spieler %d"):format(fine, src))
+end)
+
+-- Tod-Strafe: gestaffelte Geldstrafe bei Tod im Polizeieinsatz
+RegisterNetEvent('mtj_arrest:serverTodStrafe')
+AddEventHandler('mtj_arrest:serverTodStrafe', function(fineAmount, wanted)
+  local src = source
+  local fine = tonumber(fineAmount) or 0
+  if fine < 1 then return end
+  pcall(function() takeJailFine(src, fine) end)
+  dbg(("[mtj_arrest] Tod-Strafe %d EUR fuer Spieler %d (Stern %s)"):format(fine, src, tostring(wanted)))
+end)
+
 -- Optional: expliziter Server-Event zum Waffen-Clear
 RegisterNetEvent('mtj_arrest:serverClearWeapons', function()
   local src = source
