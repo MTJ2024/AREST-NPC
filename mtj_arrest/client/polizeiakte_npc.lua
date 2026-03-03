@@ -148,9 +148,15 @@ local function forceCloseAkte()
   -- IMMER ausfuehren, auch wenn akteOpen==false (Sicherheitsnetz)
   akteOpen = false
   akteOpenTime = 0
-  SetNuiFocus(false, false)
-  SetNuiFocusKeepInput(false)
   SendNUIMessage({ action = "polizeiakteClose" })
+  -- SetNuiFocus aus einem NUI-Callback heraus (fetch) wirkt nicht sofort auf die Kamera.
+  -- Daher auf den naechsten Game-Tick verschieben, damit die Kamera korrekt freigegeben wird.
+  -- Reihenfolge: KeepInput zuerst deaktivieren, dann Focus freigeben.
+  CreateThread(function()
+    Wait(0)
+    SetNuiFocusKeepInput(false)
+    SetNuiFocus(false, false)
+  end)
 end
 
 -- Script-Refresh: Akte schliessen wenn /mtj_refresh gerufen wird
@@ -223,8 +229,8 @@ CreateThread(function()
     -- Zusaetzlich: Wenn akteOpen==false aber NUI-Focus noch aktiv (Restfehler)
     -- FiveM hat kein IsNuiFocused(), daher vorsichtshalber immer freigeben wenn nicht offen
     if not akteOpen then
-      SetNuiFocus(false, false)
       SetNuiFocusKeepInput(false)
+      SetNuiFocus(false, false)
     end
   end
 end)
