@@ -415,10 +415,20 @@ Config.PolizeiakteNPC = {
     },
 
     -- Kriminallevel senken: Spieler kann Festnahmen gegen Geld reduzieren
+    -- Gestaffelte Kosten: je mehr Festnahmen, desto teurer jede Reduktion.
+    -- Die passende Stufe wird anhand der aktuellen Festnahmenanzahl ermittelt.
     KriminalLevelSenken = {
         Aktiviert           = true,     -- true = Spieler kann Level am NPC senken
-        KostenProFestnahme  = 10000,    -- Kosten in € pro Festnahme-Reduktion
         MindestFestnahmen   = 0,        -- Mindest-Festnahmen die erhalten bleiben (0 = alles loeschbar)
+        -- Stufen: AbFestnahmen = Schwelle ab der diese Kosten gelten
+        -- Tipp: Stufen aufsteigend sortieren (kleinste AbFestnahmen zuerst)
+        Stufen = {
+            { AbFestnahmen = 1,  Kosten = 2500  },   -- 1-2 Festnahmen:  2.500 EUR pro Reduktion
+            { AbFestnahmen = 3,  Kosten = 5000  },   -- 3-4 Festnahmen:  5.000 EUR
+            { AbFestnahmen = 5,  Kosten = 10000 },   -- 5-9 Festnahmen: 10.000 EUR
+            { AbFestnahmen = 10, Kosten = 25000 },   -- 10-19 Festnahmen: 25.000 EUR
+            { AbFestnahmen = 20, Kosten = 50000 },   -- 20+ Festnahmen:  50.000 EUR
+        },
     },
 }
 
