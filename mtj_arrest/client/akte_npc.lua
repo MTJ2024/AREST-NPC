@@ -75,6 +75,8 @@ function spawnAkteNPC()
     SetPedCanRagdoll(aktePed, false)
     SetBlockingOfNonTemporaryEvents(aktePed, true)
     RemoveAllPedWeapons(aktePed, true)
+    -- Neutral halten: nicht als Polizist erkennbar (kein COP-RelationshipGroup)
+    SetPedRelationshipGroupHash(aktePed, GetHashKey("CIVMALE"))
     TaskStartScenarioInPlace(aktePed, "WORLD_HUMAN_STAND_GUARD", 0, true)
   end
   SetModelAsNoLongerNeeded(model)

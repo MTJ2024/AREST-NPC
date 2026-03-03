@@ -469,7 +469,7 @@ CreateThread(function()
       clearCops()
       SetPlayerWantedLevel(PlayerId(), 0, false)
       SetPlayerWantedLevelNow(PlayerId(), false)
-      SetPoliceIgnorePlayer(PlayerId(), true)
+      setAmbientCopsIgnore(true)
     elseif not isDead then
       wasDead = false
     end

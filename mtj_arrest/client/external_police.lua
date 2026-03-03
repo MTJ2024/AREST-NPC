@@ -114,22 +114,34 @@ CreateThread(function()
 
   local lastAnnounce = 0
   while true do
-    local distNPC = getNearestExternalPoliceNPCDist(c.scanRadius)
-    local distPLY = nearestPolicePlayerDist
-    local nearest = math.min(distNPC, distPLY)
-
-    local compliance = (Config and Config.ComplianceDistance) or 25.0
-    if nearest <= compliance and GetGameTimer() > spawnProtectionUntil then
-      local now = GetGameTimer()
-      if now - lastAnnounce > 1500 then
-        dbg(("External police near (%.1fm) -> startScenario"):format(nearest))
-        lastAnnounce = now
-      end
-      -- main.lua ignoriert Doppelaufrufe (prüft scenarioActive intern)
-      TriggerEvent('mtj_arrest:startScenario')
-      Wait(2000)
+    -- Niemals triggern wenn Spieler tot ist
+    if IsEntityDead(PlayerPedId()) then
+      Wait(1000)
     else
-      Wait(c.scanInterval)
+      local distNPC = getNearestExternalPoliceNPCDist(c.scanRadius)
+      local distPLY = nearestPolicePlayerDist
+      local compliance = (Config and Config.ComplianceDistance) or 25.0
+
+      -- NPC-Cops: nur triggern wenn RequiredWantedLevel erfüllt
+      local requiredWanted = (Config and Config.RequiredWantedLevel) or 0
+      local npcTrigger = distNPC <= compliance
+          and GetPlayerWantedLevel(PlayerId()) >= requiredWanted
+
+      -- Spieler-Cops (aktive Verfolgung durch echten Polizisten): immer triggern
+      local playerTrigger = distPLY <= compliance
+
+      if (npcTrigger or playerTrigger) and GetGameTimer() > spawnProtectionUntil then
+        local now = GetGameTimer()
+        if now - lastAnnounce > 1500 then
+          dbg(("External police near (NPC:%.1fm PLY:%.1fm) -> startScenario"):format(distNPC, distPLY))
+          lastAnnounce = now
+        end
+        -- main.lua ignoriert Doppelaufrufe (prüft scenarioActive intern)
+        TriggerEvent('mtj_arrest:startScenario')
+        Wait(2000)
+      else
+        Wait(c.scanInterval)
+      end
     end
   end
 end)

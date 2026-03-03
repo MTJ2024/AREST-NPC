@@ -59,7 +59,7 @@ Config.WantedFineFreedom = 2             -- Bis zu diesem Wanted Level: Strafe +
 -- Sicherheit & Balancing
 Config.AntiDoubleJailTime = 5
 Config.GuardReleaseTime = 8
-Config.RequiredWantedLevel = 0
+Config.RequiredWantedLevel = 1
 
 -- Akte NPC (Polizist am Schalter bei der Wache – zeigt deine Festnahme-Akte)
 Config.AkteNPC = {
