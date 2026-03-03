@@ -179,12 +179,12 @@ Config.TodStrafe = {
 -- ║  Bei 1-2 Sternen: Spieler kann [E] drücken → Strafe zahlen     ║
 -- ║  und sofort frei kommen (kein Knast, wanted = 0)                ║
 -- ╚══════════════════════════════════════════════════════════════════╝
-Config.KleindeliktSchwelle      = 5       -- Alle Sterne (1-5): immer Strafe vor Ort, kein Knast
-Config.KleindeliktStrafe        = 15000   -- Geldstrafe in EUR (entspricht JailFine)
+Config.KleindeliktSchwelle      = 2       -- 1-2 Sterne: Strafe vor Ort, kein Knast; ab 3 Sternen: Knast
+Config.KleindeliktStrafe        = 500     -- Geldstrafe in EUR beim Kleindelikt (1-2 Sterne)
 Config.KleindeliktNachricht     = "~g~Kleindelikt~s~: Strafe von %d EUR ausgestellt. Du bist auf freiem Fuß!"
 -- true = Cops schiessen bei Kleindelikt NICHT sofort; sie naehern sich nur und zielen.
 -- Erst wenn der Spieler flieht oder die Compliance-Zeit ablaeuft wird scharfgeschossen.
-Config.KleindeliktNichtSchiessen = false  -- false = Cops schiessen normal (kein Knast bedeutet nicht kein Widerstand)
+Config.KleindeliktNichtSchiessen = true
 
 -- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              NACHLASSEN (Verfolgungsdruck laesst nach)          ║
