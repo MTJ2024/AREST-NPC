@@ -1790,15 +1790,7 @@ end)
 RegisterNetEvent('mtj_arrest:startScenario')
 AddEventHandler('mtj_arrest:startScenario', function()
   -- Exempt-Status wird server-seitig geprueft und via wanted_level.lua blockiert.
-  -- Hier nur noch ein Admin-Ace-Guard als letzter Fallback (rein client-seitig, nicht sicherheitskritisch).
-  local wl = Config.JobWhitelist
-  if wl and wl.Aktiviert and (wl.AdminAce or "") ~= "" and IsPlayerAceAllowed(PlayerId(), wl.AdminAce) then
-    SetPlayerWantedLevel(PlayerId(), 0, false)
-    SetPlayerWantedLevelNow(PlayerId(), false)
-    ClearPlayerWantedLevel(PlayerId())
-    dbg("startScenario: AdminAce-Guard, Wanted geloescht")
-    return
-  end
+  -- Ein client-seitiger Ace-Check entfaellt: IsPlayerAceAllowed ist nur server-seitig verfuegbar.
   if scenarioActive then
     dbg("startScenario: already active")
     return
