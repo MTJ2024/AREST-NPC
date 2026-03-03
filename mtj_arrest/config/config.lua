@@ -154,7 +154,7 @@ Config.JailFineMessage          = "Dir wurden %s€ als Strafe abgezogen!"
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.AntiDoubleJailTime       = 5       -- Sekunden: Schutz gegen doppeltes Einsperren
 Config.GuardReleaseTime         = 8       -- Sekunden: Freigabe des Anti-Doppel-Guards
-Config.RespawnGraceSek          = 10      -- Sekunden: kein Wanted-Neustart nach Tod/Respawn
+Config.RespawnGraceSek          = 30     -- Sekunden: kein Wanted-Neustart nach Tod/Respawn (30s für Spawn-Systeme mit längerer Wartezeit)
 
 -- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              TOD-STRAFE (Stufenstrafe bei Tod im Einsatz)       ║

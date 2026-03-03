@@ -1796,6 +1796,12 @@ AddEventHandler('mtj_arrest:startScenario', function()
     return
   end
   local now = GetGameTimer()
+  -- Spawn-Sperre pruefen: verhindert Szenario-Start waehrend des Spawn-Vorgangs (Respawn-Grace).
+  -- Gilt fuer ALLE Aufrufer (auch external_police.lua), nicht nur fuer wanted_level.lua.
+  if wantedDeathLockUntil > 0 and now < wantedDeathLockUntil then
+    dbg("startScenario: Spawn-Sperre aktiv, ignoriere")
+    return
+  end
   if (now - lastScenarioStart) < scenarioCooldown then
     dbg("startScenario: cooldown active, ignoring")
     return
