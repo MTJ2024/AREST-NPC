@@ -57,6 +57,7 @@ local jailTime = 0
 local jailRequested = false
 local complianceWindow = 0
 local complianceCountdownThreadActive = false
+local scenarioWantedLevel = 0  -- Wanted-Level beim Start des Szenarios
 
 -- === HILFSFUNKTIONEN ===
 
@@ -185,9 +186,6 @@ local function spawnCopsAroundPlayer()
     local off = Config.PoliceOffsets[((i - 1) % #Config.PoliceOffsets) + 1]
     local model = Config.PoliceModels[((i - 1) % #Config.PoliceModels) + 1]
     local pos = vector3(ppos.x + off.x, ppos.y + off.y, ppos.z + (off.z or 0))
-    if #(pos - ppos) < 30.0 then
-      pos = randomPosAroundPlayer(32.0, Config.MaxSpawnDistance)
-    end
     local ped = createCopAt(pos, model)
     if ped then table.insert(cops, ped) end
     Wait(40)
@@ -267,10 +265,10 @@ local function playCuffSequence()
   cuffing = false
   dbg("cuff sequence done")
   hideScenarioUI()
-  -- Jail oder Strafe+Freiheit je nach Wanted Level
+  -- Jail oder Strafe+Freiheit je nach Wanted Level beim Szenario-Start
   if not inJail then
     jailRequested = true
-    local wanted = GetPlayerWantedLevel(PlayerId())
+    local wanted = scenarioWantedLevel
     if wanted > 0 and wanted <= (Config.WantedFineFreedom or 2) then
       TriggerServerEvent('mtj_arrest:serverFineAndRelease')
     else
@@ -378,9 +376,13 @@ AddEventHandler('mtj_arrest:startScenario', function()
   cuffed = false
   cuffing = false
   complianceWindow = Config.ComplianceWindow
+  -- Wanted-Level merken, dann sofort löschen damit laufende Verfolgung abbricht
+  scenarioWantedLevel = GetPlayerWantedLevel(PlayerId())
+  SetPlayerWantedLevel(PlayerId(), 0, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  setAmbientCopsIgnore(true)
   clearCops()
   spawnCopsAroundPlayer()
-  setAmbientCopsIgnore(true)
   showScenarioUI()
   dbg("startScenario: scenarioActive set, UI requested")
   if not complianceCountdownThreadActive then
