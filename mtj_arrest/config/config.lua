@@ -182,6 +182,9 @@ Config.TodStrafe = {
 Config.KleindeliktSchwelle      = 2       -- Bis zu diesem Wanted-Level gilt Kleindelikt-Regel
 Config.KleindeliktStrafe        = 500     -- Geldstrafe in EUR beim Kleindelikt
 Config.KleindeliktNachricht     = "~g~Kleindelikt~s~: Strafe von %d EUR ausgestellt. Du bist auf freiem Fuß!"
+-- true = Cops schiessen bei Kleindelikt NICHT sofort; sie naehern sich nur und zielen.
+-- Erst wenn der Spieler flieht oder die Compliance-Zeit ablaeuft wird scharfgeschossen.
+Config.KleindeliktNichtSchiessen = true
 
 -- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              NACHLASSEN (Verfolgungsdruck laesst nach)          ║

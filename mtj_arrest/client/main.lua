@@ -221,6 +221,17 @@ local function getEffectiveWanted()
   return 0
 end
 
+-- Gibt true zurueck wenn Kleindelikt-NichtSchiessen-Modus gilt:
+-- Config.KleindeliktNichtSchiessen=true UND aktueller Wanted <= KleindeliktSchwelle.
+-- In diesem Modus naehern sich Cops nur und zielen — schiessen aber nicht (TaskAimGunAtEntity).
+-- Sofortiges Schiessen wird erst bei Flucht oder abgelaufener Compliance-Zeit aktiviert.
+local function isKleindeliktNichtSchiessen()
+  if not Config.KleindeliktNichtSchiessen then return false end
+  local wanted = getEffectiveWanted()
+  local schwelle = Config.KleindeliktSchwelle or 2
+  return wanted > 0 and wanted <= schwelle
+end
+
 -- === GLOBALER COP-ZAEHLER (fuer auto_cop_spawn.lua Koordination) ===
 -- Zaehlt nur LEBENDE Cops im Radius von 100m um den Spieler
 function GetMainLuaAliveCopCount()
@@ -650,7 +661,12 @@ local function createCopAt(pos, modelName)
   SetPedCombatRange(ped, 0)
   SetPedCombatMovement(ped, 0)
   SetPedAccuracy(ped, 0)
-  TaskGoToEntity(ped, PlayerPedId(), -1, 3.0, 3.0, 1073741824, 0)
+  -- Kleindelikt: Cop naehert sich nur — schiesst noch nicht
+  if isKleindeliktNichtSchiessen() then
+    TaskGoToEntity(ped, PlayerPedId(), -1, 2.0, 1.0, 1073741824, 0)
+  else
+    TaskGoToEntity(ped, PlayerPedId(), -1, 3.0, 3.0, 1073741824, 0)
+  end
   dbg("createCopAt OK: ped=", ped, "model=", tostring(modelName))
   return ped
 end
@@ -866,8 +882,12 @@ local function spawnPoliceVehicle()
         -- Fahrer: zum Spieler fahren
         TaskVehicleDriveToCoordLongrange(ped, veh, ppos.x, ppos.y, ppos.z, 30.0, POLICE_CHASE_DRIVING_MODE, 5.0)
       else
-        -- Beifahrer: schießen
-        TaskCombatPed(ped, playerPed, 0, 16)
+        -- Beifahrer: bei Kleindelikt nur zielen, sonst sofort schiessen
+        if isKleindeliktNichtSchiessen() then
+          TaskAimGunAtEntity(ped, playerPed, -1, false)
+        else
+          TaskCombatPed(ped, playerPed, 0, 16)
+        end
       end
       table.insert(crew, ped)
       table.insert(cops, ped) -- In cops-Liste für Reactivation
@@ -1083,6 +1103,8 @@ local function startCombatMaintenance()
       end
 
       -- Lebende Cops: Waffen, Kampf, Suchverhalten
+      -- Bei Kleindelikt (1-2 Sterne, NichtSchiessen=true): nur zielen, nicht schiessen
+      local kleindeliktMode = isKleindeliktNichtSchiessen()
       for _, ped in ipairs(cops) do
         if DoesEntityExist(ped) and not IsEntityDead(ped) then
           if ARREST_COP_GROUP then
@@ -1094,17 +1116,24 @@ local function startCombatMaintenance()
           end
           if not IsPedInCombat(ped) then
             ClearPedTasks(ped)
-            SetBlockingOfNonTemporaryEvents(ped, false)
+            SetBlockingOfNonTemporaryEvents(ped, kleindeliktMode) -- true bei Kleindelikt: blockiert Auto-Kampf
             SetPedAlertness(ped, 3)
             SetPedSeeingRange(ped, 100.0)
             SetPedHearingRange(ped, 100.0)
-            SetPedCombatAbility(ped, 2)
-            SetPedCombatRange(ped, 2)
-            SetPedCombatMovement(ped, 2)
+            SetPedCombatAbility(ped, kleindeliktMode and 0 or 2)
+            SetPedCombatRange(ped, kleindeliktMode and 0 or 2)
+            SetPedCombatMovement(ped, kleindeliktMode and 0 or 2)
             SetCurrentPedWeapon(ped, pistolHash, true)
             SetPedKeepTask(ped, true)
             local copDist = #(GetEntityCoords(ped) - ppos)
-            if copDist < 50.0 then
+            if kleindeliktMode then
+              -- Kleindelikt: Cop naehert sich und zielt, schiesst aber NICHT
+              if copDist > 3.0 then
+                TaskGoToEntity(ped, playerPed, -1, 2.0, 1.0, 1073741824, 0)
+              else
+                TaskAimGunAtEntity(ped, playerPed, -1, false)
+              end
+            elseif copDist < 50.0 then
               TaskCombatPed(ped, playerPed, 0, 16)
             else
               TaskGoToEntity(ped, playerPed, -1, 5.0, 2.0, 1073741824, 0)
@@ -1133,9 +1162,9 @@ local function startCombatMaintenance()
           local ped = createCopAt(pos, model)
           if ped then
             table.insert(cops, ped)
-            -- Sofort kampfbereit (Verstarkung, wird direkt nach createCopAt bewaffnet)
             ClearPedTasks(ped)
-            SetBlockingOfNonTemporaryEvents(ped, false)
+            -- Bei Kleindelikt: auch Verstaerkung zielt nur, schiesst nicht
+            SetBlockingOfNonTemporaryEvents(ped, kleindeliktMode)
             if ARREST_COP_GROUP then
               SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
             end
@@ -1143,13 +1172,17 @@ local function startCombatMaintenance()
             SetPedAlertness(ped, 3)
             SetPedSeeingRange(ped, 100.0)
             SetPedHearingRange(ped, 100.0)
-            SetPedCombatAbility(ped, 2)
-            SetPedCombatRange(ped, 2)
-            SetPedCombatMovement(ped, 2)
+            SetPedCombatAbility(ped, kleindeliktMode and 0 or 2)
+            SetPedCombatRange(ped, kleindeliktMode and 0 or 2)
+            SetPedCombatMovement(ped, kleindeliktMode and 0 or 2)
             SetPedAccuracy(ped, nachlassenAccuracy)
             SetCurrentPedWeapon(ped, pistolHash, true)
             SetPedKeepTask(ped, true)
-            TaskCombatPed(ped, playerPed, 0, 16)
+            if kleindeliktMode then
+              TaskGoToEntity(ped, playerPed, -1, 2.0, 1.0, 1073741824, 0)
+            else
+              TaskCombatPed(ped, playerPed, 0, 16)
+            end
           end
           Wait(200)
         end
