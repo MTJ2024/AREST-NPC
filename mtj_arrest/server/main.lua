@@ -233,6 +233,25 @@ AddEventHandler('mtj_arrest:serverBeginJail', function(minutes)
   end)
 end)
 
+-- 1-2 Sterne: Waffen weg, Strafe, sofort freilassen
+RegisterNetEvent('mtj_arrest:serverFineAndRelease')
+AddEventHandler('mtj_arrest:serverFineAndRelease', function()
+  local src = source
+  local now = GetGameTimer()
+  if activeJails[src] and (now - activeJails[src]) < 5000 then
+    dbg(("[mtj_arrest] duplicate serverFineAndRelease ignored for %d"):format(src))
+    return
+  end
+  activeJails[src] = now
+  dbg(("[mtj_arrest] FineAndRelease for %d"):format(src))
+  pcall(function() clearAllWeaponsAndItems(src) end)
+  pcall(function() takeJailFine(src) end)
+  TriggerClientEvent('mtj_arrest:clientRelease', src)
+  SetTimeout(8000, function()
+    if activeJails[src] == now then activeJails[src] = nil end
+  end)
+end)
+
 -- Optional: expliziter Server-Event zum Waffen-Clear
 RegisterNetEvent('mtj_arrest:serverClearWeapons', function()
   local src = source

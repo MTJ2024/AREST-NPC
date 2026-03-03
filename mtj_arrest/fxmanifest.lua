@@ -20,11 +20,10 @@ shared_scripts {
 }
 
 client_scripts {
-  'client/main.lua',                 -- <--- FEHLTE!
+  'client/main.lua',
   'client/nui_focus_handlers.lua',
-  'client/auto_cop_spawn.lua',
   'client/controls.lua',
-  'client/external_police.lua',  
+  'client/external_police.lua',
   'client/debug.lua'
 }
 

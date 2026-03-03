@@ -267,10 +267,15 @@ local function playCuffSequence()
   cuffing = false
   dbg("cuff sequence done")
   hideScenarioUI()
-  -- Jail-Trigger immer ausführen
+  -- Jail oder Strafe+Freiheit je nach Wanted Level
   if not inJail then
     jailRequested = true
-    TriggerServerEvent('mtj_arrest:serverBeginJail', Config.JailMinutesDefault)
+    local wanted = GetPlayerWantedLevel(PlayerId())
+    if wanted > 0 and wanted <= (Config.WantedFineFreedom or 2) then
+      TriggerServerEvent('mtj_arrest:serverFineAndRelease')
+    else
+      TriggerServerEvent('mtj_arrest:serverBeginJail', Config.JailMinutesDefault)
+    end
   end
 end
 
@@ -330,16 +335,40 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes)
   end)
 end)
 
+-- === STRAFE + FREIHEIT (1-2 Sterne) ===
+RegisterNetEvent('mtj_arrest:clientRelease')
+AddEventHandler('mtj_arrest:clientRelease', function()
+  local player = PlayerPedId()
+  FreezeEntityPosition(player, false)
+  SetEnableHandcuffs(player, false)
+  cuffed = false
+  cuffing = false
+  inJail = false
+  jailTime = 0
+  jailRequested = false
+  scenarioActive = false
+  canSurrender = false
+  surrendered = false
+  complianceWindow = 0
+  hideScenarioUI()
+  TriggerEvent('mtj_arrest:nui:jail', false)
+  TriggerEvent('mtj_arrest:nui:arrest_log', false)
+  clearCops()
+  setAmbientCopsIgnore(false)
+  SetPlayerWantedLevel(PlayerId(), 0, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  if ESX and ESX.ShowNotification then
+    ESX.ShowNotification("Du wurdest nach Zahlung der Strafe freigelassen!")
+  end
+  dbg("clientRelease: Strafe bezahlt, Spieler freigelassen")
+end)
+
 -- === SCENARIO-STATE ===
 
 RegisterNetEvent('mtj_arrest:startScenario')
 AddEventHandler('mtj_arrest:startScenario', function()
   if scenarioActive then
     dbg("startScenario: already active")
-    return
-  end
-  if GetPlayerWantedLevel(PlayerId()) == 0 then
-    dbg("startScenario abgebrochen: Kein Wanted Level!")
     return
   end
   scenarioActive = true
@@ -364,6 +393,7 @@ AddEventHandler('mtj_arrest:startScenario', function()
           TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
           if complianceWindow <= 0 then
             canSurrender = false
+            hideScenarioUI()
             reactivatePolice()
             dbg("Surrender window abgelaufen!")
           end
@@ -391,6 +421,13 @@ AddEventHandler('mtj_arrest:endScenario', function()
   dbg("endScenario: scenario ended")
 end)
 
+-- === HILFSFUNKTION: Alle UI-Panels verstecken ===
+local function resetAllUI()
+  hideScenarioUI()
+  TriggerEvent('mtj_arrest:nui:jail', false)
+  TriggerEvent('mtj_arrest:nui:arrest_log', false)
+end
+
 -- === E-TASTE / SURRENDER ===
 
 CreateThread(function()
@@ -409,18 +446,32 @@ CreateThread(function()
   end
 end)
 
--- === WANTED-LEVEL-ÜBERWACHUNG ===
+-- === TOD-ERKENNUNG: Wanted + alle Events beenden wenn Spieler stirbt ===
 
 CreateThread(function()
+  local wasDead = false
   while true do
     Wait(1000)
-    if scenarioActive then
-      if GetPlayerWantedLevel(PlayerId()) == 0 then
-        dbg("Wanted Level = 0, beende Szenario!")
-        TriggerEvent('mtj_arrest:endScenario')
-      end
-    else
-      Wait(2000)
+    local isDead = IsEntityDead(PlayerPedId())
+    if isDead and not wasDead then
+      wasDead = true
+      dbg("Spieler gestorben: beende alle Events!")
+      scenarioActive = false
+      canSurrender = false
+      surrendered = false
+      cuffed = false
+      cuffing = false
+      jailRequested = false
+      complianceWindow = 0
+      inJail = false
+      jailTime = 0
+      resetAllUI()
+      clearCops()
+      SetPlayerWantedLevel(PlayerId(), 0, false)
+      SetPlayerWantedLevelNow(PlayerId(), false)
+      SetPoliceIgnorePlayer(PlayerId(), true)
+    elseif not isDead then
+      wasDead = false
     end
   end
 end)
@@ -438,8 +489,10 @@ AddEventHandler('playerSpawned', function()
   inJail = false
   FreezeEntityPosition(PlayerPedId(), false)
   SetEnableHandcuffs(PlayerPedId(), false)
-  hideScenarioUI()
+  resetAllUI()
   clearCops()
+  SetPlayerWantedLevel(PlayerId(), 0, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
   setAmbientCopsIgnore(false)
   dbg("playerSpawned: reset scenario state")
 end)
@@ -456,7 +509,7 @@ AddEventHandler('onResourceStop', function(res)
   inJail = false
   FreezeEntityPosition(PlayerPedId(), false)
   SetEnableHandcuffs(PlayerPedId(), false)
-  hideScenarioUI()
+  resetAllUI()
   clearCops()
   setAmbientCopsIgnore(false)
   dbg("onResourceStop: reset scenario state")

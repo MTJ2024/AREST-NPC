@@ -54,11 +54,12 @@ Config.JailReleaseHeading = 270.0 -- Blickrichtung westlich zum Parkplatz
 Config.JailFine = 15000                  -- Höhe der Strafe (€)
 Config.EnableJailFine = true             -- true = Strafe wird abgezogen, false = keine Abbuchung
 Config.JailFineMessage = "Dir wurden %s€ als Strafe abgezogen!"
+Config.WantedFineFreedom = 2             -- Bis zu diesem Wanted Level: Strafe + Freiheit (kein Knast)
 
 -- Sicherheit & Balancing
 Config.AntiDoubleJailTime = 5
 Config.GuardReleaseTime = 8
-Config.RequiredWantedLevel = 1
+Config.RequiredWantedLevel = 0
 
 -- Debug
 Config.Debug = false
