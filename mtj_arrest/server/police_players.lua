@@ -1,3 +1,8 @@
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
+-- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
+-- ║  Plagiatschutz aktiv — Unbefugte Nutzung wird erkannt und gemeldet.    ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
 -- mtj_arrest: Server-Helper zur Erkennung von Spieler-Cops in der Nähe
 -- Sendet Distanz zum nächsten Spieler mit ESX-Job (z. B. police/sheriff) an den Client.
 
@@ -88,4 +93,55 @@ RegisterNetEvent('mtj_arrest:sv:getNearestPoliceDist', function(maxRadius, jobLi
   if nearest > maxRadius then nearest = 999999.0 end
   TriggerClientEvent('mtj_arrest:cl:nearestPoliceDist', src, nearest)
   dbg(("Player %d requested nearest police dist: %.2f m (max %.0f)"):format(src, nearest, maxRadius))
+end)
+
+-- ══════════════════════════════════════════════════════════════════
+--  JOB-WHITELIST: Exempt-Check fuer Police/Admin
+-- ══════════════════════════════════════════════════════════════════
+
+local function isPlayerExempt(src)
+  local wl = Config and Config.JobWhitelist
+  if not wl or not wl.Aktiviert then return false end
+
+  -- Admin-Ace Pruefung
+  local ace = wl.AdminAce
+  if ace and ace ~= "" and IsPlayerAceAllowed(src, ace) then
+    dbg(("Player %d ist exempt via AdminAce (%s)"):format(src, ace))
+    return true
+  end
+
+  -- ESX-Job Pruefung
+  if not ESX then return false end
+  local xPlayer = ESX.GetPlayerFromId(src)
+  if not xPlayer then return false end
+  local jobName = (xPlayer.job and xPlayer.job.name)
+                  or (xPlayer.getJob and xPlayer.getJob().name)
+                  or ""
+  local jobs = wl.Jobs or {}
+  for _, j in ipairs(jobs) do
+    if tostring(jobName) == tostring(j) then
+      dbg(("Player %d ist exempt via Job (%s)"):format(src, jobName))
+      return true
+    end
+  end
+  return false
+end
+
+-- Spieler ihren Exempt-Status mitteilen
+local function pushExempt(src)
+  local exempt = isPlayerExempt(src)
+  TriggerClientEvent('mtj_arrest:cl:setExempt', src, exempt)
+  dbg(("pushExempt -> Spieler %d exempt=%s"):format(src, tostring(exempt)))
+end
+
+-- Bei Spawn pushen (nach kurzer Verzoegerung damit ESX Job geladen ist)
+AddEventHandler('playerSpawned', function()
+  local src = source
+  SetTimeout(3000, function() pushExempt(src) end)
+end)
+
+-- Client kann jederzeit neu abfragen (z.B. nach Job-Wechsel)
+RegisterNetEvent('mtj_arrest:sv:checkExempt')
+AddEventHandler('mtj_arrest:sv:checkExempt', function()
+  pushExempt(source)
 end)

@@ -1,8 +1,13 @@
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
+-- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
+-- ║  Plagiatschutz aktiv — Unbefugte Nutzung wird erkannt und gemeldet.    ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
 -- mtj_arrest: Externe Polizei Erkennung + Auto-Start des Szenarios
 -- Erkennt NPC-Polizei (RelationGroups/Modelle) und optional Spieler-Cops (ESX-Job).
 -- Triggert automatisch 'mtj_arrest:startScenario', sobald nahe genug.
 
-local DEBUG = true
+local DEBUG = false
 local function dbg(...)
   if not DEBUG then return end
   local t = {}
@@ -90,17 +95,6 @@ RegisterNetEvent('mtj_arrest:cl:nearestPoliceDist', function(dist)
   end
 end)
 
--- Spawn-Schutz: kein Szenario für 30s nach jedem Spawn / Resource-Start
-local spawnProtectionUntil = GetGameTimer() + 15000
-local playerHasSpawned = false  -- true, sobald mindestens ein playerSpawned gefeuert hat
-
-AddEventHandler('playerSpawned', function()
-  spawnProtectionUntil = GetGameTimer() + 30000
-  playerHasSpawned = true
-  -- Stale Distanz zurücksetzen, damit kein veralteter Wert aus dem letzten Poll feuert
-  nearestPolicePlayerDist = 999999.0
-end)
-
 -- Server-Polling für Spieler-Cops
 CreateThread(function()
   local c = cfg()
@@ -118,35 +112,22 @@ CreateThread(function()
 
   local lastAnnounce = 0
   while true do
-    -- Niemals triggern bevor der Spieler mindestens einmal gespawnt ist
-    -- oder wenn er gerade tot ist
-    if not playerHasSpawned or IsEntityDead(PlayerPedId()) then
-      Wait(1000)
-    else
-      local distNPC = getNearestExternalPoliceNPCDist(c.scanRadius)
-      local distPLY = nearestPolicePlayerDist
-      local compliance = (Config and Config.ComplianceDistance) or 25.0
+    local distNPC = getNearestExternalPoliceNPCDist(c.scanRadius)
+    local distPLY = nearestPolicePlayerDist
+    local nearest = math.min(distNPC, distPLY)
 
-      -- NPC-Cops: nur triggern wenn RequiredWantedLevel erfüllt
-      local requiredWanted = (Config and Config.RequiredWantedLevel) or 0
-      local npcTrigger = distNPC <= compliance and
-          GetPlayerWantedLevel(PlayerId()) >= requiredWanted
-
-      -- Spieler-Cops (aktive Verfolgung durch echten Polizisten): immer triggern
-      local playerTrigger = distPLY <= compliance
-
-      if (npcTrigger or playerTrigger) and GetGameTimer() > spawnProtectionUntil then
-        local now = GetGameTimer()
-        if now - lastAnnounce > 1500 then
-          dbg(("External police near (NPC:%.1fm PLY:%.1fm) -> startScenario"):format(distNPC, distPLY))
-          lastAnnounce = now
-        end
-        -- main.lua ignoriert Doppelaufrufe (prüft scenarioActive intern)
-        TriggerEvent('mtj_arrest:startScenario')
-        Wait(2000)
-      else
-        Wait(c.scanInterval)
+    local compliance = (Config and Config.ComplianceDistance) or 25.0
+    if nearest <= compliance then
+      local now = GetGameTimer()
+      if now - lastAnnounce > 1500 then
+        dbg(("External police near (%.1fm) -> startScenario"):format(nearest))
+        lastAnnounce = now
       end
+      -- main.lua ignoriert Doppelaufrufe (prüft scenarioActive intern)
+      TriggerEvent('mtj_arrest:startScenario')
+      Wait(2000)
+    else
+      Wait(c.scanInterval)
     end
   end
 end)

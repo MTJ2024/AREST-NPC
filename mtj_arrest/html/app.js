@@ -1,7 +1,17 @@
+/**
+ * ╔══════════════════════════════════════════════════════════════════════════╗
+ * ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
+ * ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
+ * ║  Plagiatschutz aktiv — Unbefugte Nutzung wird erkannt und gemeldet.    ║
+ * ╚══════════════════════════════════════════════════════════════════════════╝
+ */
 (() => {
+  const REFRESH_BTN_LABEL = '\uD83D\uDD04 Aktualisieren';
+  const REFRESH_BTN_LOADING = '\u23F3 ...';
   let el = {};
   const state = {
     jailTotal: 0,
+    scenarioTotal: 11,
     countdownLabel: 'Letzte Chance: ',
     toastQueue: [],
     toastShowing: false,
@@ -48,7 +58,7 @@
       dbgLog: byId('mtj-debug-log'),
       dbgBtnClear: byId('mtj-debug-btn-clear'),
       dbgBtnState: byId('mtj-debug-btn-state'),
-      akte: byId('akte'),
+      notifyStack: byId('notify-stack'),
     };
 
     // Initial hide to ensure clean state
@@ -56,7 +66,6 @@
     setHidden(el.toast, true);
     setHidden(el.jail, true);
     setHidden(el.aLog, true);
-    setHidden(el.akte, true);
 
     // Ensure UI is hidden globally until something is shown
     setUiVisible(false);
@@ -75,33 +84,182 @@
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 
-  function enqueueToast(text) {
-    const t = (text != null ? String(text) : '').trim();
-    if (!t) return;
-    state.toastQueue.push(t);
-    if (!state.toastShowing) showNextToast();
-  }
+  function enqueueToast(text) { /* deaktiviert */ }
+  function showNextToast() { /* deaktiviert */ }
 
-  function showNextToast() {
-    if (state.toastShowing) return;
-    const text = state.toastQueue.shift();
-    if (!text) return;
+  /* ═══ Custom Notification (links mittig) — deaktiviert ═══ */
+  function showNotify(text, type) { /* deaktiviert: nur Einsatz- und Knast-Panel */ }
 
-    state.toastShowing = true;
-    safeText(el.toast, text);
-    el.toast.classList.add('show');
-    setHidden(el.toast, false);
+  /* ═══ Polizeiakte Vollbild-UI ═══ */
+  function handlePolizeiakteOpen(akte) {
+    const overlay = byId('akte-overlay');
+    if (!overlay) return;
 
-    const DURATION = 2400;
-    setTimeout(() => {
-      el.toast.classList.remove('show');
-      setHidden(el.toast, true);
-      state.toastShowing = false;
-      if (state.toastQueue.length > 0) {
-        setTimeout(showNextToast, 150);
+    // Werte befüllen
+    safeText(byId('akte-server'), akte.serverName || 'Police Department');
+    safeText(byId('akte-status'), (akte.status || 'unbescholten').toUpperCase());
+    safeText(byId('akte-festnahmen'), String(akte.festnahmen || 0));
+    safeText(byId('akte-haftzeit'), (akte.gesamtHaftzeit || 0) + ' Min');
+    safeText(byId('akte-geldstrafe'), (akte.gesamtGeldstrafe || 0).toLocaleString('de-DE') + ' \u20AC');
+    safeText(byId('akte-flucht'), String(akte.fluchtversuche || 0));
+    safeText(byId('akte-letzte'), akte.letztesFestnahme || '\u2014');
+    safeText(byId('akte-haft-mult'), '\u00D7' + (akte.haftzeitMultiplikator || 1).toFixed(1));
+    safeText(byId('akte-geld-mult'), '\u00D7' + (akte.geldstrafeMultiplikator || 1).toFixed(1));
+
+    // Nächste Stufe
+    var naechsteRow = byId('akte-naechste-row');
+    if (akte.naechsteStufeStatus) {
+      safeText(byId('akte-naechste'), akte.naechsteStufeStatus + ' (ab ' + akte.naechsteStufeAb + ' Festnahmen)');
+      if (naechsteRow) naechsteRow.style.display = '';
+    } else {
+      if (naechsteRow) naechsteRow.style.display = 'none';
+    }
+
+    // Status-Farbe
+    var statusBar = byId('akte-status-bar');
+    if (statusBar) statusBar.setAttribute('data-status', akte.status || 'unbescholten');
+
+    overlay.classList.remove('hidden');
+    // Vorherige Close-Operation abbrechen falls noch laufend
+    if (akteAutoCloseTimer) { clearTimeout(akteAutoCloseTimer); akteAutoCloseTimer = null; }
+    akteClosing = false;
+    setUiVisible(true);
+
+    // Auto-Close Timer auf JS-Seite: nach 60s automatisch schliessen (Sicherheitsnetz)
+    if (akteAutoCloseTimer) clearTimeout(akteAutoCloseTimer);
+    akteAutoCloseTimer = setTimeout(function() {
+      var ov = byId('akte-overlay');
+      if (ov && !ov.classList.contains('hidden')) {
+        closePolizeiakte();
       }
-    }, DURATION);
+    }, 60000);
+
+    // Refresh-Button zuruecksetzen falls noch im Lade-Zustand
+    var refreshBtn = byId('akte-refresh');
+    if (refreshBtn) {
+      refreshBtn.classList.remove('loading');
+      refreshBtn.textContent = REFRESH_BTN_LABEL;
+    }
+
+    // Reduce-Button: sichtbar wenn Feature aktiv und Festnahmen > Mindest
+    var reduceBtn = byId('akte-reduce');
+    var stufenWrap = byId('akte-stufen-wrap');
+    var stufenList = byId('akte-stufen-list');
+    if (reduceBtn) {
+      var canReduce = !!akte.kriminalLevelSenkenAktiviert &&
+                      (akte.festnahmen || 0) > (akte.mindestFestnahmen || 0);
+      reduceBtn.style.display = canReduce ? '' : 'none';
+      reduceBtn.disabled = false;
+      reduceBtn.classList.remove('loading');
+      var currentCost = akte.aktuelleReduktionsKosten || 0;
+      var cost = currentCost.toLocaleString('de-DE');
+      reduceBtn.textContent = '\u2B07 Kriminallevel senken (' + cost + '\u00A0\u20AC)';
+    }
+
+    // Stufentabelle rendern
+    if (stufenWrap && stufenList) {
+      var stufen = akte.reduktionsStufen;
+      if (akte.kriminalLevelSenkenAktiviert && stufen && stufen.length > 0) {
+        stufenList.innerHTML = '';
+        var currentFestnahmen = akte.festnahmen || 0;
+        stufen.forEach(function(s, i) {
+          var isActive = currentFestnahmen >= s.AbFestnahmen &&
+            (i === stufen.length - 1 || currentFestnahmen < stufen[i + 1].AbFestnahmen);
+          var row = document.createElement('div');
+          row.className = 'akte-stufe-row' + (isActive ? ' active' : '');
+          var badge = isActive ? '\u25B6 ' : '';
+          var bis = (i < stufen.length - 1)
+            ? ('ab ' + s.AbFestnahmen + ' bis ' + (stufen[i + 1].AbFestnahmen - 1))
+            : ('ab ' + s.AbFestnahmen + '+');
+          row.innerHTML = badge + '<span class="akte-stufe-badge">' + bis + ' Festnahmen:</span> '
+            + (s.Kosten || 0).toLocaleString('de-DE') + '\u00A0\u20AC';
+          stufenList.appendChild(row);
+        });
+        stufenWrap.classList.remove('hidden');
+      } else {
+        stufenWrap.classList.add('hidden');
+      }
+    }
   }
+
+  var akteClosing = false;
+  var akteAutoCloseTimer = null;
+
+  function sendCloseRequest(attempt) {
+    attempt = attempt || 1;
+    fetch('https://mtj_arrest/closePolizeiakte', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    }).then(function() {
+      akteClosing = false;
+    }).catch(function() {
+      if (attempt < 3) {
+        setTimeout(function() { sendCloseRequest(attempt + 1); }, 200 * attempt);
+      } else {
+        akteClosing = false;
+      }
+    });
+  }
+
+  function closePolizeiakte() {
+    var overlay = byId('akte-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    evaluateUiVisibility();
+    if (akteAutoCloseTimer) { clearTimeout(akteAutoCloseTimer); akteAutoCloseTimer = null; }
+    if (!akteClosing) {
+      akteClosing = true;
+      sendCloseRequest(1);
+    }
+  }
+
+  function forceHideAkte() {
+    var overlay = byId('akte-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    akteClosing = false;
+    if (akteAutoCloseTimer) { clearTimeout(akteAutoCloseTimer); akteAutoCloseTimer = null; }
+    evaluateUiVisibility();
+  }
+
+  // Close-Button & Refresh-Button & Reduce-Button & ESC & Klick ausserhalb
+  document.addEventListener('click', function(e) {
+    if (e.target && (e.target.id === 'akte-close' || e.target.id === 'akte-overlay')) closePolizeiakte();
+    if (e.target && e.target.id === 'akte-refresh') {
+      var btn = e.target;
+      btn.classList.add('loading');
+      btn.textContent = REFRESH_BTN_LOADING;
+      fetch('https://mtj_arrest/refreshPolizeiakte', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      }).catch(function() {
+        btn.classList.remove('loading');
+        btn.textContent = REFRESH_BTN_LABEL;
+      });
+    }
+    if (e.target && e.target.id === 'akte-reduce') {
+      var reduceBtn = e.target;
+      if (reduceBtn.disabled) return;
+      reduceBtn.disabled = true;
+      reduceBtn.classList.add('loading');
+      fetch('https://mtj_arrest/reduceKriminalLevel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      }).catch(function() {
+        reduceBtn.disabled = false;
+        reduceBtn.classList.remove('loading');
+      });
+    }
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var overlay = byId('akte-overlay');
+      if (overlay && !overlay.classList.contains('hidden')) {
+        closePolizeiakte();
+      }
+    }
+  });
 
   function setUiVisible(show) {
     try {
@@ -118,26 +276,36 @@
     const panels = [
       el && el.scenario && !el.scenario.classList.contains('hidden'),
       el && el.jail && !el.jail.classList.contains('hidden'),
-      el && el.aLog && !el.aLog.classList.contains('hidden'),
-      el && el.toast && !el.toast.classList.contains('hidden'),
-      el && el.akte && !el.akte.classList.contains('hidden'),
     ];
     const anyVisible = panels.some(Boolean);
     setUiVisible(anyVisible);
   }
 
+  /* ═══ Gegenseitige Panel-Ausschliessung: nur 1 Panel gleichzeitig ═══ */
+  function hideAllPanels() {
+    setHidden(el.scenario, true);
+    if (el.scenario) el.scenario.classList.remove('pulse-ui');
+    setHidden(el.jail, true);
+    if (el.jail) el.jail.classList.remove('pulse-ui');
+    setHidden(el.aLog, true);
+  }
+
   function handleScenarioToggle(d) {
     state.countdownLabel = (d.countdownLabel && String(d.countdownLabel)) || state.countdownLabel || 'Letzte Chance: ';
     if (d.show) {
+      hideAllPanels();
       safeText(el.sTitle, d.title || 'Polizei-Einsatz');
       safeText(el.sHint, d.hint || '');
+      state.scenarioTotal = Number(d.countdown) || 11;
       if (d.countdown) {
         safeText(el.sCountdown, `${state.countdownLabel}${Number(d.countdown)}s`);
       } else {
         safeText(el.sCountdown, '');
       }
+      // Progress bar auf 100% setzen
+      const bar = $('#scenario .scenario-progress-bar');
+      if (bar) bar.style.width = '100%';
       setHidden(el.scenario, false);
-      // GANZES UI pulsiert langsam (sicht <-> transparent)
       if (el.scenario) el.scenario.classList.add('pulse-ui');
     } else {
       setHidden(el.scenario, true);
@@ -149,37 +317,43 @@
   function handleScenarioCountdown(d) {
     const v = Number(d.value);
     safeText(el.sCountdown, `${state.countdownLabel}${isFinite(v) ? v : 0}s`);
+    // Progress bar aktualisieren (100% → 0%)
+    const bar = $('#scenario .scenario-progress-bar');
+    if (bar && state.scenarioTotal > 0) {
+      const pct = Math.max(0, Math.min(100, (v / state.scenarioTotal) * 100));
+      bar.style.width = pct.toFixed(1) + '%';
+    }
   }
 
   function handleArrestLog(d) {
-    if (d.show) {
-      safeText(el.aLogTitle, d.title || 'Festnahmeprotokoll');
-      if (el.aLogLines) {
-        el.aLogLines.innerHTML = '';
-        const lines = Array.isArray(d.lines) ? d.lines : [];
-        for (const line of lines) {
-          const li = document.createElement('li');
-          li.textContent = String(line);
-          el.aLogLines.appendChild(li);
-        }
-      }
-      setHidden(el.aLog, false);
-    } else {
-      setHidden(el.aLog, true);
-    }
+    // Festnahmeprotokoll deaktiviert: nur Einsatz- und Knast-Panel werden angezeigt
+    setHidden(el.aLog, true);
     evaluateUiVisibility();
   }
 
   function handleJailToggle(d) {
     if (d.show) {
+      hideAllPanels();
       state.jailTotal = Number(d.seconds) || 0;
       safeText(el.jTitle, d.title || 'Gefängnis');
       safeText(el.jSub, d.subtitle || '');
       safeText(el.jTimer, fmt(state.jailTotal));
       if (el.jBar) el.jBar.style.width = '0%';
+      // Geldstrafe aktualisieren (tatsaechlicher Betrag vom Server)
+      var fineEl = $('#jail .fine-amount');
+      if (fineEl) {
+        var fine = Number(d.fine) || 0;
+        if (fine > 0) {
+          safeText(fineEl, fine.toLocaleString('de-DE') + '\u00A0\u20AC');
+        } else {
+          safeText(fineEl, '\u2014');
+        }
+      }
       setHidden(el.jail, false);
+      if (el.jail) el.jail.classList.add('pulse-ui');
     } else {
       setHidden(el.jail, true);
+      if (el.jail) el.jail.classList.remove('pulse-ui');
     }
     evaluateUiVisibility();
   }
@@ -191,31 +365,6 @@
       const done = Math.max(0, Math.min(1, 1 - (secs / state.jailTotal)));
       el.jBar.style.width = `${(done * 100).toFixed(2)}%`;
     }
-  }
-
-  function handleAkteToggle(d) {
-    if (!el.akte) return;
-    if (d.show && d.data) {
-      const data = d.data;
-      const nameEl  = el.akte.querySelector('.akte-name');
-      const linesEl = el.akte.querySelector('.akte-lines');
-      if (nameEl) safeText(nameEl, data.name || 'Unbekannt');
-      if (linesEl) {
-        let lastDate = 'Nie';
-        if (data.lastArrested && data.lastArrested > 0) {
-          lastDate = new Date(data.lastArrested * 1000).toLocaleDateString('de-DE');
-        }
-        linesEl.innerHTML =
-          `<li><span class="akte-label">Festnahmen</span><span class="akte-value">${Number(data.arrests) || 0}</span></li>` +
-          `<li><span class="akte-label">Strafen gesamt</span><span class="akte-value">${(Number(data.totalFines) || 0).toLocaleString('de-DE')}\u00a0\u20ac</span></li>` +
-          `<li><span class="akte-label">Knastzeit</span><span class="akte-value">${Number(data.jailMinutes) || 0}\u00a0min</span></li>` +
-          `<li><span class="akte-label">Letzte Festnahme</span><span class="akte-value">${lastDate}</span></li>`;
-      }
-      setHidden(el.akte, false);
-    } else {
-      setHidden(el.akte, true);
-    }
-    evaluateUiVisibility();
   }
 
   function initDebug() {
@@ -312,11 +461,21 @@
       case 'jailTick':
         handleJailTick(d);
         break;
-      case 'akteToggle':
-        handleAkteToggle(d);
-        break;
       case 'uiToggle':
         if (typeof d.show !== 'undefined') setUiVisible(!!d.show);
+        break;
+      case 'notify':
+        showNotify(d.text || '', d.type || 'info');
+        break;
+      case 'polizeiakteOpen':
+        handlePolizeiakteOpen(d.akte || {});
+        break;
+      case 'polizeiakteClose':
+        forceHideAkte();
+        break;
+      case 'kriminalLevelFail':
+        var btn = byId('akte-reduce');
+        if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
         break;
       case 'mtj_debug_state':
       case 'mtj_debug_log':

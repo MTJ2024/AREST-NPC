@@ -1,3 +1,8 @@
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
+-- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
+-- ║  Plagiatschutz aktiv — Unbefugte Nutzung wird erkannt und gemeldet.    ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
 fx_version 'cerulean'
 game 'gta5'
 lua54 'yes'
@@ -5,14 +10,15 @@ lua54 'yes'
 name 'mtj_arrest'
 author 'MTJ'
 version '1.0.0'
-description 'Immersives RP-Festnahme-Szenario mit NPC-Polizei, ESX Jail, UI-Timer'
+description 'AREST-NPC — Immersives RP-Festnahme-Szenario von MTJ — NPC-Polizei, ESX Jail, UI-Timer'
 
 ui_page 'html/index.html'
 
 files {
   'html/index.html',
   'html/style.css',
-  'html/app.js'
+  'html/app.js',
+  'html/police_bg.png'
 }
 
 shared_scripts {
@@ -21,14 +27,18 @@ shared_scripts {
 
 client_scripts {
   'client/main.lua',
+  'client/wanted_level.lua',
   'client/nui_focus_handlers.lua',
+  'client/auto_cop_spawn.lua',
   'client/controls.lua',
   'client/external_police.lua',
-  'client/akte_npc.lua',
+  'client/polizeiakte_npc.lua',
   'client/debug.lua'
 }
 
 server_scripts {
+  'server/copyright_guard.lua',
+  'server/polizeiakte.lua',
   'server/police_players.lua',  
   'server/main.lua'
 }

@@ -1,6 +1,14 @@
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
+-- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
+-- ║  Plagiatschutz aktiv — Unbefugte Nutzung wird erkannt und gemeldet.    ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
 -- NUI Focus-Handler: Szenario/Arrest-Log dürfen NIE den Fokus blockieren (E soll funktionieren)
 
 local function setFocusSafe()
+  -- Polizeiakte NUI-Focus NICHT freigeben wenn die Akte gerade geoeffnet ist,
+  -- sonst koennte der Spieler die Akte nicht mehr schliessen.
+  if IsPolizeiakteOpen and IsPolizeiakteOpen() then return end
   SetNuiFocus(false, false)
   SetNuiFocusKeepInput(false)
 end
@@ -34,13 +42,14 @@ AddEventHandler('mtj_arrest:nui:arrest_log', function(show, lines)
 end)
 
 RegisterNetEvent('mtj_arrest:nui:jail')
-AddEventHandler('mtj_arrest:nui:jail', function(show, seconds, title, sub)
+AddEventHandler('mtj_arrest:nui:jail', function(show, seconds, title, sub, fine)
   SendNUIMessage({
     action = "jailToggle",
     show = show or false,
     seconds = seconds or 0,
     title = title or "Gefängnis",
-    sub = sub or ""
+    subtitle = sub or "",
+    fine = fine or 0
   })
   setFocusSafe()
 end)
@@ -55,14 +64,9 @@ AddEventHandler('mtj_arrest:nui:toast', function(text)
   SendNUIMessage({ action = "toast", text = tostring(text or "") })
 end)
 
-RegisterNetEvent('mtj_arrest:nui:akte')
-AddEventHandler('mtj_arrest:nui:akte', function(show, data)
-  SendNUIMessage({
-    action = "akteToggle",
-    show   = show or false,
-    data   = data or {}
-  })
-  setFocusSafe()
+RegisterNetEvent('mtj_arrest:nui:notify')
+AddEventHandler('mtj_arrest:nui:notify', function(text, ntype)
+  SendNUIMessage({ action = "notify", text = tostring(text or ""), type = ntype or "info" })
 end)
 
 AddEventHandler('onResourceStop', function(res)
