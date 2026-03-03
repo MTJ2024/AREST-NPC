@@ -24,6 +24,7 @@ client_scripts {
   'client/nui_focus_handlers.lua',
   'client/controls.lua',
   'client/external_police.lua',
+  'client/akte_npc.lua',
   'client/debug.lua'
 }
 

@@ -55,6 +55,16 @@ AddEventHandler('mtj_arrest:nui:toast', function(text)
   SendNUIMessage({ action = "toast", text = tostring(text or "") })
 end)
 
+RegisterNetEvent('mtj_arrest:nui:akte')
+AddEventHandler('mtj_arrest:nui:akte', function(show, data)
+  SendNUIMessage({
+    action = "akteToggle",
+    show   = show or false,
+    data   = data or {}
+  })
+  setFocusSafe()
+end)
+
 AddEventHandler('onResourceStop', function(res)
   if res ~= GetCurrentResourceName() then return end
   setFocusSafe()

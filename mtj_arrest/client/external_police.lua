@@ -82,6 +82,13 @@ local function getNearestExternalPoliceNPCDist(maxRadius)
   return best < 999999.0 and best or 999999.0
 end
 
+-- Spawn-Schutz: kein Szenario für 10s nach jedem Spawn / Resource-Start
+local spawnProtectionUntil = GetGameTimer() + 5000
+
+AddEventHandler('playerSpawned', function()
+  spawnProtectionUntil = GetGameTimer() + 10000
+end)
+
 -- Spieler-Cops Distanz (vom Server geliefert)
 local nearestPolicePlayerDist = 999999.0
 RegisterNetEvent('mtj_arrest:cl:nearestPoliceDist', function(dist)
@@ -112,7 +119,7 @@ CreateThread(function()
     local nearest = math.min(distNPC, distPLY)
 
     local compliance = (Config and Config.ComplianceDistance) or 25.0
-    if nearest <= compliance then
+    if nearest <= compliance and GetGameTimer() > spawnProtectionUntil then
       local now = GetGameTimer()
       if now - lastAnnounce > 1500 then
         dbg(("External police near (%.1fm) -> startScenario"):format(nearest))

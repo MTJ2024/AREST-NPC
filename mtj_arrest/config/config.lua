@@ -61,6 +61,14 @@ Config.AntiDoubleJailTime = 5
 Config.GuardReleaseTime = 8
 Config.RequiredWantedLevel = 0
 
+-- Akte NPC (Polizist am Schalter bei der Wache – zeigt deine Festnahme-Akte)
+Config.AkteNPC = {
+    Position = vector3(449.5, -986.3, 30.7), -- Mission Row PD Eingang
+    Heading = 3.0,
+    Model = "s_f_y_cop_01",
+    InteractRadius = 3.0
+}
+
 -- Debug
 Config.Debug = false
 

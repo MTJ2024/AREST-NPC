@@ -370,3 +370,39 @@ body {
   65%  { opacity: 0.05; }
   100% { opacity: 1; }
 }
+/* === Ermittlungsakte Panel === */
+.akte-name {
+  font-family: var(--font-digi);
+  font-size: 1.1rem;
+  margin: 10px 0 14px 0;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.akte-lines {
+  width: 100%;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.akte-lines li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px;
+  border-bottom: 1px solid #ffffff18;
+  font-size: 1.0rem;
+}
+
+.akte-label {
+  color: #8fa0c8;
+  font-size: 0.95rem;
+}
+
+.akte-value {
+  color: var(--accent3);
+  font-weight: 700;
+  font-family: var(--font-digi);
+  font-size: 1.0rem;
+}

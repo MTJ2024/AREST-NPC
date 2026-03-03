@@ -48,6 +48,7 @@
       dbgLog: byId('mtj-debug-log'),
       dbgBtnClear: byId('mtj-debug-btn-clear'),
       dbgBtnState: byId('mtj-debug-btn-state'),
+      akte: byId('akte'),
     };
 
     // Initial hide to ensure clean state
@@ -55,6 +56,7 @@
     setHidden(el.toast, true);
     setHidden(el.jail, true);
     setHidden(el.aLog, true);
+    setHidden(el.akte, true);
 
     // Ensure UI is hidden globally until something is shown
     setUiVisible(false);
@@ -118,6 +120,7 @@
       el && el.jail && !el.jail.classList.contains('hidden'),
       el && el.aLog && !el.aLog.classList.contains('hidden'),
       el && el.toast && !el.toast.classList.contains('hidden'),
+      el && el.akte && !el.akte.classList.contains('hidden'),
     ];
     const anyVisible = panels.some(Boolean);
     setUiVisible(anyVisible);
@@ -188,6 +191,31 @@
       const done = Math.max(0, Math.min(1, 1 - (secs / state.jailTotal)));
       el.jBar.style.width = `${(done * 100).toFixed(2)}%`;
     }
+  }
+
+  function handleAkteToggle(d) {
+    if (!el.akte) return;
+    if (d.show && d.data) {
+      const data = d.data;
+      const nameEl  = el.akte.querySelector('.akte-name');
+      const linesEl = el.akte.querySelector('.akte-lines');
+      if (nameEl) safeText(nameEl, data.name || 'Unbekannt');
+      if (linesEl) {
+        let lastDate = 'Nie';
+        if (data.lastArrested && data.lastArrested > 0) {
+          lastDate = new Date(data.lastArrested * 1000).toLocaleDateString('de-DE');
+        }
+        linesEl.innerHTML =
+          `<li><span class="akte-label">Festnahmen</span><span class="akte-value">${Number(data.arrests) || 0}</span></li>` +
+          `<li><span class="akte-label">Strafen gesamt</span><span class="akte-value">${(Number(data.totalFines) || 0).toLocaleString('de-DE')}\u00a0\u20ac</span></li>` +
+          `<li><span class="akte-label">Knastzeit</span><span class="akte-value">${Number(data.jailMinutes) || 0}\u00a0min</span></li>` +
+          `<li><span class="akte-label">Letzte Festnahme</span><span class="akte-value">${lastDate}</span></li>`;
+      }
+      setHidden(el.akte, false);
+    } else {
+      setHidden(el.akte, true);
+    }
+    evaluateUiVisibility();
   }
 
   function initDebug() {
@@ -283,6 +311,9 @@
         break;
       case 'jailTick':
         handleJailTick(d);
+        break;
+      case 'akteToggle':
+        handleAkteToggle(d);
         break;
       case 'uiToggle':
         if (typeof d.show !== 'undefined') setUiVisible(!!d.show);

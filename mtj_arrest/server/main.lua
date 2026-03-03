@@ -192,9 +192,20 @@ end
 -- Anti-Doppel-Guard für Jail
 local activeJails = {}
 
+-- Festnahme-Protokoll (Akte) pro Spieler (in-memory)
+local playerAkten = {}
+
+local function getOrCreateAkte(src)
+  if not playerAkten[src] then
+    playerAkten[src] = { arrests = 0, totalFines = 0, jailMinutes = 0, lastArrested = 0 }
+  end
+  return playerAkten[src]
+end
+
 AddEventHandler('playerDropped', function()
   local src = source
   activeJails[src] = nil
+  -- Akte bleibt erhalten solange der Server läuft
 end)
 
 -- Public: von Client aufgerufen
@@ -209,6 +220,14 @@ AddEventHandler('mtj_arrest:serverBeginJail', function(minutes)
   activeJails[src] = now
 
   minutes = tonumber(minutes) or 10
+
+  -- Akte aktualisieren
+  local akte = getOrCreateAkte(src)
+  akte.arrests     = akte.arrests + 1
+  akte.totalFines  = akte.totalFines + (Config.JailFine or 0)
+  akte.jailMinutes = akte.jailMinutes + minutes
+  akte.lastArrested = os.time()
+
   dbg(("[mtj_arrest] clearAllWeaponsAndItems invoked by %d"):format(src))
   pcall(function() clearAllWeaponsAndItems(src) end)
 
@@ -244,6 +263,13 @@ AddEventHandler('mtj_arrest:serverFineAndRelease', function()
   end
   activeJails[src] = now
   dbg(("[mtj_arrest] FineAndRelease for %d"):format(src))
+
+  -- Akte aktualisieren
+  local akte = getOrCreateAkte(src)
+  akte.arrests      = akte.arrests + 1
+  akte.totalFines   = akte.totalFines + (Config.JailFine or 0)
+  akte.lastArrested = os.time()
+
   pcall(function() clearAllWeaponsAndItems(src) end)
   pcall(function() takeJailFine(src) end)
   TriggerClientEvent('mtj_arrest:clientRelease', src)
@@ -257,4 +283,20 @@ RegisterNetEvent('mtj_arrest:serverClearWeapons', function()
   local src = source
   dbg(("[mtj_arrest] clearAllWeaponsAndItems invoked by %d (manual)"):format(src))
   pcall(function() clearAllWeaponsAndItems(src) end)
+end)
+
+-- Akte abrufen
+RegisterNetEvent('mtj_arrest:sv:getAkte')
+AddEventHandler('mtj_arrest:sv:getAkte', function()
+  local src  = source
+  local akte = getOrCreateAkte(src)
+  local name = GetPlayerName(src) or "Unbekannt"
+  TriggerClientEvent('mtj_arrest:cl:showAkte', src, {
+    name         = name,
+    arrests      = akte.arrests,
+    totalFines   = akte.totalFines,
+    jailMinutes  = akte.jailMinutes,
+    lastArrested = akte.lastArrested,
+  })
+  dbg(("[mtj_arrest] Akte gesendet an %d (%s)"):format(src, name))
 end)
