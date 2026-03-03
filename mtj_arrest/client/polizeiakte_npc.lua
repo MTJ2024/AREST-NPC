@@ -251,7 +251,7 @@ CreateThread(function()
   local wasDead = false
   while true do
     Wait(500)
-    local isDead = IsEntityDead(PlayerPedId())
+    local isDead = IsPedDeadOrDying(PlayerPedId(), true)
     if isDead and not wasDead then
       -- NPC und Blip entfernen damit sie bei Respawn sauber neu gespawnt werden
       if akteNpc and DoesEntityExist(akteNpc) then
