@@ -19,7 +19,7 @@ Config.PoliceModels = Config.PoliceModels or {
     "s_m_y_sheriff_01",
     "s_m_m_sheriff_01"
 }
-Config.ComplianceWindow = Config.ComplianceWindow or 10
+Config.ComplianceWindow = Config.ComplianceWindow or 20
 Config.JailMinutesDefault = Config.JailMinutesDefault or 10
 Config.MaxSpawnDistance = Config.MaxSpawnDistance or 40.0
 Config.DisableAmbientCopsAfterSurrender = true
@@ -348,6 +348,7 @@ AddEventHandler('mtj_arrest:clientRelease', function()
   canSurrender = false
   surrendered = false
   complianceWindow = 0
+  scenarioWantedLevel = 0
   hideScenarioUI()
   TriggerEvent('mtj_arrest:nui:jail', false)
   TriggerEvent('mtj_arrest:nui:arrest_log', false)
@@ -417,6 +418,7 @@ AddEventHandler('mtj_arrest:endScenario', function()
   cuffing = false
   jailRequested = false
   complianceWindow = 0
+  scenarioWantedLevel = 0
   hideScenarioUI()
   clearCops()
   setAmbientCopsIgnore(false)
@@ -465,6 +467,7 @@ CreateThread(function()
       cuffing = false
       jailRequested = false
       complianceWindow = 0
+      scenarioWantedLevel = 0
       inJail = false
       jailTime = 0
       resetAllUI()
@@ -488,6 +491,7 @@ AddEventHandler('playerSpawned', function()
   cuffing = false
   jailRequested = false
   complianceWindow = 0
+  scenarioWantedLevel = 0
   inJail = false
   FreezeEntityPosition(PlayerPedId(), false)
   SetEnableHandcuffs(PlayerPedId(), false)
@@ -508,6 +512,7 @@ AddEventHandler('onResourceStop', function(res)
   cuffing = false
   jailRequested = false
   complianceWindow = 0
+  scenarioWantedLevel = 0
   inJail = false
   FreezeEntityPosition(PlayerPedId(), false)
   SetEnableHandcuffs(PlayerPedId(), false)

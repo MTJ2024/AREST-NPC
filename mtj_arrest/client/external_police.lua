@@ -82,19 +82,23 @@ local function getNearestExternalPoliceNPCDist(maxRadius)
   return best < 999999.0 and best or 999999.0
 end
 
--- Spawn-Schutz: kein Szenario für 10s nach jedem Spawn / Resource-Start
-local spawnProtectionUntil = GetGameTimer() + 5000
-
-AddEventHandler('playerSpawned', function()
-  spawnProtectionUntil = GetGameTimer() + 10000
-end)
-
 -- Spieler-Cops Distanz (vom Server geliefert)
 local nearestPolicePlayerDist = 999999.0
 RegisterNetEvent('mtj_arrest:cl:nearestPoliceDist', function(dist)
   if type(dist) == "number" then
     nearestPolicePlayerDist = dist
   end
+end)
+
+-- Spawn-Schutz: kein Szenario für 30s nach jedem Spawn / Resource-Start
+local spawnProtectionUntil = GetGameTimer() + 15000
+local playerHasSpawned = false  -- true, sobald mindestens ein playerSpawned gefeuert hat
+
+AddEventHandler('playerSpawned', function()
+  spawnProtectionUntil = GetGameTimer() + 30000
+  playerHasSpawned = true
+  -- Stale Distanz zurücksetzen, damit kein veralteter Wert aus dem letzten Poll feuert
+  nearestPolicePlayerDist = 999999.0
 end)
 
 -- Server-Polling für Spieler-Cops
@@ -114,8 +118,9 @@ CreateThread(function()
 
   local lastAnnounce = 0
   while true do
-    -- Niemals triggern wenn Spieler tot ist
-    if IsEntityDead(PlayerPedId()) then
+    -- Niemals triggern bevor der Spieler mindestens einmal gespawnt ist
+    -- oder wenn er gerade tot ist
+    if not playerHasSpawned or IsEntityDead(PlayerPedId()) then
       Wait(1000)
     else
       local distNPC = getNearestExternalPoliceNPCDist(c.scanRadius)
@@ -124,8 +129,8 @@ CreateThread(function()
 
       -- NPC-Cops: nur triggern wenn RequiredWantedLevel erfüllt
       local requiredWanted = (Config and Config.RequiredWantedLevel) or 0
-      local npcTrigger = distNPC <= compliance
-          and GetPlayerWantedLevel(PlayerId()) >= requiredWanted
+      local npcTrigger = distNPC <= compliance and
+          GetPlayerWantedLevel(PlayerId()) >= requiredWanted
 
       -- Spieler-Cops (aktive Verfolgung durch echten Polizisten): immer triggern
       local playerTrigger = distPLY <= compliance

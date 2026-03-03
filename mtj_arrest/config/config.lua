@@ -35,7 +35,7 @@ Config.PoliceOffsets = {
     vector3(6.0, 10.0, 0.0)
 }
 Config.MaxSpawnDistance = 40.0 -- Legacy, für Kompatibilität
-Config.ComplianceWindow = 10
+Config.ComplianceWindow = 20
 Config.DisableAmbientCopsAfterSurrender = true
 
 -- Jail (realistische Koordinaten: Bolingbroke Prison Hof)
