@@ -265,15 +265,10 @@ local function playCuffSequence()
   cuffing = false
   dbg("cuff sequence done")
   hideScenarioUI()
-  -- Jail oder Strafe+Freiheit je nach Wanted Level beim Szenario-Start
+  -- Immer: Strafe vor Ort zahlen, kein Knast
   if not inJail then
     jailRequested = true
-    local wanted = scenarioWantedLevel
-    if wanted > 0 and wanted <= (Config.WantedFineFreedom or 2) then
-      TriggerServerEvent('mtj_arrest:serverFineAndRelease')
-    else
-      TriggerServerEvent('mtj_arrest:serverBeginJail', Config.JailMinutesDefault)
-    end
+    TriggerServerEvent('mtj_arrest:serverFineAndRelease')
   end
 end
 
