@@ -314,6 +314,15 @@ AddEventHandler('mtj_arrest:serverFineOnly', function(fineAmount)
   local fine = tonumber(fineAmount) or Config.KleindeliktStrafe or 500
   if fine < 1 then return end
   pcall(function() takeJailFine(src, fine) end)
+  -- Kleindelikt in Polizeiakte eintragen (0 Haftminuten, nur Geldstrafe)
+  if PolizeiakteRecord then
+    local ok, count, status = pcall(PolizeiakteRecord, src, 0, fine)
+    if ok then
+      dbg(("[mtj_arrest] Kleindelikt-Akteneintrag #%s, Status: %s"):format(tostring(count), tostring(status)))
+    else
+      dbg(("[mtj_arrest] Kleindelikt-Akteneintrag fehlgeschlagen: %s"):format(tostring(count)))
+    end
+  end
   dbg(("[mtj_arrest] Kleindelikt-Strafe %d EUR fuer Spieler %d"):format(fine, src))
 end)
 

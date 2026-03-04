@@ -428,14 +428,14 @@ body {
   transition: width 1s linear;
 }
 
-/* Langsamer Puls: 0% bis 100% Sichtbarkeit in 11 Sekunden */
+/* Dauerhafter Puls: Karte immer sichtbar, schnell blinkend fuer Dringlichkeit */
 .card.scenario.pulse-ui {
-  animation: scenarioPulseSlow 11s ease-in-out infinite !important;
+  animation: scenarioPulse 1.5s ease-in-out infinite !important;
 }
 @keyframes scenarioPulseSlow {
-  0%   { opacity: 0; }
-  50%  { opacity: 1; }
-  100% { opacity: 0; }
+  0%   { opacity: 1; }
+  50%  { opacity: 0.65; }
+  100% { opacity: 1; }
 }
 
 /* Jail-UI: GROSS (gleiche Groesse wie Szenario) + langsamer 11s Puls */
@@ -466,7 +466,7 @@ body {
 }
 
 .card.jail.pulse-ui {
-  animation: scenarioPulseSlow 11s ease-in-out infinite !important;
+  animation: scenarioPulseSlow 2.5s ease-in-out infinite !important;
 }
 
 /* Sanfter Puls: 100% bis 60% Sichtbarkeit (nie unsichtbar) */

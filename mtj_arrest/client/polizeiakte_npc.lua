@@ -149,14 +149,9 @@ local function forceCloseAkte()
   akteOpen = false
   akteOpenTime = 0
   SendNUIMessage({ action = "polizeiakteClose" })
-  -- SetNuiFocus aus einem NUI-Callback heraus (fetch) wirkt nicht sofort auf die Kamera.
-  -- Daher auf den naechsten Game-Tick verschieben, damit die Kamera korrekt freigegeben wird.
-  -- Reihenfolge: KeepInput zuerst deaktivieren, dann Focus freigeben.
-  CreateThread(function()
-    Wait(0)
-    SetNuiFocusKeepInput(false)
-    SetNuiFocus(false, false)
-  end)
+  -- Kamera sofort freigeben: KeepInput zuerst deaktivieren, dann Focus freigeben.
+  SetNuiFocusKeepInput(false)
+  SetNuiFocus(false, false)
 end
 
 -- Script-Refresh: Akte schliessen wenn /mtj_refresh gerufen wird
@@ -215,12 +210,13 @@ AddEventHandler('mtj_arrest:kriminalLevelFail', function()
   SendNUIMessage({ action = "kriminalLevelFail" })
 end)
 
--- Sicherheitsnetz: Alle 2 Sekunden pruefen ob NUI-Focus haengt
+-- Sicherheitsnetz: Timeout pruefen + haengenden NUI-Focus freigeben.
+-- Laeuft alle 500ms wenn Akte geschlossen, alle 2s wenn offen — garantiert schnelle Kamerafreigabe.
 -- KEINE ESC-Erkennung — mit SetNuiFocus(true,true) gehen alle Tasten an den Browser,
 -- IsDisabledControlJustPressed funktioniert NICHT bei NUI-Focus!
 CreateThread(function()
   while true do
-    Wait(2000)
+    Wait(akteOpen and 2000 or 500)
     -- Wenn akteOpen aber Timeout laengst abgelaufen → sofort befreien
     if akteOpen and akteOpenTime > 0 and (GetGameTimer() - akteOpenTime) >= AKTE_TIMEOUT then
       print("[mtj_arrest] Sicherheitsnetz: Polizeiakte haengt, zwangsgeschlossen")
