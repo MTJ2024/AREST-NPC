@@ -182,6 +182,9 @@ Config.TodStrafe = {
 Config.KleindeliktSchwelle      = 2       -- 1-2 Sterne: Strafe vor Ort, kein Knast; ab 3 Sternen: Knast
 Config.KleindeliktStrafe        = 500     -- Geldstrafe in EUR beim Kleindelikt (1-2 Sterne)
 Config.KleindeliktNachricht     = "~g~Kleindelikt~s~: Strafe von %d EUR ausgestellt. Du bist auf freiem Fuß!"
+Config.KleindeliktDeliktText    = "Ordnungswidrigkeit / Kleindelikt"  -- Text im Vor-Ort-Zahlung UI
+Config.KleindeliktOfficerName   = "Beamter (NPC)"                     -- Beamtenname im Vor-Ort-Zahlung UI
+Config.KleindeliktPanelDauer    = 2800   -- ms: Anzeigedauer des Vor-Ort-Zahlung Panels (muss mit VOZ_DONE_DISPLAY_MS in app.js uebereinstimmen)
 -- true = Cops schiessen bei Kleindelikt NICHT sofort; sie naehern sich nur und zielen.
 -- Erst wenn der Spieler flieht oder die Compliance-Zeit ablaeuft wird scharfgeschossen.
 Config.KleindeliktNichtSchiessen = true

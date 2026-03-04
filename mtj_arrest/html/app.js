@@ -51,6 +51,12 @@
       aLog: byId('arrest-log'),
       aLogTitle: $('#arrest-log .title'),
       aLogLines: $('#arrest-log .lines'),
+      voz: byId('vorozahlung'),
+      vozOfficer: byId('voz-officer'),
+      vozDelikt: byId('voz-delikt'),
+      vozBetrag: byId('voz-betrag'),
+      vozBar: byId('voz-progress-bar'),
+      vozStatus: byId('voz-status'),
       // debug elements (may be present from index.html)
       dbgRoot: byId('mtj-debug'),
       dbgStatus: byId('mtj-debug-status'),
@@ -66,6 +72,7 @@
     setHidden(el.toast, true);
     setHidden(el.jail, true);
     setHidden(el.aLog, true);
+    setHidden(el.voz, true);
 
     // Ensure UI is hidden globally until something is shown
     setUiVisible(false);
@@ -276,6 +283,7 @@
     const panels = [
       el && el.scenario && !el.scenario.classList.contains('hidden'),
       el && el.jail && !el.jail.classList.contains('hidden'),
+      el && el.voz && !el.voz.classList.contains('hidden'),
     ];
     const anyVisible = panels.some(Boolean);
     setUiVisible(anyVisible);
@@ -288,6 +296,8 @@
     setHidden(el.jail, true);
     if (el.jail) el.jail.classList.remove('pulse-ui');
     setHidden(el.aLog, true);
+    setHidden(el.voz, true);
+    if (el.voz) el.voz.classList.remove('show-ui');
   }
 
   function handleScenarioToggle(d) {
@@ -364,6 +374,55 @@
     if (el.jBar && state.jailTotal > 0) {
       const done = Math.max(0, Math.min(1, 1 - (secs / state.jailTotal)));
       el.jBar.style.width = `${(done * 100).toFixed(2)}%`;
+    }
+  }
+
+  // Dauer (ms) die das Abschluss-Panel nach der Zahlung sichtbar bleibt.
+  // Muss mit dem Wait() in playFineSequence (main.lua) synchron sein.
+  var VOZ_DONE_DISPLAY_MS = 2800;
+
+  var vozAutoHideTimer = null;
+  function handleFineToggle(d) {
+    if (vozAutoHideTimer) { clearTimeout(vozAutoHideTimer); vozAutoHideTimer = null; }
+    if (d.show) {
+      hideAllPanels();
+      safeText(el.vozOfficer, d.officer || 'Polizeibeamter');
+      safeText(el.vozDelikt, d.delikt || 'Ordnungswidrigkeit');
+      var fineAmount = Number(d.fine) || 0;
+      safeText(el.vozBetrag, fineAmount > 0 ? fineAmount.toLocaleString('de-DE') + '\u00A0\u20AC' : '\u2014');
+      if (el.vozBar) el.vozBar.style.width = '0%';
+      if (el.vozStatus) {
+        el.vozStatus.classList.remove('done');
+        safeText(el.vozStatus, d.statusText || 'Zahlung wird verarbeitet\u2026');
+      }
+      setHidden(el.voz, false);
+      if (el.voz) {
+        el.voz.classList.remove('show-ui');
+        void el.voz.offsetWidth; // DOM-Reflow: CSS-Animation bei Wiederverwendung zuruecksetzen
+        el.voz.classList.add('show-ui');
+      }
+      // Kurze Verzoegerung damit CSS transition nach dem initialen width=0% greift
+      setTimeout(function() {
+        if (el.vozBar) el.vozBar.style.width = '100%';
+      }, 120);
+      evaluateUiVisibility();
+    } else {
+      // Abschluss-Status kurz zeigen, dann ausblenden
+      if (d.done && el.vozStatus) {
+        el.vozStatus.classList.add('done');
+        safeText(el.vozStatus, d.doneText || '\u2705 Strafe bezahlt \u2014 Auf freiem Fu\u00df!');
+        if (el.vozBar) el.vozBar.style.width = '100%';
+        vozAutoHideTimer = setTimeout(function() {
+          setHidden(el.voz, true);
+          if (el.voz) el.voz.classList.remove('show-ui');
+          evaluateUiVisibility();
+          vozAutoHideTimer = null;
+        }, VOZ_DONE_DISPLAY_MS);
+      } else {
+        setHidden(el.voz, true);
+        if (el.voz) el.voz.classList.remove('show-ui');
+        evaluateUiVisibility();
+      }
     }
   }
 
@@ -460,6 +519,9 @@
         break;
       case 'jailTick':
         handleJailTick(d);
+        break;
+      case 'fineToggle':
+        handleFineToggle(d);
         break;
       case 'uiToggle':
         if (typeof d.show !== 'undefined') setUiVisible(!!d.show);

@@ -477,7 +477,161 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════
-   Custom Notification — links mittig (über Minimap)
+   Vor-Ort-Zahlung Panel
+   ═══════════════════════════════════════════════════════ */
+.card.vorozahlung {
+  min-width: 460px;
+  max-width: 620px;
+  padding: 34px 44px 28px 44px;
+  animation: none;
+  border-top: 4px solid #22c55e;
+  box-shadow: 0 0 40px 0 #22c55e44, var(--shadow);
+}
+
+.card.vorozahlung.show-ui {
+  animation: vozPop 0.5s cubic-bezier(.22,1.1,.38,1) both;
+}
+
+@keyframes vozPop {
+  0%   { opacity: 0; transform: scale(0.88) translateY(40px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.chip.alt-green {
+  background: linear-gradient(90deg, #14532d 0%, #22c55e 100%);
+  color: #d1fae5;
+  border: 1.5px solid #22c55e88;
+  box-shadow: 0 0 14px #22c55e55;
+  font-size: 1.1rem;
+  padding: 6px 20px;
+  border-radius: 22px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.voz-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.card.vorozahlung .title {
+  font-size: 2.4rem;
+  letter-spacing: 0.12em;
+  color: #22c55e;
+  text-shadow: 0 0 18px #22c55eaa, 0 0 4px #22c55e55;
+}
+
+.voz-officer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 18px;
+  font-size: 1.1rem;
+  opacity: 0.85;
+  letter-spacing: 0.04em;
+}
+
+.voz-icon {
+  font-size: 1.6rem;
+}
+
+.voz-officer-text {
+  font-style: italic;
+  color: #a5f3c9;
+}
+
+/* Quittungs-Layout */
+.voz-receipt {
+  width: 100%;
+  background: #0d1a1488;
+  border: 1.5px solid #22c55e44;
+  border-radius: 14px;
+  padding: 14px 22px 10px 22px;
+  margin-bottom: 18px;
+}
+
+.voz-receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 1.1rem;
+}
+
+.voz-receipt-label {
+  opacity: 0.7;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+}
+
+.voz-receipt-value {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.voz-receipt-divider {
+  height: 1px;
+  background: #22c55e33;
+  margin: 6px 0;
+}
+
+.voz-total-row {
+  margin-top: 4px;
+}
+
+.voz-amount {
+  font-size: 1.7rem !important;
+  font-family: var(--font-digi);
+  color: #22c55e !important;
+  text-shadow: 0 0 14px #22c55ecc, 0 0 4px #22c55e55;
+  letter-spacing: 0.08em;
+}
+
+/* Fortschrittsbalken */
+.voz-progress-wrap {
+  width: 100%;
+  height: 10px;
+  border-radius: 8px;
+  background: #1c2340aa;
+  overflow: hidden;
+  position: relative;
+  margin: 0 0 12px 0;
+}
+
+.voz-progress-bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #14532d, #22c55e, #86efac);
+  border-radius: 8px;
+  box-shadow: 0 0 12px #22c55e88;
+  transition: width 2.8s ease-in-out;
+}
+
+.voz-status {
+  font-size: 1.05rem;
+  text-align: center;
+  letter-spacing: 0.04em;
+  color: #86efac;
+  min-height: 1.4em;
+  transition: color 0.4s;
+}
+
+.voz-status.done {
+  color: #22c55e;
+  font-weight: 700;
+  font-size: 1.2rem;
+  text-shadow: 0 0 12px #22c55eaa;
+}
+
+
    ═══════════════════════════════════════════════════════ */
 .notify-stack {
   position: fixed;

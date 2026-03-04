@@ -59,6 +59,21 @@ AddEventHandler('mtj_arrest:nui:jail_tick', function(seconds)
   SendNUIMessage({ action = "jailTick", seconds = seconds or 0 })
 end)
 
+RegisterNetEvent('mtj_arrest:nui:fine')
+AddEventHandler('mtj_arrest:nui:fine', function(show, fine, officer, delikt, done, doneText)
+  SendNUIMessage({
+    action     = "fineToggle",
+    show       = show or false,
+    fine       = fine or 0,
+    officer    = officer or "Polizeibeamter",
+    delikt     = delikt or "Ordnungswidrigkeit",
+    done       = done or false,
+    doneText   = doneText or "✅ Strafe bezahlt — Auf freiem Fuß!",
+    statusText = show and "Zahlung wird verarbeitet…" or nil
+  })
+  setFocusSafe()
+end)
+
 RegisterNetEvent('mtj_arrest:nui:toast')
 AddEventHandler('mtj_arrest:nui:toast', function(text)
   SendNUIMessage({ action = "toast", text = tostring(text or "") })

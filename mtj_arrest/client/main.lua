@@ -1557,8 +1557,11 @@ local function playFineSequence()
   local msg = (Config.KleindeliktNachricht or "~g~Kleindelikt~s~: Strafe von %d EUR ausgestellt. Du bist auf freiem Fuß!"):format(fine)
   hideScenarioUI()
   hideAllUI()
-  nativeHudSet("fine_notice", "KLEINDELIKT: Strafe " .. fine .. " EUR — Auf freiem Fuß!", 50, 220, 100)
-  nativeNotify(msg, "erfolg")
+
+  -- Vor-Ort-Zahlung NUI-Panel anzeigen
+  local deliktText = Config.KleindeliktDeliktText or "Ordnungswidrigkeit / Kleindelikt"
+  local officerName = Config.KleindeliktOfficerName or "Beamter (NPC)"
+  TriggerEvent('mtj_arrest:nui:fine', true, fine, officerName, deliktText, false, nil)
 
   TriggerServerEvent('mtj_arrest:serverFineOnly', fine)
   TriggerServerEvent('mtj_arrest:dispatch:pursuitEnd', "entlassen")
@@ -1570,8 +1573,15 @@ local function playFineSequence()
   lastKnownWanted = 0
   wantedDeathLockUntil = GetGameTimer() + 5000
 
-  Wait(3000)
-  nativeHudSet("fine_notice", nil)
+  -- Abschluss-Status nach kurzer Verzoegerung setzen (Fortschrittsbalken laeuft 2.8s;
+  -- muss mit VOZ_DONE_DISPLAY_MS in app.js synchron bleiben)
+  local vozPanelMs = Config.KleindeliktPanelDauer or 2800
+  Wait(vozPanelMs)
+  local doneMsg = ("✅ Strafe von %d EUR bezahlt — Auf freiem Fuß!"):format(fine)
+  TriggerEvent('mtj_arrest:nui:fine', false, fine, officerName, deliktText, true, doneMsg)
+  nativeNotify(msg, "erfolg")
+
+  Wait(vozPanelMs)
   cuffing = false
   TriggerEvent('mtj_arrest:endScenario')
   dbg("playFineSequence: Kleindelikt abgeschlossen, Spieler frei")
