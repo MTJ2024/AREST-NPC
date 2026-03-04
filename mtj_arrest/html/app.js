@@ -131,9 +131,12 @@
     if (akteAutoCloseTimer) { clearTimeout(akteAutoCloseTimer); akteAutoCloseTimer = null; }
     akteClosing = false;
     setUiVisible(true);
+    // Heartbeat starten: sendet alle 800ms 'akteAlive' an Lua solange Overlay sichtbar ist
+    startAkteHeartbeat();
 
     // Auto-Close Timer auf JS-Seite: nach 60s automatisch schliessen (Sicherheitsnetz)
-    if (akteAutoCloseTimer) clearTimeout(akteAutoCloseTimer);
+    // clearTimeout hier redundant aber sicher gegen eventuelle Race-Conditions
+    if (akteAutoCloseTimer) { clearTimeout(akteAutoCloseTimer); akteAutoCloseTimer = null; }
     akteAutoCloseTimer = setTimeout(function() {
       var ov = byId('akte-overlay');
       if (ov && !ov.classList.contains('hidden')) {
@@ -191,49 +194,66 @@
 
   var akteClosing = false;
   var akteAutoCloseTimer = null;
+  // Heartbeat: sendet alle 800ms 'akteAlive' an Lua solange die Akte sichtbar ist.
+  // Lua-seitiger Safety-Net schliesst nach 2s ohne Heartbeat (HEARTBEAT_CLOSE_DELAY).
+  // Dies ist der primaere Fallback-Mechanismus wenn closePolizeiakte-Fetch fehlschlaegt.
+  var akteHeartbeatInterval = null;
 
-  function sendCloseRequest(attempt) {
-    attempt = attempt || 1;
-    // AbortController: bricht den Fetch nach 1500ms ab damit der Browser nicht
-    // bis zum 30s NUI-Bridge-Timeout haengt. Lua-seitig wird cb('ok') VOR forceCloseAkte()
-    // aufgerufen, daher ist der normale Fall <100ms. Ist AbortController nicht verfuegbar
-    // (aeltere CEF-Builds), laeuft der Fetch ohne Timeout durch — der Lua Safety-Net
-    // (100ms Fast-Mode) gibt den Focus spaetestens nach 3s frei.
-    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    var timeoutId = ctrl ? setTimeout(function() { ctrl.abort(); }, 1500) : null;
-    var opts = {
+  function startAkteHeartbeat() {
+    stopAkteHeartbeat();
+    akteHeartbeatInterval = setInterval(function() {
+      var ov = byId('akte-overlay');
+      if (!ov || ov.classList.contains('hidden')) {
+        // Overlay wurde inzwischen versteckt — Heartbeat beenden (Lua erkennt Ausfall)
+        stopAkteHeartbeat();
+        return;
+      }
+      fetch('https://mtj_arrest/akteAlive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      }).catch(function() {});  // Fire-and-forget, kein Fehler-Handling noetig
+    }, 800);
+  }
+
+  function stopAkteHeartbeat() {
+    if (akteHeartbeatInterval) {
+      clearInterval(akteHeartbeatInterval);
+      akteHeartbeatInterval = null;
+    }
+  }
+
+  function sendCloseRequest() {
+    // Kein AbortController: lass den Fetch natuerlich abschliessen.
+    // Lua antwortet mit cb('ok') sofort (vor forceCloseAkte), daher normaler Fall < 100ms.
+    // Parallel laeuft der Heartbeat-Timeout (2s) als Fallback falls dieser Fetch fehlschlaegt.
+    fetch('https://mtj_arrest/closePolizeiakte', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({})
-    };
-    if (ctrl) opts.signal = ctrl.signal;
-    fetch('https://mtj_arrest/closePolizeiakte', opts)
-      .then(function() {
-        if (timeoutId) clearTimeout(timeoutId);
-        akteClosing = false;
-      })
-      .catch(function() {
-        if (timeoutId) clearTimeout(timeoutId);
-        // Nach Timeout/Fehler: Focus-Freigabe erfolgt durch Lua Safety-Net (100ms Intervall).
-        // Kein Retry nötig da Lua cb('ok') bereits VOR dem Cleanup ausfuehrt.
-        akteClosing = false;
-      });
+    }).then(function() {
+      akteClosing = false;
+    }).catch(function() {
+      akteClosing = false;
+    });
   }
 
   function closePolizeiakte() {
     var overlay = byId('akte-overlay');
     if (overlay) overlay.classList.add('hidden');
+    stopAkteHeartbeat();   // Heartbeat sofort stoppen: Lua erkennt Ausfall und schliesst
     evaluateUiVisibility();
     if (akteAutoCloseTimer) { clearTimeout(akteAutoCloseTimer); akteAutoCloseTimer = null; }
     if (!akteClosing) {
       akteClosing = true;
-      sendCloseRequest(1);
+      sendCloseRequest();
     }
   }
 
   function forceHideAkte() {
     var overlay = byId('akte-overlay');
     if (overlay) overlay.classList.add('hidden');
+    stopAkteHeartbeat();
     akteClosing = false;
     if (akteAutoCloseTimer) { clearTimeout(akteAutoCloseTimer); akteAutoCloseTimer = null; }
     evaluateUiVisibility();

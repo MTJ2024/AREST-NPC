@@ -142,23 +142,27 @@ end
 
 -- Akte-Daten vom Server empfangen -> UI oeffnen
 local akteOpenTime = 0
-local AKTE_TIMEOUT = 60000 -- 60 Sekunden max offen
+local AKTE_TIMEOUT = 60000  -- 60 Sekunden absoluter Max-Timeout
 local safetyNetFastUntil = 0  -- Zeitstempel bis zu dem der Safety-Net-100ms-Modus gilt
+-- Heartbeat-Tracking: JS sendet alle 800ms 'akteAlive' waehrend die Akte sichtbar ist.
+-- Wenn die Signale ausbleiben (Overlay geschlossen), schliesst das Safety-Net nach
+-- HEARTBEAT_CLOSE_DELAY Millisekunden selbst. lastJsHeartbeat==0 = noch kein Heartbeat
+-- empfangen (Fallback: AKTE_TIMEOUT bleibt aktiv).
+local lastJsHeartbeat = 0
+local HEARTBEAT_CLOSE_DELAY = 2000  -- ms ohne Heartbeat -> Force-Close
 
 local function forceCloseAkte()
   -- IMMER ausfuehren, auch wenn akteOpen==false (Sicherheitsnetz)
   akteOpen = false
   akteOpenTime = 0
+  lastJsHeartbeat = 0
   -- Sicherheitsnetz fuer 3s in den 100ms-Schnellmodus schalten
   safetyNetFastUntil = GetGameTimer() + 3000
   SendNUIMessage({ action = "polizeiakteClose" })
-  -- Kamera-Freigabe in eigenem Thread: SetNuiFocus darf NICHT aus dem NUI-Callback-Kontext
-  -- heraus blockieren (wuerde sonst ~30s haengen bis NUI-Bridge-Timeout). Dedizierter Thread
-  -- laeuft auf dem naechsten Game-Frame und gibt Focus garantiert sofort frei.
-  CreateThread(function()
-    SetNuiFocusKeepInput(false)
-    SetNuiFocus(false, false)
-  end)
+  -- Kamera direkt freigeben. cb('ok') wurde bereits VOR diesem Aufruf gesetzt,
+  -- daher ist hier kein NUI-Bridge-Deadlock mehr moeglich.
+  SetNuiFocusKeepInput(false)
+  SetNuiFocus(false, false)
 end
 
 -- Script-Refresh: Akte schliessen wenn /mtj_refresh gerufen wird
@@ -176,6 +180,7 @@ AddEventHandler('mtj_arrest:clientFullAkte', function(akte)
   })
   SetNuiFocus(true, true)
   akteOpenTime = GetGameTimer()
+  lastJsHeartbeat = 0  -- wird beim ersten JS-Heartbeat gesetzt
 
   -- Eigener Timer-Thread fuer DIESE Oeffnung: schliesst nach AKTE_TIMEOUT garantiert
   local openedAt = akteOpenTime
@@ -189,12 +194,20 @@ AddEventHandler('mtj_arrest:clientFullAkte', function(akte)
   end)
 end)
 
--- NUI Callback: Akte schliessen (JS fetch erfolgreich)
--- cb('ok') ZUERST aufrufen: gibt den JS-Fetch sofort frei und verhindert den NUI-Bridge-Deadlock.
--- forceCloseAkte() laeuft danach (SetNuiFocus im eigenen Thread via CreateThread).
+-- NUI Callback: Akte schliessen (primaerer Pfad)
+-- cb('ok') ZUERST aufrufen: gibt den JS-Fetch sofort frei.
+-- forceCloseAkte() laeuft danach und ruft SetNuiFocus direkt auf (kein CreateThread).
 RegisterNUICallback('closePolizeiakte', function(data, cb)
   cb('ok')
   forceCloseAkte()
+end)
+
+-- NUI Callback: Heartbeat — JS sendet diesen alle 800ms waehrend die Akte sichtbar ist.
+-- Wenn die Akte geschlossen wird (Overlay hidden), stoppt JS den Heartbeat.
+-- Das Safety-Net erkennt den Ausfall und schliesst nach HEARTBEAT_CLOSE_DELAY ms.
+RegisterNUICallback('akteAlive', function(data, cb)
+  lastJsHeartbeat = GetGameTimer()  -- immer updaten, Safety-Net-Check ist separat durch akteOpen gewaehrt
+  cb('ok')
 end)
 
 -- NUI Callback: Akte aktualisieren (Refresh-Button im UI)
@@ -219,21 +232,28 @@ AddEventHandler('mtj_arrest:kriminalLevelFail', function()
   SendNUIMessage({ action = "kriminalLevelFail" })
 end)
 
--- Sicherheitsnetz: Timeout pruefen + haengenden NUI-Focus freigeben.
--- Laeuft 100ms direkt nach einer Close-Anfrage (erste 3s), danach 500ms.
--- KEINE ESC-Erkennung — mit SetNuiFocus(true,true) gehen alle Tasten an den Browser,
--- IsDisabledControlJustPressed funktioniert NICHT bei NUI-Focus!
+-- Sicherheitsnetz: Focus freigeben + Timeouts pruefen.
+-- Laeuft alle 100ms wenn im Fast-Modus (3s nach forceCloseAkte), sonst alle 500ms.
+-- Heartbeat-Check: wenn JS kein akteAlive mehr sendet (Overlay wurde geschlossen),
+-- nach HEARTBEAT_CLOSE_DELAY ms schliessen. Greift auch wenn closePolizeiakte-Callback
+-- nicht ankommt (z.B. bei transienten NUI-HTTP-Problemen).
 CreateThread(function()
   while true do
     local interval = (GetGameTimer() < safetyNetFastUntil) and 100 or 500
     Wait(interval)
-    -- Wenn akteOpen aber Timeout laengst abgelaufen → sofort befreien
-    if akteOpen and akteOpenTime > 0 and (GetGameTimer() - akteOpenTime) >= AKTE_TIMEOUT then
-      print("[mtj_arrest] Sicherheitsnetz: Polizeiakte haengt, zwangsgeschlossen")
-      forceCloseAkte()
+    if akteOpen then
+      local now = GetGameTimer()
+      -- Heartbeat-Timeout: JS hat Overlay geschlossen aber closePolizeiakte-Callback kam nicht an
+      if lastJsHeartbeat > 0 and (now - lastJsHeartbeat) >= HEARTBEAT_CLOSE_DELAY then
+        print("[mtj_arrest] Heartbeat-Timeout: Akte JS-seitig geschlossen, zwangsschliesse")
+        forceCloseAkte()
+      -- Absoluter Timeout als letzter Fallback
+      elseif akteOpenTime > 0 and (now - akteOpenTime) >= AKTE_TIMEOUT then
+        print("[mtj_arrest] Sicherheitsnetz: Polizeiakte absoluter Timeout, zwangsgeschlossen")
+        forceCloseAkte()
+      end
     end
-    -- Zusaetzlich: Wenn akteOpen==false aber NUI-Focus noch aktiv (Restfehler)
-    -- FiveM hat kein IsNuiFocused(), daher vorsichtshalber immer freigeben wenn nicht offen
+    -- Wenn akteOpen==false aber NUI-Focus noch aktiv (Restfehler nach Schliessen)
     if not akteOpen then
       SetNuiFocusKeepInput(false)
       SetNuiFocus(false, false)
