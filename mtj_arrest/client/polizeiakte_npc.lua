@@ -143,15 +143,22 @@ end
 -- Akte-Daten vom Server empfangen -> UI oeffnen
 local akteOpenTime = 0
 local AKTE_TIMEOUT = 60000 -- 60 Sekunden max offen
+local safetyNetFastUntil = 0  -- Zeitstempel bis zu dem der Safety-Net-100ms-Modus gilt
 
 local function forceCloseAkte()
   -- IMMER ausfuehren, auch wenn akteOpen==false (Sicherheitsnetz)
   akteOpen = false
   akteOpenTime = 0
+  -- Sicherheitsnetz fuer 3s in den 100ms-Schnellmodus schalten
+  safetyNetFastUntil = GetGameTimer() + 3000
   SendNUIMessage({ action = "polizeiakteClose" })
-  -- Kamera sofort freigeben: KeepInput zuerst deaktivieren, dann Focus freigeben.
-  SetNuiFocusKeepInput(false)
-  SetNuiFocus(false, false)
+  -- Kamera-Freigabe in eigenem Thread: SetNuiFocus darf NICHT aus dem NUI-Callback-Kontext
+  -- heraus blockieren (wuerde sonst ~30s haengen bis NUI-Bridge-Timeout). Dedizierter Thread
+  -- laeuft auf dem naechsten Game-Frame und gibt Focus garantiert sofort frei.
+  CreateThread(function()
+    SetNuiFocusKeepInput(false)
+    SetNuiFocus(false, false)
+  end)
 end
 
 -- Script-Refresh: Akte schliessen wenn /mtj_refresh gerufen wird
@@ -183,9 +190,11 @@ AddEventHandler('mtj_arrest:clientFullAkte', function(akte)
 end)
 
 -- NUI Callback: Akte schliessen (JS fetch erfolgreich)
+-- cb('ok') ZUERST aufrufen: gibt den JS-Fetch sofort frei und verhindert den NUI-Bridge-Deadlock.
+-- forceCloseAkte() laeuft danach (SetNuiFocus im eigenen Thread via CreateThread).
 RegisterNUICallback('closePolizeiakte', function(data, cb)
-  forceCloseAkte()
   cb('ok')
+  forceCloseAkte()
 end)
 
 -- NUI Callback: Akte aktualisieren (Refresh-Button im UI)
@@ -211,12 +220,13 @@ AddEventHandler('mtj_arrest:kriminalLevelFail', function()
 end)
 
 -- Sicherheitsnetz: Timeout pruefen + haengenden NUI-Focus freigeben.
--- Laeuft alle 500ms wenn Akte geschlossen, alle 2s wenn offen — garantiert schnelle Kamerafreigabe.
+-- Laeuft 100ms direkt nach einer Close-Anfrage (erste 3s), danach 500ms.
 -- KEINE ESC-Erkennung — mit SetNuiFocus(true,true) gehen alle Tasten an den Browser,
 -- IsDisabledControlJustPressed funktioniert NICHT bei NUI-Focus!
 CreateThread(function()
   while true do
-    Wait(akteOpen and 2000 or 500)
+    local interval = (GetGameTimer() < safetyNetFastUntil) and 100 or 500
+    Wait(interval)
     -- Wenn akteOpen aber Timeout laengst abgelaufen → sofort befreien
     if akteOpen and akteOpenTime > 0 and (GetGameTimer() - akteOpenTime) >= AKTE_TIMEOUT then
       print("[mtj_arrest] Sicherheitsnetz: Polizeiakte haengt, zwangsgeschlossen")

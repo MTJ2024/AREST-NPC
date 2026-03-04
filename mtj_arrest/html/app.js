@@ -194,19 +194,30 @@
 
   function sendCloseRequest(attempt) {
     attempt = attempt || 1;
-    fetch('https://mtj_arrest/closePolizeiakte', {
+    // AbortController: bricht den Fetch nach 1500ms ab damit der Browser nicht
+    // bis zum 30s NUI-Bridge-Timeout haengt. Lua-seitig wird cb('ok') VOR forceCloseAkte()
+    // aufgerufen, daher ist der normale Fall <100ms. Ist AbortController nicht verfuegbar
+    // (aeltere CEF-Builds), laeuft der Fetch ohne Timeout durch — der Lua Safety-Net
+    // (100ms Fast-Mode) gibt den Focus spaetestens nach 3s frei.
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timeoutId = ctrl ? setTimeout(function() { ctrl.abort(); }, 1500) : null;
+    var opts = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({})
-    }).then(function() {
-      akteClosing = false;
-    }).catch(function() {
-      if (attempt < 3) {
-        setTimeout(function() { sendCloseRequest(attempt + 1); }, 200 * attempt);
-      } else {
+    };
+    if (ctrl) opts.signal = ctrl.signal;
+    fetch('https://mtj_arrest/closePolizeiakte', opts)
+      .then(function() {
+        if (timeoutId) clearTimeout(timeoutId);
         akteClosing = false;
-      }
-    });
+      })
+      .catch(function() {
+        if (timeoutId) clearTimeout(timeoutId);
+        // Nach Timeout/Fehler: Focus-Freigabe erfolgt durch Lua Safety-Net (100ms Intervall).
+        // Kein Retry nötig da Lua cb('ok') bereits VOR dem Cleanup ausfuehrt.
+        akteClosing = false;
+      });
   }
 
   function closePolizeiakte() {
