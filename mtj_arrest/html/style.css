@@ -380,7 +380,7 @@ body {
 
 .card.scenario .title {
   font-size: 3.2rem;
-  letter-spacing: 0.10em;
+  letter-spacing: 0.1em;
 }
 
 .card.scenario .chip {
@@ -448,7 +448,7 @@ body {
 
 .card.jail .title {
   font-size: 3.2rem;
-  letter-spacing: 0.10em;
+  letter-spacing: 0.1em;
 }
 
 .card.jail .chip {
@@ -505,7 +505,7 @@ body {
   font-size: 1.1rem;
   padding: 6px 20px;
   border-radius: 22px;
-  letter-spacing: 0.10em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   font-weight: 700;
 }

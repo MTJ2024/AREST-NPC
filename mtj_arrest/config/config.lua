@@ -444,10 +444,11 @@ Config.PolizeiakteNPC = {
 -- ║  Wanted-Level und das Szenario startet nicht fuer sie.          ║
 -- ║  Aktiviert = false  →  alle Spieler sind betroffen              ║
 -- ║  Aktiviert = true   →  Jobs/Admins sind exempt                  ║
+-- ║  Job-Wechsel wird live erkannt (esx:setJob).                    ║
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.JobWhitelist = {
     Aktiviert   = true,
-    Jobs        = { "police", "sheriff", "fib", "swat" },  -- ESX-Jobnamen
+    Jobs        = { "police", "sheriff", "fib", "swat", "ambulance", "doj" },  -- ESX-Jobnamen
     AdminAce    = "command.mtj_admin",                     -- Ace-Permission fuer Admin-Exempt
 }
 

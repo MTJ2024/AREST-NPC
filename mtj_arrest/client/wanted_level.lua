@@ -17,6 +17,10 @@ local consecutiveZeroChecks = 0  -- Zaehlt wie oft hintereinander Wanted=0 geles
 local ZERO_CHECKS_REQUIRED = 3  -- 3x hintereinander Wanted=0 (= 6 Sekunden) bevor Reset
 local isExempt = false  -- true = Spieler ist exempt (Police/Admin), kein Szenario
 
+-- Globale Getter-Funktion: andere Dateien (external_police.lua, main.lua) koennen diesen
+-- Status abfragen ohne direkt auf die lokale Variable zuzugreifen.
+function IsPlayerExempt() return isExempt end
+
 -- Exempt-Status vom Server empfangen
 RegisterNetEvent('mtj_arrest:cl:setExempt')
 AddEventHandler('mtj_arrest:cl:setExempt', function(exempt)
@@ -34,6 +38,12 @@ end)
 -- Listen for scenario end to allow re-triggering
 AddEventHandler('mtj_arrest:endScenario', function()
   scenarioTriggered = false
+end)
+
+-- ESX Client: Job-Wechsel → Exempt-Status vom Server neu abfragen.
+-- Tritt z.B. ein wenn ein Polizist /duty macht oder den Job wechselt.
+AddEventHandler('esx:setJob', function(job)
+  TriggerServerEvent('mtj_arrest:sv:checkExempt')
 end)
 
 AddEventHandler('playerSpawned', function()

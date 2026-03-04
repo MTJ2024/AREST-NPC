@@ -1799,8 +1799,14 @@ end)
 
 RegisterNetEvent('mtj_arrest:startScenario')
 AddEventHandler('mtj_arrest:startScenario', function()
-  -- Exempt-Status wird server-seitig geprueft und via wanted_level.lua blockiert.
-  -- Ein client-seitiger Ace-Check entfaellt: IsPlayerAceAllowed ist nur server-seitig verfuegbar.
+  -- Job-Freigabe: Spieler mit freigegebenen Jobs (z.B. police) sind exempt → kein Szenario.
+  if IsPlayerExempt and IsPlayerExempt() then
+    dbg("startScenario: Spieler ist Job-exempt — abgebrochen")
+    SetPlayerWantedLevel(PlayerId(), 0, false)
+    SetPlayerWantedLevelNow(PlayerId(), false)
+    ClearPlayerWantedLevel(PlayerId())
+    return
+  end
   if scenarioActive then
     dbg("startScenario: already active")
     return

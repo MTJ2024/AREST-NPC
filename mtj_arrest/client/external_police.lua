@@ -118,14 +118,19 @@ CreateThread(function()
 
     local compliance = (Config and Config.ComplianceDistance) or 25.0
     if nearest <= compliance then
-      local now = GetGameTimer()
-      if now - lastAnnounce > 1500 then
-        dbg(("External police near (%.1fm) -> startScenario"):format(nearest))
-        lastAnnounce = now
+      -- Job-Freigabe: Spieler mit freigegebenen Jobs (z.B. police) bekommen kein Szenario
+      if IsPlayerExempt and IsPlayerExempt() then
+        Wait(c.scanInterval)
+      else
+        local now = GetGameTimer()
+        if now - lastAnnounce > 1500 then
+          dbg(("External police near (%.1fm) -> startScenario"):format(nearest))
+          lastAnnounce = now
+        end
+        -- main.lua ignoriert Doppelaufrufe (prüft scenarioActive intern)
+        TriggerEvent('mtj_arrest:startScenario')
+        Wait(2000)
       end
-      -- main.lua ignoriert Doppelaufrufe (prüft scenarioActive intern)
-      TriggerEvent('mtj_arrest:startScenario')
-      Wait(2000)
     else
       Wait(c.scanInterval)
     end

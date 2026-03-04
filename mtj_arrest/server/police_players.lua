@@ -140,7 +140,16 @@ AddEventHandler('playerSpawned', function()
   SetTimeout(3000, function() pushExempt(src) end)
 end)
 
--- Client kann jederzeit neu abfragen (z.B. nach Job-Wechsel)
+-- ESX: Job-Wechsel live erkennen → Exempt-Status sofort aktualisieren
+-- Damit werden Spieler, die z.B. /duty machen, sofort freigestellt oder eingesetzt.
+AddEventHandler('esx:setJob', function(source, job, lastJob)
+  local src = source
+  -- Kurze Verzoegerung, damit ESX den Job intern gesetzt hat
+  SetTimeout(500, function() pushExempt(src) end)
+  dbg(("esx:setJob -> Spieler %d: %s → %s"):format(src, tostring(lastJob and lastJob.name), tostring(job and job.name)))
+end)
+
+-- Client kann jederzeit neu abfragen (z.B. nach Job-Wechsel oder Reconnect)
 RegisterNetEvent('mtj_arrest:sv:checkExempt')
 AddEventHandler('mtj_arrest:sv:checkExempt', function()
   pushExempt(source)
