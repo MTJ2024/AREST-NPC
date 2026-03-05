@@ -169,9 +169,12 @@ CreateThread(function()
         clearRoadblocks()
         clearHelis()
         clearPoliceVehicles()
-        setAmbientCopsIgnore(false)
       end
-      -- Wanted auf 0 + 5-Sekunden-Sperre (verhindert sofortigen Neustart)
+      -- Sofort: Ambient-Cops ignorieren + Wanted auf 0 setzen.
+      -- SetPoliceIgnorePlayer(PlayerId(), true) kommt ZUERST, damit keine einzige Frame-Luecke
+      -- existiert in der Wanted>0 und aktive Cops gleichzeitig vorhanden sind.
+      -- Gilt auch wenn kein Szenario aktiv war (z.B. Tod vor Szenario-Start).
+      SetPoliceIgnorePlayer(PlayerId(), true)
       SetPlayerWantedLevel(PlayerId(), 0, false)
       SetPlayerWantedLevelNow(PlayerId(), false)
       ClearPlayerWantedLevel(PlayerId())
@@ -311,8 +314,11 @@ CreateThread(function()
       SetMaxWantedLevel(5)
       lastMaxWantedCheck = now
     end
+    -- Spieler tot: keine Wanted-Wartung, sofort weiter
+    if IsPedDeadOrDying(PlayerPedId(), true) then
+      goto continue_wm
+    end
     if scenarioActive and not surrendered and not cuffed and not inJail then
-      -- === Entkommen-Pruefung: Ist ein Cop in der Naehe? ===
       local esc = Config.Entkommen
       local escapeEnabled = esc and esc.Aktiviert
       local copNearby = false
@@ -431,7 +437,7 @@ CreateThread(function()
       -- GTA loescht Fahndungssterne schnell ohne aktiven Einsatz; wir stellen sie
       -- sofort wieder her, damit wanted_level.lua beim naechsten Tick zuverlaessig
       -- einen gueltigen Wanted-Level vorfindet und das Szenario neu startet.
-      if lastKnownWanted > 0 and not inJail then
+      if lastKnownWanted > 0 and not inJail and not IsPedDeadOrDying(PlayerPedId(), true) then
         local wanted = GetPlayerWantedLevel(PlayerId())
         if wanted > 0 then
           wantedDropCount = 0
@@ -442,6 +448,7 @@ CreateThread(function()
         end
       end
     end
+    ::continue_wm::
   end
 end)
 
@@ -1838,6 +1845,11 @@ AddEventHandler('mtj_arrest:startScenario', function()
     return
   end
   local now = GetGameTimer()
+  -- Kein Szenario wenn Spieler tot ist (z.B. Race Condition vor Tod-Erkennung)
+  if IsPedDeadOrDying(PlayerPedId(), true) then
+    dbg("startScenario: Spieler ist tot — abgebrochen")
+    return
+  end
   -- Spawn-Sperre pruefen: verhindert Szenario-Start waehrend des Spawn-Vorgangs (Respawn-Grace).
   -- Gilt fuer ALLE Aufrufer (auch external_police.lua), nicht nur fuer wanted_level.lua.
   if wantedDeathLockUntil > 0 and now < wantedDeathLockUntil then

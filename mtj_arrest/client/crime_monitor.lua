@@ -81,6 +81,14 @@ CreateThread(function()
     -- CrimeMonitor deaktiviert?
     if cfg and cfg.Aktiviert == false then goto continue end
 
+    -- Spieler ist tot: sofort alles zuruecksetzen, kein Crime-Wanted
+    -- Diese Pruefung laeuft BEVOR der DeathLock gesetzt wird (200ms Fenster nach Tod)
+    -- und verhindert, dass pendingWanted in dieser Luecke wiederholt angewendet wird.
+    if IsPedDeadOrDying(PlayerPedId(), true) then
+      shootingSince = 0; shootingWanted = false; pendingWanted = 0
+      goto continue
+    end
+
     -- Grace-Period nach Tod / Respawn: kein Crime-Wanted (Spieler ist gerade gestorben)
     local deathLock = (GetWantedDeathLockUntil and GetWantedDeathLockUntil()) or 0
     if deathLock > 0 and GetGameTimer() < deathLock then

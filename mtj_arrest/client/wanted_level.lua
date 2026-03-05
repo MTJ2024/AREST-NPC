@@ -71,7 +71,8 @@ CreateThread(function()
     -- Wanted-Sperre nach Tod pruefen (5 Sekunden nach Tod kein Re-Trigger)
     -- GetWantedDeathLockUntil ist in main.lua definiert, defensive Pruefung fuer Ladereihenfolge
     local deathLock = (GetWantedDeathLockUntil and GetWantedDeathLockUntil()) or 0
-    local deathLockActive = deathLock > 0 and GetGameTimer() < deathLock
+    local deathLockActive = (deathLock > 0 and GetGameTimer() < deathLock)
+      or IsPedDeadOrDying(PlayerPedId(), true)
     if deathLockActive then
       consecutiveZeroChecks = 0
       scenarioTriggered = false
