@@ -408,22 +408,18 @@ CreateThread(function()
           evasionNotifiedAt = 0
           nativeHudSet("evasion", nil) -- HUD-Zeile entfernen
         end
-        -- Wanted aktiv halten — aber mit Grace Period!
-        -- Wenn GTA 6x hintereinander (3s) Wanted=0 meldet, ist es ECHT (Server hat es entfernt)
+        -- Wanted aktiv halten: GTA loescht Fahndungssterne sobald Spieler aus Sichtlinie verschwindet.
+        -- Im aktiven Szenario (Cop in Naehe oder Entkommen deaktiviert) Wanted sofort wieder anwenden —
+        -- das Szenario endet nur noch ueber explizite Pfade (E-Taste, Timer-Ablauf, Entkommen, endScenario).
         local wanted = GetPlayerWantedLevel(PlayerId())
         if wanted > 0 then
           lastKnownWanted = wanted
           wantedDropCount = 0
         elseif lastKnownWanted > 0 then
-          wantedDropCount = wantedDropCount + 1
-          if wantedDropCount >= 6 then
-            -- Anhaltender Drop (3s): Server/Spieler hat Wanted entfernt → sofort Szenario beenden
-            dbg("WantedMaintenance: Wanted seit 3s auf 0 — beende Szenario sofort")
-            lastKnownWanted = 0
-            wantedDropCount = 0
-            wantedDeathLockUntil = GetGameTimer() + 5000 -- 5s Sperre gegen Sofort-Neustart
-            TriggerEvent('mtj_arrest:endScenario')
-          end
+          -- GTA hat Wanted gecleart (Sichtlinienverlust o.ae.) → sofort wieder anwenden.
+          SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
+          SetPlayerWantedLevelNow(PlayerId(), false)
+          wantedDropCount = 0
         end
       end
     else
@@ -1484,10 +1480,19 @@ local function runNegotiationAndCompliance()
       if complianceWindow <= 0 then
         canSurrender = false
         hideScenarioUI()
-        nativeHudSet("combat_status", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
-        reactivatePolice()
-        startCombatMaintenance()
-        dbg("Surrender window abgelaufen!")
+        local curWanted = getEffectiveWanted()
+        local schwelle = Config.KleindeliktSchwelle or 2
+        if curWanted <= schwelle then
+          -- Kleindelikt (1-2 Sterne): Compliance-Fenster abgelaufen → Strafe automatisch ausstellen
+          dbg("Kleindelikt: Compliance-Fenster abgelaufen, automatische Strafe (wanted=" .. curWanted .. ")")
+          surrendered = true
+          playFineSequence()
+        else
+          nativeHudSet("combat_status", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
+          reactivatePolice()
+          startCombatMaintenance()
+          dbg("Surrender window abgelaufen!")
+        end
       end
     else
       break
