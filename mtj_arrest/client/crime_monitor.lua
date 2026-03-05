@@ -19,6 +19,22 @@ local shootingWanted = false -- Hat Schießen bereits 1★ ausgelöst (Reset bei
 local deathSeen      = {}    -- [entityHandle] → GameTimer-ts (bereits gezählt, no double-count)
 local lastCleanup    = 0
 
+-- pendingWanted: der Wanted-Level den crime_monitor setzen will.
+-- GTA/FiveM loescht Wanted sofort im naechsten Frame (Multiplayer-Eigenheit).
+-- Diesen Wert halten wir jedes Tick aufrecht bis das Szenario startet und
+-- selbst die Wanted-Verwaltung uebernimmt (main.lua WantedMaintenance).
+local pendingWanted = 0
+
+-- Sobald das Szenario startet, uebernimmt main.lua die Wanted-Verwaltung.
+-- pendingWanted zuruecksetzen damit crime_monitor nicht mehr eingreift.
+AddEventHandler('mtj_arrest:startScenario', function()
+  pendingWanted = 0
+end)
+-- Nach Szenario-Ende (Verhaftung, Entkommen, Neustart) ebenfalls zuruecksetzen.
+AddEventHandler('mtj_arrest:endScenario', function()
+  pendingWanted = 0
+end)
+
 -- Cop-Modell-Hashes (lazy built once): Tötung von Cops zählt NICHT als Crime
 -- (Cops werden vom Szenario selbst verwaltet und sterben im Kampf)
 local COP_HASHES = nil
@@ -42,13 +58,16 @@ local function isCopPed(ped)
 end
 
 -- Wanted-Level erhöhen (respektiert Config.CrimeMonitor.MaxWanted)
+-- Setzt auch pendingWanted, damit der Wert per Tick aufrechterhalten wird
+-- bis das Szenario startet.
 local function addWanted(stars)
   local cfg  = Config and Config.CrimeMonitor
   local maxW = (cfg and cfg.MaxWanted) or 5
   local pid  = PlayerId()
-  local cur  = GetPlayerWantedLevel(pid)
+  local cur  = math.max(GetPlayerWantedLevel(pid), pendingWanted)
   local nw   = math.min(cur + stars, maxW)
   if nw > cur then
+    pendingWanted = nw
     SetPlayerWantedLevel(pid, nw, false)
     SetPlayerWantedLevelNow(pid, false)
   end
@@ -65,14 +84,28 @@ CreateThread(function()
     -- Grace-Period nach Tod / Respawn: kein Crime-Wanted (Spieler ist gerade gestorben)
     local deathLock = (GetWantedDeathLockUntil and GetWantedDeathLockUntil()) or 0
     if deathLock > 0 and GetGameTimer() < deathLock then
-      shootingSince = 0; shootingWanted = false
+      shootingSince = 0; shootingWanted = false; pendingWanted = 0
       goto continue
     end
 
     -- Exempt-Spieler (Police/Admin): niemals Wanted vergeben
     if IsPlayerExempt and IsPlayerExempt() then
-      shootingSince = 0; shootingWanted = false
+      shootingSince = 0; shootingWanted = false; pendingWanted = 0
       goto continue
+    end
+
+    -- ── pendingWanted aufrechterhalten (vor Szenario-Start) ─────────────────
+    -- GTA/FiveM loescht SetPlayerWantedLevel() sofort im naechsten Frame.
+    -- Wir stellen den Wert jedes Tick (500 ms) wieder her, bis das Szenario
+    -- startet und main.lua die Verwaltung uebernimmt.
+    if pendingWanted > 0 then
+      local curW = GetPlayerWantedLevel(PlayerId())
+      if curW == 0 then
+        SetPlayerWantedLevel(PlayerId(), pendingWanted, false)
+        SetPlayerWantedLevelNow(PlayerId(), false)
+      elseif curW > pendingWanted then
+        pendingWanted = curW  -- extern erhoeht (z.B. durch Eskalation)
+      end
     end
 
     -- Szenario läuft bereits: Wanted wird vom Szenario selbst verwaltet (Eskalation, Nachlassen etc.)
