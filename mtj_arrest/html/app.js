@@ -127,6 +127,7 @@
     if (statusBar) statusBar.setAttribute('data-status', akte.status || 'unbescholten');
 
     overlay.classList.remove('hidden');
+    document.body.style.cursor = 'default'; // NUI-Cursor wiederherstellen
     // Vorherige Close-Operation abbrechen falls noch laufend
     if (akteAutoCloseTimer) { clearTimeout(akteAutoCloseTimer); akteAutoCloseTimer = null; }
     akteClosing = false;
@@ -241,6 +242,7 @@
   function closePolizeiakte() {
     var overlay = byId('akte-overlay');
     if (overlay) overlay.classList.add('hidden');
+    document.body.style.cursor = 'none'; // NUI-Cursor sofort ausblenden (kein Warten auf Lua-Callback)
     stopAkteHeartbeat();   // Heartbeat sofort stoppen: Lua erkennt Ausfall und schliesst
     evaluateUiVisibility();
     if (akteAutoCloseTimer) { clearTimeout(akteAutoCloseTimer); akteAutoCloseTimer = null; }
@@ -253,6 +255,7 @@
   function forceHideAkte() {
     var overlay = byId('akte-overlay');
     if (overlay) overlay.classList.add('hidden');
+    document.body.style.cursor = 'none'; // NUI-Cursor sofort ausblenden
     stopAkteHeartbeat();
     akteClosing = false;
     if (akteAutoCloseTimer) { clearTimeout(akteAutoCloseTimer); akteAutoCloseTimer = null; }

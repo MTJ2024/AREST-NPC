@@ -206,7 +206,9 @@ AddEventHandler('mtj_arrest:clientFullAkte', function(akte)
     akte = akte
   })
   SetNuiFocus(true, true)
-  akteLog("clientFullAkte: SetNuiFocus(true,true) gesetzt")
+  SetNuiFocusKeepInput(true)  -- Kamera NIE sperren: Spieler kann sich jederzeit umsehen,
+                              -- auch wenn NUI-Callback (JS→Lua) nicht zurueckkommt
+  akteLog("clientFullAkte: SetNuiFocus(true,true) + SetNuiFocusKeepInput(true) → Kamera frei, Cursor aktiv")
   akteOpen = true
   akteRequested = false
   akteOpenTime = GetGameTimer()
