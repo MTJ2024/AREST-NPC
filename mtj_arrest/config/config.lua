@@ -440,6 +440,21 @@ Config.PolizeiakteNPC = {
 }
 
 -- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              VERBRECHENSERKENNUNG (GTA Online Stil)             ║
+-- ║  Da FiveMs natives Verbrechenssystem nicht zuverlässig          ║
+-- ║  funktioniert, erkennt crime_monitor.lua Taten client-seitig.   ║
+-- ║  Tötung von Zivilisten und Dauerschießen → Wanted-Level erhöht  ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+Config.CrimeMonitor = {
+    Aktiviert           = true,   -- true = Verbrechenserkennung aktiv
+    KillGibtWanted      = true,   -- Tötung von Zivilisten erhöht Wanted-Level
+    KillSterne          = 1,      -- Wie viele Sterne pro getötetem Zivilisten
+    SchiessGibtWanted   = true,   -- Dauerschießen (ohne Tötung) erhöht Wanted-Level
+    SchiessWarmupMs     = 2500,   -- ms Schießen bis 1★ vergeben wird (verhindert Fehlalarme)
+    MaxWanted           = 5,      -- Maximale Sternzahl durch CrimeMonitor
+}
+
+-- ╔══════════════════════════════════════════════════════════════════╗
 -- ║              JOB-WHITELIST (Exemption vom Wanted-System)        ║
 -- ║  Spieler mit diesen Jobs oder Admin-Ace erhalten KEINEN         ║
 -- ║  Wanted-Level und das Szenario startet nicht fuer sie.          ║

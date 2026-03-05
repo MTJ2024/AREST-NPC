@@ -78,6 +78,12 @@ CreateThread(function()
     else
       local wanted = getWantedRobust()
       if wanted >= Config.RequiredWantedLevel then
+        -- Wanted sofort aktiv halten: verhindert dass andere Scripts ihn in der Lücke
+        -- vor Szenario-Start (bis zu 2s) leeren. Das Szenario übernimmt danach.
+        if not isExempt then
+          SetPlayerWantedLevel(PlayerId(), wanted, false)
+          SetPlayerWantedLevelNow(PlayerId(), false)
+        end
         -- Exempt-Spieler (Police/Admin) bekommen kein Szenario
         if isExempt then
           SetPlayerWantedLevel(PlayerId(), 0, false)
