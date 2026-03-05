@@ -41,3 +41,16 @@ RegisterCommand('mtj_refresh', function()
   print("[mtj_arrest][REFRESH] Script-Zustand wird zurückgesetzt...")
   TriggerEvent('mtj_arrest:refreshScript')
 end, false)
+
+-- Polizeiakte-Diagnose: druckt aktuellen Akte-Zustand einmalig in die F8-Konsole.
+-- Kein Spam — nur einmaliger Dump beim Ausführen des Befehls.
+RegisterCommand('mtj_akte_diag', function()
+  local ped = PlayerPedId()
+  print("[AKTE-DIAG][DUMP] ══════════════════════════════")
+  print("[AKTE-DIAG][DUMP] IsPolizeiakteOpen() = " .. tostring(IsPolizeiakteOpen and IsPolizeiakteOpen()))
+  print("[AKTE-DIAG][DUMP] IsEntityPositionFrozen(ped) = " .. tostring(IsEntityPositionFrozen(ped)))
+  print("[AKTE-DIAG][DUMP] IsEntityPlayingAnim(kneeling_arrest) = " .. tostring(IsEntityPlayingAnim(ped, "random@arrests", "kneeling_arrest_idle", 3)))
+  print("[AKTE-DIAG][DUMP] GetPlayerWantedLevel = " .. tostring(GetPlayerWantedLevel(PlayerId())))
+  print("[AKTE-DIAG][DUMP] GetGameTimer = " .. tostring(GetGameTimer()))
+  print("[AKTE-DIAG][DUMP] ══════════════════════════════")
+end, false)
