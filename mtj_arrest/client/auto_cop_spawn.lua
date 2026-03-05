@@ -62,6 +62,13 @@ local function clearCops()
     activeCops = {}
 end
 
+-- Sofort loeschen wenn Szenario endet (Tod, Entkommen, Verhaftung).
+-- main.lua's clearCops() leert nur den eigenen cops[]-Table.
+-- auto_cop_spawn hat seinen eigenen activeCops[]-Table: dieser muss hier separat geleert werden.
+AddEventHandler('mtj_arrest:endScenario', function()
+    clearCops()
+end)
+
 -- Wie viele Cops für dieses Wanted-Level (aus Config oder Fallback)
 local function getMaxCopsForWanted(wanted)
     if Config and Config.CopsPerWantedLevel and Config.CopsPerWantedLevel[wanted] then
@@ -75,6 +82,12 @@ end
 CreateThread(function()
     while true do
         Wait(1500)
+
+        -- Spieler tot: eigene Cops sofort loeschen, kein Respawn
+        if IsPedDeadOrDying(PlayerPedId(), true) then
+            if #activeCops > 0 then clearCops() end
+            goto continue
+        end
 
         -- Waehrend aktivem Szenario aber NICHT Kampfphase: main.lua uebernimmt
         -- Waehrend Kampfphase: auto_cop_spawn darf supplementaer spawnen
