@@ -1356,9 +1356,10 @@ local function hideAllUI()
   dbg("hideAllUI: alle Panels versteckt")
 end
 
-local function showScenarioUI()
+local function showScenarioUI(timerOverride)
   hideAllUI() -- Alle anderen Panels ausblenden
-  TriggerEvent('mtj_arrest:nui:scenario', true, getScenarioHint(), Config.ComplianceWindow)
+  local displayTimer = timerOverride or Config.ComplianceWindow
+  TriggerEvent('mtj_arrest:nui:scenario', true, getScenarioHint(), displayTimer)
   -- GTA Native Fallback
   local hint = getScenarioHint() or ""
   -- Entferne GTA Farbcodes fuer Native HUD
@@ -1368,9 +1369,9 @@ local function showScenarioUI()
   local schwelle = Config.KleindeliktSchwelle or 2
   if wanted <= schwelle then
     local fine = Config.KleindeliktStrafe or 500
-    nativeHudSet("scenario_cd", "[E] Strafe akzeptieren: " .. fine .. " EUR — frei kommen", 50, 220, 100)
+    nativeHudSet("scenario_cd", "[E] Strafe akzeptieren: " .. fine .. " EUR — frei kommen (" .. displayTimer .. "s) | Sonst +1 Stern!", 50, 220, 100)
   else
-    nativeHudSet("scenario_cd", "Letzte Chance: " .. (Config.ComplianceWindow or 10) .. "s — [E] Ergeben", 100, 180, 255)
+    nativeHudSet("scenario_cd", "Letzte Chance: " .. displayTimer .. "s — [E] Ergeben", 100, 180, 255)
   end
   dbg("showScenarioUI: NUI + Native HUD")
 end
@@ -1457,42 +1458,64 @@ end
 -- === COMPLIANCE-COUNTDOWN (Countdown vor Zugriff) ===
 local function runNegotiationAndCompliance()
   canSurrender = true
+  local initWanted = getEffectiveWanted()
+  local schwelle = Config.KleindeliktSchwelle or 2
+
+  -- ── KLEINDELIKT-PHASE (1-2 Sterne): 10s-Entscheidungsfenster ─────────────
+  -- Spieler hat 10 Sekunden um per [E] die Geldstrafe zu akzeptieren (→ frei).
+  -- Reagiert er nicht, steigt der Wanted-Level auf schwelle+1 und der
+  -- normale Kampf-Verlauf beginnt.
+  if initWanted <= schwelle then
+    local kleindeliktWindow = Config.KleindeliktPromptDauer or 10
+    showScenarioUI(kleindeliktWindow)
+    makeCopsShout()
+    nativeNotify("~r~POLIZEI~s~ an " .. playerName .. ": " .. getScenarioHint(), "polizei")
+    complianceCountdownThreadActive = true
+    while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and kleindeliktWindow > 0 do
+      Wait(1000)
+      kleindeliktWindow = kleindeliktWindow - 1
+      TriggerEvent('mtj_arrest:nui:scenario_tick', kleindeliktWindow)
+      local fine = Config.KleindeliktStrafe or 500
+      nativeHudSet("scenario_cd", "[E] Strafe zahlen: " .. fine .. " EUR → frei (" .. kleindeliktWindow .. "s) | Sonst +1 Stern!", 50, 220, 100)
+      checkFluchtversuch()
+    end
+    complianceCountdownThreadActive = false
+    -- Spieler hat [E] gedrückt, wurde verhaftet, oder Szenario wurde anderweitig beendet → nicht eskalieren
+    if surrendered or not scenarioActive or cuffing or cuffed or inJail then return end
+    -- 10s abgelaufen ohne Reaktion → Eskalation
+    canSurrender = false
+    hideScenarioUI()
+    local escalatedWanted = schwelle + 1
+    SetPlayerWantedLevel(PlayerId(), escalatedWanted, false)
+    SetPlayerWantedLevelNow(PlayerId(), false)
+    lastKnownWanted = escalatedWanted
+    dbg("Kleindelikt: Prompt abgelaufen, Eskalation auf " .. escalatedWanted .. " Sterne")
+    nativeNotify(("~r~Keine Reaktion!~s~ Fahndungslevel erhöht auf %d Stern(e)!"):format(escalatedWanted), "warnung")
+    nativeHudSet("combat_status", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
+    reactivatePolice()
+    startCombatMaintenance()
+    return
+  end
+
+  -- ── STANDARD-COMPLIANCE-PHASE (3+ Sterne) ────────────────────────────────
   showScenarioUI()
   makeCopsShout()
   nativeNotify("~r~POLIZEI~s~ an " .. playerName .. ": " .. getScenarioHint(), "polizei")
-
   complianceCountdownThreadActive = true
   while scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail and complianceWindow > 0 do
     Wait(1000)
     if scenarioActive and canSurrender and not surrendered and not cuffing and not cuffed and not inJail then
       complianceWindow = complianceWindow - 1
       TriggerEvent('mtj_arrest:nui:scenario_tick', complianceWindow)
-      -- Countdown-Text je nach Wanted-Level
-      local curWanted = getEffectiveWanted()
-      local schwelle = Config.KleindeliktSchwelle or 2
-      if curWanted <= schwelle then
-        local fine = Config.KleindeliktStrafe or 500
-        nativeHudSet("scenario_cd", "[E] Strafe akzeptieren: " .. fine .. " EUR — frei kommen (" .. complianceWindow .. "s)", 50, 220, 100)
-      else
-        nativeHudSet("scenario_cd", "Letzte Chance: " .. complianceWindow .. "s — [E] Ergeben", 100, 180, 255)
-      end
+      nativeHudSet("scenario_cd", "Letzte Chance: " .. complianceWindow .. "s — [E] Ergeben", 100, 180, 255)
       checkFluchtversuch()
       if complianceWindow <= 0 then
         canSurrender = false
         hideScenarioUI()
-        local curWanted = getEffectiveWanted()
-        local schwelle = Config.KleindeliktSchwelle or 2
-        if curWanted <= schwelle then
-          -- Kleindelikt (1-2 Sterne): Compliance-Fenster abgelaufen → Strafe automatisch ausstellen
-          dbg("Kleindelikt: Compliance-Fenster abgelaufen, automatische Strafe (wanted=" .. curWanted .. ")")
-          surrendered = true
-          playFineSequence()
-        else
-          nativeHudSet("combat_status", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
-          reactivatePolice()
-          startCombatMaintenance()
-          dbg("Surrender window abgelaufen!")
-        end
+        nativeHudSet("combat_status", "POLIZEI-EINSATZ: Zugriff!", 255, 30, 30)
+        reactivatePolice()
+        startCombatMaintenance()
+        dbg("Surrender window abgelaufen!")
       end
     else
       break

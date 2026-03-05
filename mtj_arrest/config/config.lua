@@ -181,6 +181,7 @@ Config.TodStrafe = {
 -- ╚══════════════════════════════════════════════════════════════════╝
 Config.KleindeliktSchwelle      = 2       -- 1-2 Sterne: Strafe vor Ort, kein Knast; ab 3 Sternen: Knast
 Config.KleindeliktStrafe        = 500     -- Geldstrafe in EUR beim Kleindelikt (1-2 Sterne)
+Config.KleindeliktPromptDauer   = 10      -- Sekunden: Entscheidungsfenster "Strafe zahlen?" bei 1-2 Sternen; bei Ablauf → Wanted +1
 Config.KleindeliktNachricht     = "~g~Kleindelikt~s~: Strafe von %d EUR ausgestellt. Du bist auf freiem Fuß!"
 Config.KleindeliktDeliktText    = "Ordnungswidrigkeit / Kleindelikt"  -- Text im Vor-Ort-Zahlung UI
 Config.KleindeliktOfficerName   = "Beamter (NPC)"                     -- Beamtenname im Vor-Ort-Zahlung UI
