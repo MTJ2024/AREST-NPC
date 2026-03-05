@@ -381,20 +381,18 @@ CreateThread(function()
             local hudMsg = (esc.NachrichtEvasion or "~b~Polizei verliert dich...~s~ Noch %ds bis Entkommen!"):format(remaining)
             dbg("Evasion:", remaining, "s verbleibend", hudMsg)
           end
-          -- Wanted trotzdem halten (Spieler ist noch nicht frei!) — mit Grace Period
+          -- Wanted-Level waehrend Evasion aufrechterhalten — wie GTA V Online.
+          -- GTA loescht Fahndungssterne sofort wenn keine Cops in Sichtlinie sind.
+          -- Wir stellen sie sofort wieder her, damit der Spieler die Sterne sieht und
+          -- das Szenario erst nach der vollen Evasion-Zeit (ZeitBisEntkommen) endet.
           local wanted = GetPlayerWantedLevel(PlayerId())
           if wanted > 0 then
             lastKnownWanted = wanted
             wantedDropCount = 0
           elseif lastKnownWanted > 0 then
-            wantedDropCount = wantedDropCount + 1
-            if wantedDropCount >= 6 then
-              dbg("WantedMaintenance (evasion): Wanted seit 3s auf 0 — beende Szenario")
-              lastKnownWanted = 0
-              wantedDropCount = 0
-              wantedDeathLockUntil = GetGameTimer() + 5000
-              TriggerEvent('mtj_arrest:endScenario')
-            end
+            SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
+            SetPlayerWantedLevelNow(PlayerId(), false)
+            wantedDropCount = 0
           end
         end
       else
@@ -429,18 +427,18 @@ CreateThread(function()
         evasionNotifiedAt = 0
         nativeHudSet("evasion", nil)
       end
-      -- Wanted auch im Gap zwischen Szenario-Neustarts halten — mit gleicher Grace Period
+      -- Wanted auch im Gap zwischen Szenario-Neustarts aufrechterhalten.
+      -- GTA loescht Fahndungssterne schnell ohne aktiven Einsatz; wir stellen sie
+      -- sofort wieder her, damit wanted_level.lua beim naechsten Tick zuverlaessig
+      -- einen gueltigen Wanted-Level vorfindet und das Szenario neu startet.
       if lastKnownWanted > 0 and not inJail then
         local wanted = GetPlayerWantedLevel(PlayerId())
         if wanted > 0 then
           wantedDropCount = 0
         elseif wanted == 0 then
-          wantedDropCount = wantedDropCount + 1
-          if wantedDropCount >= 6 then
-            dbg("WantedMaintenance (gap): Wanted seit 3s auf 0 — akzeptiere")
-            lastKnownWanted = 0
-            wantedDropCount = 0
-          end
+          SetPlayerWantedLevel(PlayerId(), lastKnownWanted, false)
+          SetPlayerWantedLevelNow(PlayerId(), false)
+          wantedDropCount = 0
         end
       end
     end
