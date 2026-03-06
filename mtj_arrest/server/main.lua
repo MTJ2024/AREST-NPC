@@ -164,19 +164,21 @@ local function takeJailFine(src, fineOverride)
   -- ESX
   if ESX then
     local xPlayer = ESX.GetPlayerFromId(src)
-    if xPlayer and xPlayer.getAccount and xPlayer.removeAccountMoney and xPlayer.getAccounts then
-      local cash = xPlayer.getAccount('money') and xPlayer.getAccount('money').money or 0
+    if xPlayer and xPlayer.getAccount and xPlayer.removeAccountMoney then
+      local cashAcc = xPlayer:getAccount('money')
+      local cash = cashAcc and cashAcc.money or 0
       if cash > 0 then
         local take = math.min(remaining, cash)
-        xPlayer.removeAccountMoney('money', take)
+        xPlayer:removeAccountMoney('money', take)
         remaining = remaining - take
         paid = paid + take
       end
       if remaining > 0 then
-        local bank = xPlayer.getAccount('bank') and xPlayer.getAccount('bank').money or 0
+        local bankAcc = xPlayer:getAccount('bank')
+        local bank = bankAcc and bankAcc.money or 0
         if bank > 0 then
           local take = math.min(remaining, bank)
-          xPlayer.removeAccountMoney('bank', take)
+          xPlayer:removeAccountMoney('bank', take)
           remaining = remaining - take
           paid = paid + take
         end
@@ -532,14 +534,16 @@ AddEventHandler('mtj_arrest:reduceKriminalLevel', function()
   -- ESX
   if not paid and ESX then
     local xPlayer = ESX.GetPlayerFromId(src)
-    if xPlayer and xPlayer.getAccount then
-      local cash = (xPlayer.getAccount('money') and xPlayer.getAccount('money').money) or 0
-      local bank = (xPlayer.getAccount('bank')  and xPlayer.getAccount('bank').money)  or 0
+    if xPlayer and xPlayer.getAccount and xPlayer.removeAccountMoney then
+      local cashAcc = xPlayer:getAccount('money')
+      local bankAcc = xPlayer:getAccount('bank')
+      local cash = (cashAcc and cashAcc.money) or 0
+      local bank = (bankAcc and bankAcc.money) or 0
       if cash + bank >= kosten then
         local fromCash = math.min(cash, kosten)
         local fromBank = kosten - fromCash
-        if fromCash > 0 then xPlayer.removeAccountMoney('money', fromCash) end
-        if fromBank > 0 then xPlayer.removeAccountMoney('bank',  fromBank) end
+        if fromCash > 0 then xPlayer:removeAccountMoney('money', fromCash) end
+        if fromBank > 0 then xPlayer:removeAccountMoney('bank',  fromBank) end
         paid = true
       end
     end

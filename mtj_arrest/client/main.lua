@@ -281,20 +281,24 @@ function GetMainLuaLastKnownWanted()
   return lastKnownWanted
 end
 
--- === RELATIONSHIP GROUP (Cops MÜSSEN den Spieler hassen, sonst keine Interaktion) ===
+-- === RELATIONSHIP GROUP ===
 local ARREST_COP_GROUP = nil
 CreateThread(function()
+  -- ARREST_COP darf NICHT global "PLAYER" hassen:
+  -- Netzwerk-synchronisierte Cops wuerden sonst alle Spieler (auch Unbeteiligte) angreifen.
+  -- Ziel-Hostilitaet erfolgt gezielt ueber TaskCombatPed auf den verfolgten Spieler.
+  local REL_NEUTRAL = 3
   local ok, hash = AddRelationshipGroup("ARREST_COP")
   if ok then
     ARREST_COP_GROUP = hash
-    SetRelationshipBetweenGroups(5, hash, GetHashKey("PLAYER")) -- 5 = HATE
-    SetRelationshipBetweenGroups(5, GetHashKey("PLAYER"), hash)
-    dbg("ARREST_COP relationship group erstellt (HATE)")
+    SetRelationshipBetweenGroups(REL_NEUTRAL, hash, GetHashKey("PLAYER"))
+    SetRelationshipBetweenGroups(REL_NEUTRAL, GetHashKey("PLAYER"), hash)
+    dbg("ARREST_COP relationship group erstellt (NEUTRAL)")
   else
     -- Fallback: Gruppe existiert schon
     ARREST_COP_GROUP = GetHashKey("ARREST_COP")
-    SetRelationshipBetweenGroups(5, ARREST_COP_GROUP, GetHashKey("PLAYER"))
-    SetRelationshipBetweenGroups(5, GetHashKey("PLAYER"), ARREST_COP_GROUP)
+    SetRelationshipBetweenGroups(REL_NEUTRAL, ARREST_COP_GROUP, GetHashKey("PLAYER"))
+    SetRelationshipBetweenGroups(REL_NEUTRAL, GetHashKey("PLAYER"), ARREST_COP_GROUP)
     dbg("ARREST_COP relationship group wiederverwendet")
   end
   -- Max-Wanted-Level auf 5 setzen (GTA/FiveM begrenzt sonst oft auf 3!)
@@ -1284,7 +1288,7 @@ local function reactivatePolice()
       SetPedHearingRange(ped, 100.0)
       SetPedFleeAttributes(ped, 0, false)
       SetPedAccuracy(ped, 50)
-      -- Von COP (RESPECT) → ARREST_COP (HATE) umschalten + bewaffnen
+      -- Von COP (RESPECT) → ARREST_COP umschalten + bewaffnen
       if ARREST_COP_GROUP then
         SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
       end
@@ -2007,7 +2011,7 @@ AddEventHandler('mtj_arrest:endScenario', function()
   if wasInPursuit then
     -- Verfolgung laeuft noch → Cops behalten, sie kaempfen weiter
     dbg("endScenario: Cops BEIBEHALTEN (lastKnownWanted > 0, Verfolgung laeuft noch)")
-    -- Cops trotzdem kampfbereit halten (Relationship bleibt HATE)
+    -- Cops bleiben kampfbereit ueber bestehende Tasks (TaskCombatPed)
   else
     -- Wanted wirklich 0 → alles aufraeumen
     clearCops()
