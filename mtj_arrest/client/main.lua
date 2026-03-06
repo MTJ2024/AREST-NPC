@@ -299,7 +299,7 @@ CreateThread(function()
     ARREST_COP_GROUP = GetHashKey("ARREST_COP")
     SetRelationshipBetweenGroups(REL_NEUTRAL, ARREST_COP_GROUP, GetHashKey("PLAYER"))
     SetRelationshipBetweenGroups(REL_NEUTRAL, GetHashKey("PLAYER"), ARREST_COP_GROUP)
-    dbg("ARREST_COP relationship group wiederverwendet")
+    dbg("ARREST_COP relationship group wiederverwendet (NEUTRAL)")
   end
   -- Max-Wanted-Level auf 5 setzen (GTA/FiveM begrenzt sonst oft auf 3!)
   SetMaxWantedLevel(5)
