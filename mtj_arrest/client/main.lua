@@ -1604,17 +1604,23 @@ local function playFineSequence()
   SetPlayerWantedLevelNow(PlayerId(), false)
   ClearPlayerWantedLevel(PlayerId())
   lastKnownWanted = 0
-  wantedDeathLockUntil = GetGameTimer() + 5000
+  -- Lock laenger setzen als die gesamte Animation (2x vozPanelMs = 5600ms + Puffer),
+  -- damit kein neues Szenario startet waehrend das Fine-Panel noch laeuft.
+  local vozPanelMs = Config.KleindeliktPanelDauer or 2800
+  wantedDeathLockUntil = GetGameTimer() + (vozPanelMs * 2) + 2000
 
   -- Abschluss-Status nach kurzer Verzoegerung setzen (Fortschrittsbalken laeuft 2.8s;
   -- muss mit VOZ_DONE_DISPLAY_MS in app.js synchron bleiben)
-  local vozPanelMs = Config.KleindeliktPanelDauer or 2800
   Wait(vozPanelMs)
+  -- Szenario koennte waehrend der Animation durch Tod/Sicherheitsnetz beendet worden sein
+  if not scenarioActive then cuffing = false; return end
   local doneMsg = ("✅ Strafe von %d EUR bezahlt — Auf freiem Fuß!"):format(fine)
   TriggerEvent('mtj_arrest:nui:fine', false, fine, officerName, deliktText, true, doneMsg)
   nativeNotify(msg, "erfolg")
 
   Wait(vozPanelMs)
+  -- Nochmals pruefen: Falls Spieler in der Zwischenzeit gestorben ist, kein zweites endScenario
+  if not scenarioActive then cuffing = false; return end
   cuffing = false
   TriggerEvent('mtj_arrest:endScenario')
   dbg("playFineSequence: Kleindelikt abgeschlossen, Spieler frei")
@@ -1999,7 +2005,12 @@ AddEventHandler('mtj_arrest:endScenario', function()
     -- Wanted wirklich 0 → alles aufraeumen
     clearCops()
     clearRoadblocks()
-    setAmbientCopsIgnore(false)
+    -- Ambient-Cops NUR zurueckschalten wenn Spieler lebt.
+    -- Beim Tod setzt der death-handler SetPoliceIgnorePlayer(true) — wuerden wir es hier sofort
+    -- auf false setzen, griffen GTA-Ambient-Cops den Spieler ohne Wanted-Sterne an.
+    if not IsPedDeadOrDying(PlayerPedId(), true) then
+      setAmbientCopsIgnore(false)
+    end
   end
   dbg("endScenario: scenario ended, lastKnownWanted:", lastKnownWanted)
 end)
@@ -2066,11 +2077,13 @@ CreateThread(function()
         -- Beide 0: primärer Pfad ist WantedMaintenance; dieser Thread ist reines Sicherheitsnetz.
         -- 1 Sekunde Wartezeit reicht, da WantedMaintenance bereits 3s Grace-Period abgewartet hat.
         wantedZeroStreak = wantedZeroStreak + 1
-        if wantedZeroStreak >= 1 then
-          dbg("Wanted-Ueberwachung (Sicherheitsnetz): Wanted = 0, beende Szenario")
+        if wantedZeroStreak >= 3 then
+          -- Erst nach 3 aufeinanderfolgenden Checks (3s) sicher szenario beenden.
+          -- Kein wantedDeathLockUntil setzen: das Szenario endet wegen echtem Wanted=0,
+          -- nicht wegen Tod/Entkommen — ein Lock wuerde neue Verbrechen 5s lang blockieren.
+          dbg("Wanted-Ueberwachung (Sicherheitsnetz): Wanted = 0 (3x), beende Szenario")
           pursuitStartTime = 0
           wantedZeroStreak = 0
-          wantedDeathLockUntil = GetGameTimer() + 5000
           TriggerEvent('mtj_arrest:endScenario')
         end
       else
