@@ -75,7 +75,7 @@ CreateThread(function()
       scenarioTriggered = false
       lastTriggerTime = 0
       consecutiveZeroChecks = 0
-      goto continue_wanted
+      goto skip_wanted_processing
     end
     -- Wanted-Sperre nach Tod pruefen (5 Sekunden nach Tod kein Re-Trigger)
     -- GetWantedDeathLockUntil ist in main.lua definiert, defensive Pruefung fuer Ladereihenfolge
@@ -129,6 +129,6 @@ CreateThread(function()
         end
       end
     end
-    ::continue_wanted::
+    ::skip_wanted_processing::
   end
 end)
