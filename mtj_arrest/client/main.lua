@@ -377,7 +377,9 @@ CreateThread(function()
           SetPlayerWantedLevelNow(PlayerId(), false)
           nativeNotify(esc.NachrichtEntkommen or "~g~ENTKOMMEN!~s~ Du hast die Polizei abgehängt!", "erfolg")
           nativeHudSet("evasion", nil)
-          wantedDeathLockUntil = GetGameTimer() + 5000 -- 5s Sperre gegen Sofort-Neustart
+          -- Kein wantedDeathLockUntil: wuerde crime_monitor fuer 5s blockieren.
+          -- scenarioCooldown (5s via lastScenarioStart) genuegt als Sofort-Neustart-Schutz.
+          lastScenarioStart = GetGameTimer()
           TriggerServerEvent('mtj_arrest:dispatch:pursuitEnd', "entkommen")
           TriggerEvent('mtj_arrest:endScenario')
         else
@@ -1604,10 +1606,13 @@ local function playFineSequence()
   SetPlayerWantedLevelNow(PlayerId(), false)
   ClearPlayerWantedLevel(PlayerId())
   lastKnownWanted = 0
-  -- Lock laenger setzen als die gesamte Animation (2x vozPanelMs = 5600ms + Puffer),
-  -- damit kein neues Szenario startet waehrend das Fine-Panel noch laeuft.
+  -- wantedDeathLockUntil hier NICHT setzen: crime_monitor.lua interpretiert diesen
+  -- Lock als Tod/Respawn-Sperre und nullt pendingWanted jede 500ms — neue Verbrechen
+  -- nach dem Kleindelikt wuerden dadurch fuer mehrere Sekunden keine Sterne bekommen.
+  -- Stattdessen: lastScenarioStart erneuern → scenarioCooldown (5s) verhindert
+  -- Sofort-Neustart, ohne crime_monitor zu blockieren.
+  lastScenarioStart = GetGameTimer()
   local vozPanelMs = Config.KleindeliktPanelDauer or 2800
-  wantedDeathLockUntil = GetGameTimer() + (vozPanelMs * 2) + 2000
 
   -- Abschluss-Status nach kurzer Verzoegerung setzen (Fortschrittsbalken laeuft 2.8s;
   -- muss mit VOZ_DONE_DISPLAY_MS in app.js synchron bleiben)
