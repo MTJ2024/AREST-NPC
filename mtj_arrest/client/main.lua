@@ -130,6 +130,7 @@ end
 
 -- Tod-Erkennung: Beendet Szenario sofort wenn Spieler stirbt
 local wantedDeathLockUntil = 0 -- GameTimer-Zeitstempel bis zu dem Wanted gesperrt ist
+local applyRespawnGraceOnNextSpawn = false -- Nur nach echtem Tod/Respawn die Wanted-Spawn-Sperre aktivieren
 function GetWantedDeathLockUntil() return wantedDeathLockUntil end
 
 -- Vorwaerts-Deklarationen: Diese local-Variablen werden in Threads verwendet,
@@ -144,6 +145,7 @@ CreateThread(function()
     local ped = PlayerPedId()
     local isDead = IsPedDeadOrDying(ped, true)
     if isDead and not wasDead then
+      applyRespawnGraceOnNextSpawn = true
       -- Spieler ist gerade gestorben
       diedDuringScenario = scenarioActive
       -- Tod-Strafe: gestaffelte Geldstrafe basierend auf Wanted-Level
@@ -2130,6 +2132,7 @@ local function resetScriptState()
   releaseWarningShown = false
   inJail = false
   wantedDeathLockUntil = 0
+  applyRespawnGraceOnNextSpawn = false
   deadBodies = {}
   FreezeEntityPosition(PlayerPedId(), false)
   SetEnableHandcuffs(PlayerPedId(), false)
@@ -2156,24 +2159,32 @@ end)
 
 AddEventHandler('playerSpawned', function()
   resetScriptState()
-  -- Sperre nach Wiederbelebung: kein Wanted-Neustart fuer RespawnGraceSek Sekunden
-  wantedDeathLockUntil = GetGameTimer() + ((Config.RespawnGraceSek or 10) * 1000)
-  -- Aktive Wanted-Unterdrueckung: GTA weist nach Respawn sofort 1 Stern zu wenn Cops in der Naehe sind.
-  -- SetPoliceIgnorePlayer(true) + periodisches ClearPlayerWantedLevel fuer die gesamte Grace Period.
-  SetPoliceIgnorePlayer(PlayerId(), true)
-  local suppressUntil = wantedDeathLockUntil
-  CreateThread(function()
-    while GetGameTimer() < suppressUntil do
-      SetPlayerWantedLevel(PlayerId(), 0, false)
-      SetPlayerWantedLevelNow(PlayerId(), false)
-      ClearPlayerWantedLevel(PlayerId())
-      Wait(500)
-    end
-    if not scenarioActive then
-      SetPoliceIgnorePlayer(PlayerId(), false)
-    end
-    dbg("playerSpawned: Wanted-Grace-Period abgelaufen, SetPoliceIgnorePlayer(false)")
-  end)
+  -- Spawn-Sperre nur nach ECHTEM Tod/Respawn setzen.
+  -- Einige Frameworks feuern playerSpawned auch beim Join/Reload:
+  -- dort wuerde eine pauschale Sperre Wanted sofort "wegblocken".
+  if applyRespawnGraceOnNextSpawn then
+    applyRespawnGraceOnNextSpawn = false
+    -- Sperre nach Wiederbelebung: kein Wanted-Neustart fuer RespawnGraceSek Sekunden
+    wantedDeathLockUntil = GetGameTimer() + ((Config.RespawnGraceSek or 10) * 1000)
+    -- Aktive Wanted-Unterdrueckung: GTA weist nach Respawn sofort 1 Stern zu wenn Cops in der Naehe sind.
+    -- SetPoliceIgnorePlayer(true) + periodisches ClearPlayerWantedLevel fuer die gesamte Grace Period.
+    SetPoliceIgnorePlayer(PlayerId(), true)
+    local suppressUntil = wantedDeathLockUntil
+    CreateThread(function()
+      while GetGameTimer() < suppressUntil do
+        SetPlayerWantedLevel(PlayerId(), 0, false)
+        SetPlayerWantedLevelNow(PlayerId(), false)
+        ClearPlayerWantedLevel(PlayerId())
+        Wait(500)
+      end
+      if not scenarioActive then
+        SetPoliceIgnorePlayer(PlayerId(), false)
+      end
+      dbg("playerSpawned: Wanted-Grace-Period abgelaufen, SetPoliceIgnorePlayer(false)")
+    end)
+  else
+    wantedDeathLockUntil = 0
+  end
   -- Waffen NUR entfernen wenn Spieler waehrend Polizeieinsatz gestorben ist
   local wbt = Config.WaffenBeiTod
   if wbt and wbt.Aktiviert and diedDuringScenario then
