@@ -592,6 +592,9 @@ AddEventHandler('mtj_arrest:reduceKriminalLevel', function()
     PolizeiakteSetFestnahmen(src, newFestnahmen)
   end
 
+  -- Nach erfolgreicher Zahlung Verfolgung client-seitig sofort hart stoppen
+  TriggerClientEvent('mtj_arrest:clientForceWantedStop', src, "akte_payment")
+
   TriggerClientEvent('chat:addMessage', src, {
     color = {50, 255, 50}, multiline = true,
     args = {"[MTJ]", ("Kriminallevel gesenkt! Festnahmen: %d → %d (-%d EUR)"):format(akte.festnahmen, newFestnahmen, kosten)}

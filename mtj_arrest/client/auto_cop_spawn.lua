@@ -88,6 +88,11 @@ CreateThread(function()
             if #activeCops > 0 then clearCops() end
             goto continue
         end
+        if (IsPlayerInJail and IsPlayerInJail())
+            or (IsWantedHardStopActive and IsWantedHardStopActive()) then
+            if #activeCops > 0 then clearCops() end
+            goto continue
+        end
 
         -- Waehrend aktivem Szenario aber NICHT Kampfphase: main.lua uebernimmt
         -- Waehrend Kampfphase: auto_cop_spawn darf supplementaer spawnen
