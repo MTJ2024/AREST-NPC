@@ -1,3 +1,10 @@
+<!--
+  ╔══════════════════════════════════════════════════════════════════════════╗
+  ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
+  ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
+  ║  Plagiatschutz aktiv — Unbefugte Nutzung wird erkannt und gemeldet.    ║
+  ╚══════════════════════════════════════════════════════════════════════════╝
+-->
 <!DOCTYPE html>
 <html lang="de">
   <head>
@@ -8,8 +15,7 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <title>MTJ Arrest UI</title>
-    <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;700&display=swap" rel="stylesheet" />
+    <!-- Fonts (system fallback, kein externer Load nötig) -->
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -21,12 +27,18 @@
           <h1 class="title neon-glow">POLIZEI-EINSATZ</h1>
         </div>
         <p class="hint">Du bist <span class="neon2">umzingelt!</span> <br> <span class="key neon-glow">[E]</span> <span>zum Ergeben</span></p>
-        <div class="countdown neon-glow">Letzte Chance: <span class="count">10</span>s</div>
+        <div class="scenario-progress-wrap">
+          <div class="scenario-progress-bar"></div>
+        </div>
+        <div class="countdown neon-glow">Letzte Chance: <span class="count">11</span>s</div>
         <div class="accent-line"></div>
       </section>
 
       <!-- Toast / Hinweise -->
       <div id="toast" class="toast hidden neon2" role="status" aria-live="polite">Hinweis</div>
+
+      <!-- Custom Notification (links mittig, über Minimap) -->
+      <div id="notify-stack" class="notify-stack"></div>
 
       <!-- Jail-Panel -->
       <section id="jail" class="card jail hidden" aria-live="polite">
@@ -45,7 +57,7 @@
         <!-- GELDSTRAFE BADGE -->
         <div class="fine-badge">
           <span class="fine-label">Geldstrafe</span>
-          <span class="fine-amount">15.000&nbsp;€</span>
+          <span class="fine-amount">&mdash;</span>
         </div>
         <div class="accent-line"></div>
       </section>
@@ -61,7 +73,129 @@
         </ul>
         <div class="accent-line subtle"></div>
       </section>
+
+      <!-- Vor-Ort-Zahlung Panel -->
+      <section id="vorozahlung" class="card vorozahlung hidden" aria-live="polite">
+        <div class="voz-header">
+          <div class="chip neon alt-green">Kleindelikt</div>
+          <h1 class="title neon-glow">VOR-ORT-ZAHLUNG</h1>
+        </div>
+        <div class="voz-officer-row">
+          <span class="voz-icon">&#x1F46E;</span>
+          <span class="voz-officer-text" id="voz-officer">Beamter</span>
+        </div>
+        <div class="voz-receipt">
+          <div class="voz-receipt-row">
+            <span class="voz-receipt-label">Delikt</span>
+            <span class="voz-receipt-value" id="voz-delikt">Ordnungswidrigkeit</span>
+          </div>
+          <div class="voz-receipt-divider"></div>
+          <div class="voz-receipt-row voz-total-row">
+            <span class="voz-receipt-label">Strafe</span>
+            <span class="voz-receipt-value voz-amount neon2" id="voz-betrag">500&nbsp;&euro;</span>
+          </div>
+        </div>
+        <div class="voz-progress-wrap">
+          <div class="voz-progress-bar" id="voz-progress-bar"></div>
+        </div>
+        <div class="voz-status neon-glow" id="voz-status">Zahlung wird verarbeitet&hellip;</div>
+        <div class="accent-line"></div>
+      </section>
     </div>
+
+    <!-- ═══ Polizeiakte Vollbild-UI (GTA V Police Department Style) ═══ -->
+    <div id="akte-overlay" class="akte-overlay hidden">
+      <div class="akte-bg-img"></div>
+      <div class="akte-bg-overlay"></div>
+      <div class="akte-fullpage">
+        <!-- Oberer Header-Streifen -->
+        <div class="akte-top-bar">
+          <div class="akte-top-left">
+            <span class="akte-badge-icon">&#x1F6E1;&#xFE0F;</span>
+            <div>
+              <h1 class="akte-main-title">POLIZEIAKTE</h1>
+              <p class="akte-dept" id="akte-server">Los Santos Police Department</p>
+            </div>
+          </div>
+          <div class="akte-top-right">
+            <div class="akte-status-pill" id="akte-status-bar" data-status="unbescholten">
+              <span class="akte-status-dot"></span>
+              <span class="akte-status-text" id="akte-status">UNBESCHOLTEN</span>
+            </div>
+            <button class="akte-close-btn" id="akte-close">&#x2715;</button>
+          </div>
+        </div>
+
+        <!-- Haupt-Inhalt -->
+        <div class="akte-content">
+          <!-- Statistik-Karten -->
+          <div class="akte-cards">
+            <div class="akte-card">
+              <div class="akte-card-icon">&#x1F694;</div>
+              <div class="akte-card-val" id="akte-festnahmen">0</div>
+              <div class="akte-card-lbl">Festnahmen</div>
+            </div>
+            <div class="akte-card">
+              <div class="akte-card-icon">&#x23F1;&#xFE0F;</div>
+              <div class="akte-card-val" id="akte-haftzeit">0 Min</div>
+              <div class="akte-card-lbl">Gesamte Haftzeit</div>
+            </div>
+            <div class="akte-card">
+              <div class="akte-card-icon">&#x1F4B0;</div>
+              <div class="akte-card-val" id="akte-geldstrafe">0 &euro;</div>
+              <div class="akte-card-lbl">Geldstrafen</div>
+            </div>
+            <div class="akte-card">
+              <div class="akte-card-icon">&#x1F3C3;</div>
+              <div class="akte-card-val" id="akte-flucht">0</div>
+              <div class="akte-card-lbl">Fluchtversuche</div>
+            </div>
+          </div>
+
+          <!-- Detail-Bereich -->
+          <div class="akte-info-grid">
+            <div class="akte-info-row">
+              <span class="akte-info-icon">&#x1F4C5;</span>
+              <span class="akte-info-label">Letzte Festnahme</span>
+              <span class="akte-info-value" id="akte-letzte">&mdash;</span>
+            </div>
+            <div class="akte-info-row">
+              <span class="akte-info-icon">&#x2696;&#xFE0F;</span>
+              <span class="akte-info-label">Haftzeit-Multiplikator</span>
+              <span class="akte-info-value" id="akte-haft-mult">&times;1.0</span>
+            </div>
+            <div class="akte-info-row">
+              <span class="akte-info-icon">&#x1F4B8;</span>
+              <span class="akte-info-label">Geldstrafe-Multiplikator</span>
+              <span class="akte-info-value" id="akte-geld-mult">&times;1.0</span>
+            </div>
+            <div class="akte-info-row" id="akte-naechste-row">
+              <span class="akte-info-icon">&#x2B06;&#xFE0F;</span>
+              <span class="akte-info-label">N&auml;chste Stufe</span>
+              <span class="akte-info-value" id="akte-naechste">&mdash;</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="akte-bottom-bar">
+          <p class="akte-legal">Dieses Dokument ist Eigentum der Polizeibeh&ouml;rde. Unbefugte Weitergabe ist strafbar.</p>
+          <!-- Gestaffelte Reduktionskosten -->
+          <div id="akte-stufen-wrap" class="akte-stufen-wrap hidden">
+            <p class="akte-stufen-title">&#x1F4B3; Stufenzahlungen &mdash; Kriminallevel senken</p>
+            <div id="akte-stufen-list" class="akte-stufen-list">
+              <!-- JS befuellt -->
+            </div>
+          </div>
+          <div class="akte-bottom-actions">
+            <button class="akte-reduce-btn" id="akte-reduce">&#x2B07; Kriminallevel senken</button>
+            <button class="akte-refresh-btn" id="akte-refresh">&#x1F504; Aktualisieren</button>
+            <p class="akte-close-hint">Dr&uuml;cke <span class="akte-key-hint">ESC</span> zum Schlie&szlig;en</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="app.js"></script>
   </body>
 </html>

@@ -1,3 +1,10 @@
+/*
+ * ╔══════════════════════════════════════════════════════════════════════════╗
+ * ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
+ * ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
+ * ║  Plagiatschutz aktiv — Unbefugte Nutzung wird erkannt und gemeldet.    ║
+ * ╚══════════════════════════════════════════════════════════════════════════╝
+ */
 :root {
   --primary: #121b3b;
   --surface: #181e2eeb;
@@ -11,8 +18,8 @@
   --chip-bg: #192042;
   --card-radius: 28px;
   --shadow: 0 10px 60px 0 #11284c99;
-  --font-main: 'Inter', Arial, sans-serif;
-  --font-digi: 'Orbitron', Arial, sans-serif;
+  --font-main: 'Segoe UI', Arial, Helvetica, sans-serif;
+  --font-digi: 'Consolas', 'Courier New', monospace;
 }
 
 body {
@@ -126,14 +133,19 @@ body {
 .subtitle {
   font-size: 1.15rem;
   margin: 7px 0 20px 0;
-  color: var(--accent3);
+  color: #ffffff;
   letter-spacing: 0.02em;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
 }
 .hint {
   font-size: 1.12rem;
-  color: #b3d6ff;
+  color: #ffffff;
   margin: 10px 0 18px 0;
   text-align: center;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 .key {
   font-family: var(--font-digi);
@@ -174,18 +186,19 @@ body {
   position: absolute;
   bottom: 8vh;
   left: 50%;
-  transform: translateX(-50%) scale(1.05);
+  transform: translateX(-50%) scale(1);
   background: linear-gradient(90deg, var(--accent-glow) 0%, var(--accent2-glow) 60%, var(--accent3-glow) 100%);
   color: #fff;
-  font-size: 1.12rem;
+  font-size: 0.95rem;
   font-family: var(--font-digi);
-  border-radius: 22px;
-  padding: 13px 40px;
-  opacity: 0.97;
-  box-shadow: 0 2px 28px 0 var(--accent2-glow);
+  border-radius: 16px;
+  padding: 10px 28px;
+  opacity: 0.95;
+  box-shadow: 0 2px 20px 0 var(--accent2-glow);
   pointer-events: none;
   animation: popIn 0.7s cubic-bezier(.52,1.4,.38,1) both;
   transition: opacity 0.25s, transform 0.22s;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
 }
 
 .bar-wrap {
@@ -283,11 +296,11 @@ body {
 /* Jail Grundtext/Subtitle */
 .jail-reason {
   font-size: 1.17rem;
-  color: #e7f0ff;
+  color: #ffffff;
   margin: 8px 0 15px 0;
   text-align: center;
   letter-spacing: 0.04em;
-  text-shadow: 0 0 10px #10182b99;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
   z-index: 2;
   position: relative;
 }
@@ -320,8 +333,8 @@ body {
   font-size: 1.5rem;
   font-weight: 900;
   letter-spacing: 0.1em;
-  color: #ffefae;
-  text-shadow: 0 0 6px #ffefaecc, 0 0 2px #ff2a2acc;
+  color: #ffffff;
+  text-shadow: 0 0 8px #ff2a2acc, 0 1px 4px rgba(0,0,0,0.8);
 }
 @keyframes fine-glow {
   0%   { box-shadow: 0 0 18px #217aff55, 0 0 6px #ff2a2a33; }
@@ -353,20 +366,745 @@ body {
     max-width: 99vw;
     padding: 18px 2vw 16px 2vw;
   }
-  .toast { font-size: 0.99rem; padding: 10px 14vw;}
+  .toast { font-size: 0.88rem; padding: 8px 10vw;}
   .timer { font-size: 2.0rem; padding: 10px 8vw 8px 8vw;}
 }
 
-/* Szenario-UI: langsamer Gesamt-Puls (optional zuschalten per Klasse 'pulse-ui') */
-.card.scenario.pulse-ui {
-  animation: popIn 0.8s cubic-bezier(.22,1.1,.38,1) both,
-             scenarioPulse 7s ease-in-out infinite;
+/* Szenario-UI: GROSS + starker Puls (100% bis 0%) */
+.card.scenario {
+  min-width: 540px;
+  max-width: 700px;
+  padding: 38px 48px 32px 48px;
+  animation: none;
 }
 
-/* Puls zwischen „voll sichtbar“ und „fast transparent“ (ca. 5%) */
+.card.scenario .title {
+  font-size: 3.2rem;
+  letter-spacing: 0.1em;
+}
+
+.card.scenario .chip {
+  font-size: 1.4rem;
+  padding: 9px 24px;
+}
+
+.card.scenario .hint {
+  font-size: 1.4rem;
+  margin: 14px 0 22px 0;
+}
+
+.card.scenario .key {
+  font-size: 1.3rem;
+  padding: 4px 14px;
+}
+
+.card.scenario .countdown {
+  font-size: 1.7rem;
+}
+
+.card.scenario .accent-line {
+  height: 4px;
+}
+
+/* Fortschrittsbalken im Szenario-Panel (100% → 0%) */
+.scenario-progress-wrap {
+  width: 100%;
+  height: 18px;
+  border-radius: 12px;
+  background: #1c234088;
+  overflow: hidden;
+  position: relative;
+  margin: 0 0 10px 0;
+  box-shadow: 0 0 12px 0 rgba(33,122,255,0.15);
+}
+.scenario-progress-bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--accent), var(--accent3), var(--accent));
+  border-radius: 12px;
+  box-shadow: 0 0 20px 0 var(--accent2-glow), 0 0 10px var(--accent-glow);
+  transition: width 1s linear;
+}
+
+/* Dauerhafter Puls: Karte immer sichtbar, schnell blinkend fuer Dringlichkeit */
+.card.scenario.pulse-ui {
+  animation: scenarioPulse 1.5s ease-in-out infinite !important;
+}
+@keyframes scenarioPulseSlow {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.65; }
+  100% { opacity: 1; }
+}
+
+/* Jail-UI: GROSS (gleiche Groesse wie Szenario) + langsamer 11s Puls */
+.card.jail {
+  min-width: 540px;
+  max-width: 700px;
+  padding: 38px 48px 32px 48px;
+  animation: none;
+}
+
+.card.jail .title {
+  font-size: 3.2rem;
+  letter-spacing: 0.1em;
+}
+
+.card.jail .chip {
+  font-size: 1.4rem;
+  padding: 9px 24px;
+}
+
+.card.jail .subtitle {
+  font-size: 1.5rem;
+  margin: 10px 0 22px 0;
+}
+
+.card.jail .accent-line {
+  height: 4px;
+}
+
+.card.jail.pulse-ui {
+  animation: scenarioPulseSlow 2.5s ease-in-out infinite !important;
+}
+
+/* Sanfter Puls: 100% bis 60% Sichtbarkeit (nie unsichtbar) */
 @keyframes scenarioPulse {
   0%   { opacity: 1; }
-  35%  { opacity: 0.05; }
-  65%  { opacity: 0.05; }
+  50%  { opacity: 0.6; }
   100% { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Vor-Ort-Zahlung Panel
+   ═══════════════════════════════════════════════════════ */
+.card.vorozahlung {
+  min-width: 460px;
+  max-width: 620px;
+  padding: 34px 44px 28px 44px;
+  animation: none;
+  border-top: 4px solid #22c55e;
+  box-shadow: 0 0 40px 0 #22c55e44, var(--shadow);
+}
+
+.card.vorozahlung.show-ui {
+  animation: vozPop 0.5s cubic-bezier(.22,1.1,.38,1) both;
+}
+
+@keyframes vozPop {
+  0%   { opacity: 0; transform: scale(0.88) translateY(40px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.chip.alt-green {
+  background: linear-gradient(90deg, #14532d 0%, #22c55e 100%);
+  color: #d1fae5;
+  border: 1.5px solid #22c55e88;
+  box-shadow: 0 0 14px #22c55e55;
+  font-size: 1.1rem;
+  padding: 6px 20px;
+  border-radius: 22px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.voz-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.card.vorozahlung .title {
+  font-size: 2.4rem;
+  letter-spacing: 0.12em;
+  color: #22c55e;
+  text-shadow: 0 0 18px #22c55eaa, 0 0 4px #22c55e55;
+}
+
+.voz-officer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 18px;
+  font-size: 1.1rem;
+  opacity: 0.85;
+  letter-spacing: 0.04em;
+}
+
+.voz-icon {
+  font-size: 1.6rem;
+}
+
+.voz-officer-text {
+  font-style: italic;
+  color: #a5f3c9;
+}
+
+/* Quittungs-Layout */
+.voz-receipt {
+  width: 100%;
+  background: #0d1a1488;
+  border: 1.5px solid #22c55e44;
+  border-radius: 14px;
+  padding: 14px 22px 10px 22px;
+  margin-bottom: 18px;
+}
+
+.voz-receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 1.1rem;
+}
+
+.voz-receipt-label {
+  opacity: 0.7;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+}
+
+.voz-receipt-value {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.voz-receipt-divider {
+  height: 1px;
+  background: #22c55e33;
+  margin: 6px 0;
+}
+
+.voz-total-row {
+  margin-top: 4px;
+}
+
+.voz-amount {
+  font-size: 1.7rem !important;
+  font-family: var(--font-digi);
+  color: #22c55e !important;
+  text-shadow: 0 0 14px #22c55ecc, 0 0 4px #22c55e55;
+  letter-spacing: 0.08em;
+}
+
+/* Fortschrittsbalken */
+.voz-progress-wrap {
+  width: 100%;
+  height: 10px;
+  border-radius: 8px;
+  background: #1c2340aa;
+  overflow: hidden;
+  position: relative;
+  margin: 0 0 12px 0;
+}
+
+.voz-progress-bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #14532d, #22c55e, #86efac);
+  border-radius: 8px;
+  box-shadow: 0 0 12px #22c55e88;
+  transition: width 2.8s ease-in-out;
+}
+
+.voz-status {
+  font-size: 1.05rem;
+  text-align: center;
+  letter-spacing: 0.04em;
+  color: #86efac;
+  min-height: 1.4em;
+  transition: color 0.4s;
+}
+
+.voz-status.done {
+  color: #22c55e;
+  font-weight: 700;
+  font-size: 1.2rem;
+  text-shadow: 0 0 12px #22c55eaa;
+}
+
+
+   ═══════════════════════════════════════════════════════ */
+.notify-stack {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 18px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-width: 520px;
+  width: 90vw;
+}
+
+.notify-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px 10px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(10,16,38,0.97) 0%, rgba(18,30,60,0.95) 100%);
+  border-left: 3px solid var(--accent);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.55), 0 0 12px 0 rgba(33,122,255,0.2);
+  color: #fff;
+  font-family: var(--font-main);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transform: translateY(-30px);
+  animation: notifySlideIn 0.5s cubic-bezier(.22,1.1,.38,1) forwards;
+  pointer-events: none;
+}
+
+.notify-item.out {
+  animation: notifySlideOut 0.4s cubic-bezier(.6,0,.4,1) forwards;
+}
+
+.notify-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  text-shadow: 0 0 10px var(--accent-glow), 0 0 4px #fff6;
+  filter: drop-shadow(0 0 4px var(--accent-glow));
+}
+
+.notify-text {
+  flex: 1;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8), 0 0 6px rgba(0,0,0,0.4);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.notify-item.type-polizei {
+  border-left-color: var(--accent);
+}
+.notify-item.type-polizei .notify-icon { color: var(--accent); }
+
+.notify-item.type-erfolg {
+  border-left-color: #2ecc71;
+}
+.notify-item.type-erfolg .notify-icon { color: #2ecc71; text-shadow: 0 0 12px #2ecc7199; }
+
+.notify-item.type-warnung {
+  border-left-color: #f39c12;
+}
+.notify-item.type-warnung .notify-icon { color: #f39c12; text-shadow: 0 0 12px #f39c1299; }
+
+.notify-item.type-info {
+  border-left-color: var(--accent2);
+}
+.notify-item.type-info .notify-icon { color: var(--accent2); }
+
+@keyframes notifySlideIn {
+  0%   { opacity: 0; transform: translateY(-30px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes notifySlideOut {
+  0%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-30px); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Polizeiakte Vollbild-UI (GTA V Police Department Style)
+   Mit police_bg.png Hintergrund, volle Sichtbarkeit
+   ═══════════════════════════════════════════════════════ */
+.akte-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  animation: akteFadeIn 0.4s ease-out both;
+}
+.akte-overlay.hidden {
+  display: none !important;
+}
+
+/* Background Image Layer (PNG, volle Sichtbarkeit) */
+.akte-bg-img {
+  position: absolute;
+  inset: 0;
+  background: url('police_bg.png') center center / cover no-repeat;
+  opacity: 1; /* 100% Sichtbarkeit */
+  z-index: 0;
+}
+
+/* Overlay fuer Lesbarkeit (leichter dunkler Schleier ueber dem Bild) */
+.akte-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 30% 25%, rgba(33,122,255,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 75%, rgba(255,42,42,0.05) 0%, transparent 50%),
+    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.20) 50%, rgba(0,0,0,0.40) 100%);
+  z-index: 1;
+}
+
+/* Haupt-Container (volle Seite) */
+.akte-fullpage {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+/* Oberer Header-Streifen */
+.akte-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 48px 22px 48px;
+  background: linear-gradient(90deg, rgba(10,16,38,0.82) 0%, rgba(18,27,59,0.72) 50%, rgba(10,16,38,0.82) 100%);
+  border-bottom: 2px solid rgba(33,122,255,0.25);
+  backdrop-filter: blur(8px);
+}
+.akte-top-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.akte-badge-icon {
+  font-size: 3.2rem;
+  filter: drop-shadow(0 0 16px rgba(33,122,255,0.6));
+}
+.akte-main-title {
+  font-family: var(--font-digi);
+  font-size: 2.6rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: #fff;
+  text-shadow: 0 0 24px rgba(33,122,255,0.5), 0 0 10px rgba(255,42,42,0.3);
+  margin: 0;
+  text-transform: uppercase;
+}
+.akte-dept {
+  font-size: 1.0rem;
+  color: rgba(179,214,255,0.6);
+  margin: 4px 0 0 0;
+  letter-spacing: 0.06em;
+}
+.akte-top-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Status-Pill */
+.akte-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 28px;
+  border-radius: 50px;
+  background: rgba(0,0,0,0.4);
+  border: 2px solid currentColor;
+  backdrop-filter: blur(6px);
+}
+.akte-status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 12px currentColor;
+  animation: statusDotPulse 1.5s infinite alternate;
+}
+.akte-status-text {
+  font-family: var(--font-digi);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px currentColor;
+}
+
+/* Status-Farben */
+.akte-status-pill[data-status="unbescholten"] { color: #2ecc71; }
+.akte-status-pill[data-status="vorbestraft"] { color: #f39c12; }
+.akte-status-pill[data-status="mehrfach vorbestraft"] { color: #e67e22; }
+.akte-status-pill[data-status="schwerkriminell"] { color: #e74c3c; }
+.akte-status-pill[data-status="Staatsfeind"] {
+  color: #ff1744;
+  animation: statusBlink 1.2s infinite alternate;
+}
+
+@keyframes statusDotPulse {
+  0% { opacity: 0.6; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1.15); }
+}
+
+/* Close Button */
+.akte-close-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.12);
+  background: rgba(255,42,42,0.12);
+  color: #ff6b6b;
+  font-size: 1.4rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.akte-close-btn:hover {
+  background: rgba(255,42,42,0.35);
+  border-color: #ff6b6b;
+  box-shadow: 0 0 20px rgba(255,42,42,0.4);
+}
+
+/* Haupt-Inhalt */
+.akte-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 40px 60px;
+  gap: 36px;
+}
+
+/* Statistik-Karten */
+.akte-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+.akte-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 20px;
+  background: rgba(10,16,38,0.65);
+  border: 1px solid rgba(33,122,255,0.18);
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  transition: all 0.3s;
+}
+.akte-card:hover {
+  border-color: rgba(33,122,255,0.4);
+  background: rgba(10,16,38,0.8);
+  box-shadow: 0 0 30px rgba(33,122,255,0.15);
+}
+.akte-card-icon {
+  font-size: 2.4rem;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 0 10px rgba(33,122,255,0.4));
+}
+.akte-card-val {
+  font-family: var(--font-digi);
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 16px rgba(33,122,255,0.4);
+  margin-bottom: 6px;
+}
+.akte-card-lbl {
+  font-size: 0.85rem;
+  color: rgba(179,214,255,0.5);
+  text-align: center;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Detail-Bereich */
+.akte-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: rgba(10,16,38,0.55);
+  border: 1px solid rgba(33,122,255,0.12);
+  border-radius: 16px;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.akte-info-row {
+  display: flex;
+  align-items: center;
+  padding: 18px 32px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.2s;
+}
+.akte-info-row:last-child { border-bottom: none; }
+.akte-info-row:hover { background: rgba(33,122,255,0.04); }
+.akte-info-icon {
+  font-size: 1.3rem;
+  width: 40px;
+  text-align: center;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(33,122,255,0.3));
+}
+.akte-info-label {
+  flex: 1;
+  font-size: 1.0rem;
+  color: rgba(179,214,255,0.7);
+  letter-spacing: 0.02em;
+}
+.akte-info-value {
+  font-family: var(--font-digi);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 8px rgba(33,122,255,0.3);
+}
+
+/* Footer */
+.akte-bottom-bar {
+  padding: 20px 48px;
+  background: linear-gradient(90deg, rgba(10,16,38,0.82) 0%, rgba(18,27,59,0.72) 50%, rgba(10,16,38,0.82) 100%);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  text-align: center;
+  backdrop-filter: blur(8px);
+}
+.akte-legal {
+  font-size: 0.78rem;
+  color: rgba(179,214,255,0.3);
+  margin: 0 0 8px 0;
+  letter-spacing: 0.02em;
+}
+.akte-close-hint {
+  font-size: 0.9rem;
+  color: rgba(179,214,255,0.5);
+  margin: 0;
+}
+.akte-key-hint {
+  font-family: var(--font-digi);
+  font-size: 0.82rem;
+  background: rgba(33,122,255,0.2);
+  color: var(--accent2);
+  padding: 3px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(33,122,255,0.3);
+  letter-spacing: 0.05em;
+}
+.akte-bottom-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 4px;
+}
+.akte-refresh-btn {
+  background: rgba(33,122,255,0.15);
+  color: var(--accent2);
+  border: 1px solid rgba(33,122,255,0.35);
+  border-radius: 8px;
+  padding: 7px 20px;
+  font-size: 0.88rem;
+  font-family: var(--font-main);
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.04em;
+}
+.akte-refresh-btn:hover {
+  background: rgba(33,122,255,0.32);
+  border-color: var(--accent2);
+  box-shadow: 0 0 14px rgba(33,122,255,0.28);
+}
+.akte-refresh-btn.loading {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.akte-reduce-btn {
+  background: rgba(255, 160, 30, 0.15);
+  color: #ffa31a;
+  border: 1px solid rgba(255, 160, 30, 0.35);
+  border-radius: 8px;
+  padding: 7px 20px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  cursor: pointer;
+  display: none; /* initial state: hidden until JS shows based on akte data */
+  transition: background 0.18s, box-shadow 0.18s, border-color 0.18s;
+  letter-spacing: 0.04em;
+}
+.akte-reduce-btn:hover {
+  background: rgba(255, 160, 30, 0.32);
+  border-color: #ffa31a;
+  box-shadow: 0 0 14px rgba(255, 160, 30, 0.28);
+}
+.akte-reduce-btn.loading, .akte-reduce-btn:disabled {
+  opacity: 0.55;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* ── Gestaffelte Reduktionskosten ── */
+.akte-stufen-wrap {
+  margin: 0 0 10px 0;
+  padding: 12px 18px;
+  background: rgba(255,163,30,0.06);
+  border: 1px solid rgba(255,163,30,0.18);
+  border-radius: 10px;
+  text-align: left;
+}
+.akte-stufen-wrap.hidden { display: none; }
+.akte-stufen-title {
+  font-size: 0.82rem;
+  color: #ffa31a;
+  margin: 0 0 8px 0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.akte-stufen-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.akte-stufe-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,163,30,0.08);
+  border: 1px solid rgba(255,163,30,0.2);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.75);
+  white-space: nowrap;
+}
+.akte-stufe-row.active {
+  background: rgba(255,163,30,0.22);
+  border-color: #ffa31a;
+  color: #ffa31a;
+  font-weight: 600;
+  box-shadow: 0 0 8px rgba(255,163,30,0.2);
+}
+.akte-stufe-badge {
+  font-size: 0.75rem;
+  opacity: 0.55;
+}
+
+@keyframes akteFadeIn {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes statusBlink {
+  0% { text-shadow: 0 0 8px #ff1744; box-shadow: none; }
+  100% { text-shadow: 0 0 30px #ff1744, 0 0 60px rgba(255,23,68,0.4); box-shadow: 0 0 24px rgba(255,23,68,0.2); }
+}
+
+@media (max-width: 800px) {
+  .akte-cards { grid-template-columns: repeat(2, 1fr); }
+  .akte-main-title { font-size: 1.6rem; }
+  .akte-top-bar { padding: 18px 24px; }
+  .akte-content { padding: 24px 24px; }
 }

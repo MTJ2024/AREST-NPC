@@ -1,6 +1,14 @@
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║  AREST-NPC — Copyright (c) 2024-2026 MTJ2024. Alle Rechte vorbehalten. ║
+-- ║  Unbefugtes Kopieren, Verbreiten oder Modifizieren ist UNTERSAGT.      ║
+-- ║  Plagiatschutz aktiv — Unbefugte Nutzung wird erkannt und gemeldet.    ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
 -- NUI Focus-Handler: Szenario/Arrest-Log dürfen NIE den Fokus blockieren (E soll funktionieren)
 
 local function setFocusSafe()
+  -- Polizeiakte NUI-Focus NICHT freigeben wenn die Akte gerade geoeffnet ist,
+  -- sonst koennte der Spieler die Akte nicht mehr schliessen.
+  if IsPolizeiakteOpen and IsPolizeiakteOpen() then return end
   SetNuiFocus(false, false)
   SetNuiFocusKeepInput(false)
 end
@@ -34,13 +42,14 @@ AddEventHandler('mtj_arrest:nui:arrest_log', function(show, lines)
 end)
 
 RegisterNetEvent('mtj_arrest:nui:jail')
-AddEventHandler('mtj_arrest:nui:jail', function(show, seconds, title, sub)
+AddEventHandler('mtj_arrest:nui:jail', function(show, seconds, title, sub, fine)
   SendNUIMessage({
     action = "jailToggle",
     show = show or false,
     seconds = seconds or 0,
     title = title or "Gefängnis",
-    sub = sub or ""
+    subtitle = sub or "",
+    fine = fine or 0
   })
   setFocusSafe()
 end)
@@ -50,9 +59,29 @@ AddEventHandler('mtj_arrest:nui:jail_tick', function(seconds)
   SendNUIMessage({ action = "jailTick", seconds = seconds or 0 })
 end)
 
+RegisterNetEvent('mtj_arrest:nui:fine')
+AddEventHandler('mtj_arrest:nui:fine', function(show, fine, officer, delikt, done, doneText)
+  SendNUIMessage({
+    action     = "fineToggle",
+    show       = show or false,
+    fine       = fine or 0,
+    officer    = officer or "Polizeibeamter",
+    delikt     = delikt or "Ordnungswidrigkeit",
+    done       = done or false,
+    doneText   = doneText or "✅ Strafe bezahlt — Auf freiem Fuß!",
+    statusText = show and "Zahlung wird verarbeitet…" or nil
+  })
+  setFocusSafe()
+end)
+
 RegisterNetEvent('mtj_arrest:nui:toast')
 AddEventHandler('mtj_arrest:nui:toast', function(text)
   SendNUIMessage({ action = "toast", text = tostring(text or "") })
+end)
+
+RegisterNetEvent('mtj_arrest:nui:notify')
+AddEventHandler('mtj_arrest:nui:notify', function(text, ntype)
+  SendNUIMessage({ action = "notify", text = tostring(text or ""), type = ntype or "info" })
 end)
 
 AddEventHandler('onResourceStop', function(res)
