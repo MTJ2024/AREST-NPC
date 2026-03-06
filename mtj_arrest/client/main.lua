@@ -275,6 +275,10 @@ function IsCombatPhaseActive()
   return combatMaintenanceActive
 end
 
+function IsPlayerInJail()
+  return inJail
+end
+
 -- Fuer wanted_level.lua: Gibt lastKnownWanted zurueck damit
 -- die Wanted-Pruefung nicht auf GTA's Race-Condition reinfaellt
 function GetMainLuaLastKnownWanted()
@@ -1744,13 +1748,22 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes, fineAmount)
   SetCurrentPedWeapon(player, GetHashKey("WEAPON_UNARMED"), true)
 
   inJail = true
+  scenarioActive = false
+  canSurrender = false
+  surrendered = false
+  cuffing = false
+  cuffed = false
+  combatMaintenanceActive = false
+  complianceWindow = 0
+  lastKnownWanted = 0
+  setAmbientCopsIgnore(true)
+  TriggerEvent('mtj_arrest:endScenario')
 
   -- HIER: WANTED LEVEL AUF NULL SETZEN
-  if GetPlayerWantedLevel(PlayerId()) ~= 0 then
-    SetPlayerWantedLevel(PlayerId(), 0, false)
-    SetPlayerWantedLevelNow(PlayerId(), false)
-    dbg("[Jail] Setze Wanted Level auf 0!")
-  end
+  SetPlayerWantedLevel(PlayerId(), 0, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  ClearPlayerWantedLevel(PlayerId())
+  dbg("[Jail] Wanted/Angriff gestoppt, Szenario beendet")
 
   local jailSeconds = math.floor((tonumber(minutes) or 10) * 60)
   local jailTotalSeconds = jailSeconds -- Gesamtzeit fuer Progress-Bar (einmalig gesetzt)
@@ -1798,6 +1811,7 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes, fineAmount)
       SetEnableHandcuffs(player, false)
       inJail = false
       jailTime = 0
+      setAmbientCopsIgnore(false)
 
       -- Waffen entfernen (Client-Ped) — Server prüft Waffenschein
       RemoveAllPedWeapons(player, true)
@@ -1849,6 +1863,13 @@ end)
 
 RegisterNetEvent('mtj_arrest:startScenario')
 AddEventHandler('mtj_arrest:startScenario', function()
+  if inJail then
+    dbg("startScenario: Spieler im Gefaengnis — abgebrochen")
+    SetPlayerWantedLevel(PlayerId(), 0, false)
+    SetPlayerWantedLevelNow(PlayerId(), false)
+    ClearPlayerWantedLevel(PlayerId())
+    return
+  end
   -- Job-Freigabe: Spieler mit freigegebenen Jobs (z.B. police) sind exempt → kein Szenario.
   if IsPlayerExempt and IsPlayerExempt() then
     dbg("startScenario: Spieler ist Job-exempt — abgebrochen")
