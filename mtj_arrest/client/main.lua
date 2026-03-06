@@ -2071,8 +2071,8 @@ end)
 
 RegisterNetEvent('mtj_arrest:clientForceWantedStop')
 AddEventHandler('mtj_arrest:clientForceWantedStop', function(reason)
-  local stopMs = ((Config and Config.RespawnGraceSek) or 10) * 1000
-  wantedHardStopUntil = math.max(wantedHardStopUntil, GetGameTimer() + stopMs)
+  local hardStopDurationMs = ((Config and Config.RespawnGraceSek) or 10) * 1000
+  wantedHardStopUntil = math.max(wantedHardStopUntil, GetGameTimer() + hardStopDurationMs)
   scenarioActive = false
   canSurrender = false
   surrendered = false
