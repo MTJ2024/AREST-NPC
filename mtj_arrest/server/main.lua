@@ -21,14 +21,24 @@ if not Config.JailFineMessage then Config.JailFineMessage = "Dir wurden %s€ al
 
 -- ESX holen
 local ESX
+local function resolveESX()
+  if ESX then return ESX end
+  pcall(function()
+    if exports and exports['es_extended'] and exports['es_extended'].getSharedObject then
+      ESX = exports['es_extended']:getSharedObject()
+    end
+  end)
+  if ESX then return ESX end
+  pcall(function()
+    TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
+  end)
+  return ESX
+end
+
 CreateThread(function()
   local start = GetGameTimer()
   while not ESX and (GetGameTimer() - start) < 10000 do
-    pcall(function()
-      if exports and exports['es_extended'] and exports['es_extended'].getSharedObject then
-        ESX = exports['es_extended']:getSharedObject()
-      end
-    end)
+    resolveESX()
     Wait(200)
   end
   if ESX then dbg("ESX loaded") else dbg("Warning: ESX not found") end
@@ -77,8 +87,9 @@ local function clearAllWeaponsAndItems(src)
   end
 
   -- ESX: Loadout & Inventory
-  if ESX then
-    local xPlayer = ESX.GetPlayerFromId(src)
+  local esx = resolveESX()
+  if esx then
+    local xPlayer = esx.GetPlayerFromId(src)
     if xPlayer then
       -- Waffen im Loadout (WICHTIG: Colon-Syntax fuer ESX-Methoden!)
       if xPlayer.getLoadout and xPlayer.removeWeapon then
@@ -578,8 +589,9 @@ AddEventHandler('mtj_arrest:reduceKriminalLevel', function()
   end
 
   -- ESX
-  if not paid and ESX then
-    local xPlayer = ESX.GetPlayerFromId(src)
+  local esx = resolveESX()
+  if not paid and esx then
+    local xPlayer = esx.GetPlayerFromId(src)
     if xPlayer then
       local cash = esxGetMoney(xPlayer, 'money')
       local bank = esxGetMoney(xPlayer, 'bank')
@@ -607,9 +619,6 @@ AddEventHandler('mtj_arrest:reduceKriminalLevel', function()
   if PolizeiakteSetFestnahmen then
     PolizeiakteSetFestnahmen(src, newFestnahmen)
   end
-
-  -- Nach erfolgreicher Zahlung Verfolgung client-seitig sofort hart stoppen
-  TriggerClientEvent('mtj_arrest:clientForceWantedStop', src, "akte_payment")
 
   TriggerClientEvent('chat:addMessage', src, {
     color = {50, 255, 50}, multiline = true,

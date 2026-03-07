@@ -159,7 +159,7 @@
     if (reduceBtn) {
       var canReduce = !!akte.kriminalLevelSenkenAktiviert &&
                       (akte.festnahmen || 0) > (akte.mindestFestnahmen || 0);
-      reduceBtn.style.display = canReduce ? '' : 'none';
+      reduceBtn.style.display = canReduce ? 'inline-flex' : 'none';
       reduceBtn.disabled = false;
       reduceBtn.classList.remove('loading');
       var currentCost = akte.aktuelleReduktionsKosten || 0;
