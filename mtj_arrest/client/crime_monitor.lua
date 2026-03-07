@@ -96,6 +96,24 @@ CreateThread(function()
       goto continue
     end
 
+    -- Globale HardStop-Phase (Zahlung/Festnahme/Tod): niemals Wanted setzen
+    if IsWantedHardStopActive and IsWantedHardStopActive() then
+      shootingSince = 0; shootingWanted = false; pendingWanted = 0
+      SetPlayerWantedLevel(PlayerId(), 0, false)
+      SetPlayerWantedLevelNow(PlayerId(), false)
+      ClearPlayerWantedLevel(PlayerId())
+      goto continue
+    end
+
+    -- Im Gefaengnis niemals Crime-Wanted aufbauen/halten
+    if IsPlayerInJail and IsPlayerInJail() then
+      shootingSince = 0; shootingWanted = false; pendingWanted = 0
+      SetPlayerWantedLevel(PlayerId(), 0, false)
+      SetPlayerWantedLevelNow(PlayerId(), false)
+      ClearPlayerWantedLevel(PlayerId())
+      goto continue
+    end
+
     -- Exempt-Spieler (Police/Admin): niemals Wanted vergeben
     if IsPlayerExempt and IsPlayerExempt() then
       shootingSince = 0; shootingWanted = false; pendingWanted = 0

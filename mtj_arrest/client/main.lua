@@ -130,6 +130,8 @@ end
 
 -- Tod-Erkennung: Beendet Szenario sofort wenn Spieler stirbt
 local wantedDeathLockUntil = 0 -- GameTimer-Zeitstempel bis zu dem Wanted gesperrt ist
+local wantedHardStopUntil = 0 -- Kurze globale Sperre nach Zahlung/Tod/Festnahme gegen Re-Trigger
+local applyRespawnGraceOnNextSpawn = false -- Nur nach echtem Tod/Respawn die Wanted-Spawn-Sperre aktivieren
 function GetWantedDeathLockUntil() return wantedDeathLockUntil end
 
 -- Vorwaerts-Deklarationen: Diese local-Variablen werden in Threads verwendet,
@@ -144,6 +146,7 @@ CreateThread(function()
     local ped = PlayerPedId()
     local isDead = IsPedDeadOrDying(ped, true)
     if isDead and not wasDead then
+      applyRespawnGraceOnNextSpawn = true
       -- Spieler ist gerade gestorben
       diedDuringScenario = scenarioActive
       -- Tod-Strafe: gestaffelte Geldstrafe basierend auf Wanted-Level
@@ -180,6 +183,7 @@ CreateThread(function()
       ClearPlayerWantedLevel(PlayerId())
       lastKnownWanted = 0
       wantedDeathLockUntil = GetGameTimer() + 5000
+      wantedHardStopUntil = math.max(wantedHardStopUntil, wantedDeathLockUntil)
       dbg("Spieler gestorben: Wanted=0, Sperre bis", wantedDeathLockUntil)
       -- Szenario-Event feuern damit wanted_level.lua reset erhaelt
       TriggerEvent('mtj_arrest:endScenario')
@@ -273,27 +277,39 @@ function IsCombatPhaseActive()
   return combatMaintenanceActive
 end
 
+function IsPlayerInJail()
+  return inJail
+end
+
+function IsWantedHardStopActive()
+  return wantedHardStopUntil > GetGameTimer()
+end
+
 -- Fuer wanted_level.lua: Gibt lastKnownWanted zurueck damit
 -- die Wanted-Pruefung nicht auf GTA's Race-Condition reinfaellt
 function GetMainLuaLastKnownWanted()
   return lastKnownWanted
 end
 
--- === RELATIONSHIP GROUP (Cops MÜSSEN den Spieler hassen, sonst keine Interaktion) ===
+-- === RELATIONSHIP GROUP ===
 local ARREST_COP_GROUP = nil
 CreateThread(function()
+  -- ARREST_COP darf NICHT global "PLAYER" hassen:
+  -- Netzwerk-synchronisierte Cops wuerden sonst alle Spieler (auch Unbeteiligte) angreifen.
+  -- Ziel-Hostilitaet erfolgt gezielt ueber TaskCombatPed auf den verfolgten Spieler.
+  local REL_NEUTRAL = 3
   local ok, hash = AddRelationshipGroup("ARREST_COP")
   if ok then
     ARREST_COP_GROUP = hash
-    SetRelationshipBetweenGroups(5, hash, GetHashKey("PLAYER")) -- 5 = HATE
-    SetRelationshipBetweenGroups(5, GetHashKey("PLAYER"), hash)
-    dbg("ARREST_COP relationship group erstellt (HATE)")
+    SetRelationshipBetweenGroups(REL_NEUTRAL, hash, GetHashKey("PLAYER"))
+    SetRelationshipBetweenGroups(REL_NEUTRAL, GetHashKey("PLAYER"), hash)
+    dbg("ARREST_COP relationship group erstellt (NEUTRAL)")
   else
     -- Fallback: Gruppe existiert schon
     ARREST_COP_GROUP = GetHashKey("ARREST_COP")
-    SetRelationshipBetweenGroups(5, ARREST_COP_GROUP, GetHashKey("PLAYER"))
-    SetRelationshipBetweenGroups(5, GetHashKey("PLAYER"), ARREST_COP_GROUP)
-    dbg("ARREST_COP relationship group wiederverwendet")
+    SetRelationshipBetweenGroups(REL_NEUTRAL, ARREST_COP_GROUP, GetHashKey("PLAYER"))
+    SetRelationshipBetweenGroups(REL_NEUTRAL, GetHashKey("PLAYER"), ARREST_COP_GROUP)
+    dbg("ARREST_COP relationship group wiederverwendet (NEUTRAL)")
   end
   -- Max-Wanted-Level auf 5 setzen (GTA/FiveM begrenzt sonst oft auf 3!)
   SetMaxWantedLevel(5)
@@ -313,6 +329,14 @@ CreateThread(function()
     if now - lastMaxWantedCheck > 10000 then
       SetMaxWantedLevel(5)
       lastMaxWantedCheck = now
+    end
+    if wantedHardStopUntil > now then
+      SetPlayerWantedLevel(PlayerId(), 0, false)
+      SetPlayerWantedLevelNow(PlayerId(), false)
+      ClearPlayerWantedLevel(PlayerId())
+      lastKnownWanted = 0
+      wantedDropCount = 0
+      goto continue_wm
     end
     -- Spieler tot: keine Wanted-Wartung, sofort weiter
     if IsPedDeadOrDying(PlayerPedId(), true) then
@@ -1282,7 +1306,7 @@ local function reactivatePolice()
       SetPedHearingRange(ped, 100.0)
       SetPedFleeAttributes(ped, 0, false)
       SetPedAccuracy(ped, 50)
-      -- Von COP (RESPECT) → ARREST_COP (HATE) umschalten + bewaffnen
+      -- Von COP (RESPECT) → ARREST_COP umschalten + bewaffnen
       if ARREST_COP_GROUP then
         SetPedRelationshipGroupHash(ped, ARREST_COP_GROUP)
       end
@@ -1358,6 +1382,7 @@ end
 local function hideAllUI()
   TriggerEvent('mtj_arrest:nui:scenario', false)
   TriggerEvent('mtj_arrest:nui:jail', false)
+  TriggerEvent('mtj_arrest:nui:fine', false)
   hideCombatHUD()
   nativeHudClear()
   dbg("hideAllUI: alle Panels versteckt")
@@ -1738,13 +1763,23 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes, fineAmount)
   SetCurrentPedWeapon(player, GetHashKey("WEAPON_UNARMED"), true)
 
   inJail = true
+  wantedHardStopUntil = math.max(wantedHardStopUntil, GetGameTimer() + 10000)
+  scenarioActive = false
+  canSurrender = false
+  surrendered = false
+  cuffing = false
+  cuffed = false
+  combatMaintenanceActive = false
+  complianceWindow = 0
+  lastKnownWanted = 0
+  setAmbientCopsIgnore(true)
+  TriggerEvent('mtj_arrest:endScenario')
 
   -- HIER: WANTED LEVEL AUF NULL SETZEN
-  if GetPlayerWantedLevel(PlayerId()) ~= 0 then
-    SetPlayerWantedLevel(PlayerId(), 0, false)
-    SetPlayerWantedLevelNow(PlayerId(), false)
-    dbg("[Jail] Setze Wanted Level auf 0!")
-  end
+  SetPlayerWantedLevel(PlayerId(), 0, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  ClearPlayerWantedLevel(PlayerId())
+  dbg("[Jail] Wanted/Angriff gestoppt, Szenario beendet")
 
   local jailSeconds = math.floor((tonumber(minutes) or 10) * 60)
   local jailTotalSeconds = jailSeconds -- Gesamtzeit fuer Progress-Bar (einmalig gesetzt)
@@ -1792,6 +1827,7 @@ AddEventHandler('mtj_arrest:clientBeginJail', function(minutes, fineAmount)
       SetEnableHandcuffs(player, false)
       inJail = false
       jailTime = 0
+      setAmbientCopsIgnore(false)
 
       -- Waffen entfernen (Client-Ped) — Server prüft Waffenschein
       RemoveAllPedWeapons(player, true)
@@ -1843,6 +1879,20 @@ end)
 
 RegisterNetEvent('mtj_arrest:startScenario')
 AddEventHandler('mtj_arrest:startScenario', function()
+  if wantedHardStopUntil > GetGameTimer() then
+    dbg("startScenario: Wanted-HardStop aktiv — abgebrochen")
+    SetPlayerWantedLevel(PlayerId(), 0, false)
+    SetPlayerWantedLevelNow(PlayerId(), false)
+    ClearPlayerWantedLevel(PlayerId())
+    return
+  end
+  if inJail then
+    dbg("startScenario: Spieler im Gefaengnis — abgebrochen")
+    SetPlayerWantedLevel(PlayerId(), 0, false)
+    SetPlayerWantedLevelNow(PlayerId(), false)
+    ClearPlayerWantedLevel(PlayerId())
+    return
+  end
   -- Job-Freigabe: Spieler mit freigegebenen Jobs (z.B. police) sind exempt → kein Szenario.
   if IsPlayerExempt and IsPlayerExempt() then
     dbg("startScenario: Spieler ist Job-exempt — abgebrochen")
@@ -1991,6 +2041,7 @@ AddEventHandler('mtj_arrest:endScenario', function()
   gpsTrackerActive = false  -- GPS-Tracker freigeben fuer naechstes Szenario
   gpsLastHeliUpdate = 0
   hideScenarioUI()
+  TriggerEvent('mtj_arrest:nui:fine', false)
   hideCombatHUD()
   nativeHudClear()
   -- Spieler-Freeze aufheben wenn er gerade in einer Festnahme-Animation war
@@ -2005,7 +2056,7 @@ AddEventHandler('mtj_arrest:endScenario', function()
   if wasInPursuit then
     -- Verfolgung laeuft noch → Cops behalten, sie kaempfen weiter
     dbg("endScenario: Cops BEIBEHALTEN (lastKnownWanted > 0, Verfolgung laeuft noch)")
-    -- Cops trotzdem kampfbereit halten (Relationship bleibt HATE)
+    -- Cops bleiben kampfbereit ueber bestehende Tasks (TaskCombatPed)
   else
     -- Wanted wirklich 0 → alles aufraeumen
     clearCops()
@@ -2013,11 +2064,35 @@ AddEventHandler('mtj_arrest:endScenario', function()
     -- Ambient-Cops NUR zurueckschalten wenn Spieler lebt.
     -- Beim Tod setzt der death-handler SetPoliceIgnorePlayer(true) — wuerden wir es hier sofort
     -- auf false setzen, griffen GTA-Ambient-Cops den Spieler ohne Wanted-Sterne an.
-    if not IsPedDeadOrDying(PlayerPedId(), true) then
+    if not IsPedDeadOrDying(PlayerPedId(), true) and not inJail then
       setAmbientCopsIgnore(false)
     end
   end
   dbg("endScenario: scenario ended, lastKnownWanted:", lastKnownWanted)
+end)
+
+RegisterNetEvent('mtj_arrest:clientForceWantedStop')
+AddEventHandler('mtj_arrest:clientForceWantedStop', function(reason)
+  local hardStopDurationMs = ((Config and Config.RespawnGraceSek) or 10) * 1000
+  wantedHardStopUntil = math.max(wantedHardStopUntil, GetGameTimer() + hardStopDurationMs)
+  scenarioActive = false
+  canSurrender = false
+  surrendered = false
+  cuffing = false
+  cuffed = false
+  combatMaintenanceActive = false
+  complianceWindow = 0
+  evasionStartTime = 0
+  evasionNotifiedAt = 0
+  fluchtversuchTriggered = false
+  scenarioStartPos = nil
+  wantedDropCount = 0
+  lastKnownWanted = 0
+  SetPlayerWantedLevel(PlayerId(), 0, false)
+  SetPlayerWantedLevelNow(PlayerId(), false)
+  ClearPlayerWantedLevel(PlayerId())
+  TriggerEvent('mtj_arrest:endScenario')
+  dbg("clientForceWantedStop ausgefuehrt:", tostring(reason))
 end)
 
 -- === E-TASTE / SURRENDER ===
@@ -2130,6 +2205,7 @@ local function resetScriptState()
   releaseWarningShown = false
   inJail = false
   wantedDeathLockUntil = 0
+  applyRespawnGraceOnNextSpawn = false
   deadBodies = {}
   FreezeEntityPosition(PlayerPedId(), false)
   SetEnableHandcuffs(PlayerPedId(), false)
@@ -2156,24 +2232,32 @@ end)
 
 AddEventHandler('playerSpawned', function()
   resetScriptState()
-  -- Sperre nach Wiederbelebung: kein Wanted-Neustart fuer RespawnGraceSek Sekunden
-  wantedDeathLockUntil = GetGameTimer() + ((Config.RespawnGraceSek or 10) * 1000)
-  -- Aktive Wanted-Unterdrueckung: GTA weist nach Respawn sofort 1 Stern zu wenn Cops in der Naehe sind.
-  -- SetPoliceIgnorePlayer(true) + periodisches ClearPlayerWantedLevel fuer die gesamte Grace Period.
-  SetPoliceIgnorePlayer(PlayerId(), true)
-  local suppressUntil = wantedDeathLockUntil
-  CreateThread(function()
-    while GetGameTimer() < suppressUntil do
-      SetPlayerWantedLevel(PlayerId(), 0, false)
-      SetPlayerWantedLevelNow(PlayerId(), false)
-      ClearPlayerWantedLevel(PlayerId())
-      Wait(500)
-    end
-    if not scenarioActive then
-      SetPoliceIgnorePlayer(PlayerId(), false)
-    end
-    dbg("playerSpawned: Wanted-Grace-Period abgelaufen, SetPoliceIgnorePlayer(false)")
-  end)
+  -- Spawn-Sperre nur nach ECHTEM Tod/Respawn setzen.
+  -- Einige Frameworks feuern playerSpawned auch beim Join/Reload:
+  -- dort wuerde eine pauschale Sperre Wanted sofort "wegblocken".
+  if applyRespawnGraceOnNextSpawn then
+    applyRespawnGraceOnNextSpawn = false
+    -- Sperre nach Wiederbelebung: kein Wanted-Neustart fuer RespawnGraceSek Sekunden
+    wantedDeathLockUntil = GetGameTimer() + ((Config.RespawnGraceSek or 10) * 1000)
+    -- Aktive Wanted-Unterdrueckung: GTA weist nach Respawn sofort 1 Stern zu wenn Cops in der Naehe sind.
+    -- SetPoliceIgnorePlayer(true) + periodisches ClearPlayerWantedLevel fuer die gesamte Grace Period.
+    SetPoliceIgnorePlayer(PlayerId(), true)
+    local suppressUntil = wantedDeathLockUntil
+    CreateThread(function()
+      while GetGameTimer() < suppressUntil do
+        SetPlayerWantedLevel(PlayerId(), 0, false)
+        SetPlayerWantedLevelNow(PlayerId(), false)
+        ClearPlayerWantedLevel(PlayerId())
+        Wait(500)
+      end
+      if not scenarioActive then
+        SetPoliceIgnorePlayer(PlayerId(), false)
+      end
+      dbg("playerSpawned: Wanted-Grace-Period abgelaufen, SetPoliceIgnorePlayer(false)")
+    end)
+  else
+    wantedDeathLockUntil = 0
+  end
   -- Waffen NUR entfernen wenn Spieler waehrend Polizeieinsatz gestorben ist
   local wbt = Config.WaffenBeiTod
   if wbt and wbt.Aktiviert and diedDuringScenario then

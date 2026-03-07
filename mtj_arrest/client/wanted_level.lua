@@ -68,6 +68,24 @@ end
 CreateThread(function()
   while true do
     Wait(2000)
+    if IsWantedHardStopActive and IsWantedHardStopActive() then
+      SetPlayerWantedLevel(PlayerId(), 0, false)
+      SetPlayerWantedLevelNow(PlayerId(), false)
+      ClearPlayerWantedLevel(PlayerId())
+      scenarioTriggered = false
+      lastTriggerTime = 0
+      consecutiveZeroChecks = 0
+      goto skip_wanted_processing
+    end
+    if IsPlayerInJail and IsPlayerInJail() then
+      SetPlayerWantedLevel(PlayerId(), 0, false)
+      SetPlayerWantedLevelNow(PlayerId(), false)
+      ClearPlayerWantedLevel(PlayerId())
+      scenarioTriggered = false
+      lastTriggerTime = 0
+      consecutiveZeroChecks = 0
+      goto skip_wanted_processing
+    end
     -- Wanted-Sperre nach Tod pruefen (5 Sekunden nach Tod kein Re-Trigger)
     -- GetWantedDeathLockUntil ist in main.lua definiert, defensive Pruefung fuer Ladereihenfolge
     local deathLock = (GetWantedDeathLockUntil and GetWantedDeathLockUntil()) or 0
@@ -120,5 +138,6 @@ CreateThread(function()
         end
       end
     end
+    ::skip_wanted_processing::
   end
 end)

@@ -726,6 +726,7 @@ body {
   display: flex;
   align-items: stretch;
   justify-content: stretch;
+  overflow-y: auto;
   animation: akteFadeIn 0.4s ease-out both;
 }
 .akte-overlay.hidden {

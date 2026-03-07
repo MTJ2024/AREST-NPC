@@ -21,14 +21,24 @@ if not Config.JailFineMessage then Config.JailFineMessage = "Dir wurden %s€ al
 
 -- ESX holen
 local ESX
+local function resolveESX()
+  if ESX then return ESX end
+  pcall(function()
+    if exports and exports['es_extended'] and exports['es_extended'].getSharedObject then
+      ESX = exports['es_extended']:getSharedObject()
+    end
+  end)
+  if ESX then return ESX end
+  pcall(function()
+    TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
+  end)
+  return ESX
+end
+
 CreateThread(function()
   local start = GetGameTimer()
   while not ESX and (GetGameTimer() - start) < 10000 do
-    pcall(function()
-      if exports and exports['es_extended'] and exports['es_extended'].getSharedObject then
-        ESX = exports['es_extended']:getSharedObject()
-      end
-    end)
+    resolveESX()
     Wait(200)
   end
   if ESX then dbg("ESX loaded") else dbg("Warning: ESX not found") end
@@ -77,8 +87,9 @@ local function clearAllWeaponsAndItems(src)
   end
 
   -- ESX: Loadout & Inventory
-  if ESX then
-    local xPlayer = ESX.GetPlayerFromId(src)
+  local esx = resolveESX()
+  if esx then
+    local xPlayer = esx.GetPlayerFromId(src)
     if xPlayer then
       -- Waffen im Loadout (WICHTIG: Colon-Syntax fuer ESX-Methoden!)
       if xPlayer.getLoadout and xPlayer.removeWeapon then
@@ -107,6 +118,52 @@ local function clearAllWeaponsAndItems(src)
   end
 
   dbg(("[mtj_arrest] clearAllWeaponsAndItems finished for %d removed: ox=%d esx=%d"):format(src, removed_ox, removed_esx))
+end
+
+local function normalizeEsxAccountName(account)
+  if type(account) == "string" then return account end
+  if type(account) == "table" then
+    -- Kompatibilitaet: je nach ESX/Wrapper liegt der Kontoname in .name/.account/.type oder als [1]
+    local name = account.name or account.account or account.type or account[1]
+    if type(name) == "string" and name ~= "" then return name end
+  end
+  return nil
+end
+
+local function esxGetMoney(xPlayer, account)
+  if not xPlayer then return 0 end
+  local accountName = normalizeEsxAccountName(account)
+  if not accountName then return 0 end
+  if xPlayer.getAccount then
+    local ok, accOrErr = pcall(function() return xPlayer:getAccount(accountName) end)
+    if not ok then
+      dbg(("[mtj_arrest] esxGetMoney:getAccount failed for account '%s': %s"):format(accountName, tostring(accOrErr)))
+    elseif accOrErr and accOrErr.money ~= nil then
+      return tonumber(accOrErr.money) or 0
+    end
+  end
+  if accountName == "money" and xPlayer.getMoney then
+    local ok, val = pcall(function() return xPlayer:getMoney() end)
+    if ok then return tonumber(val) or 0 end
+  end
+  return 0
+end
+
+local function esxRemoveMoney(xPlayer, account, amount)
+  if not xPlayer then return false end
+  local accountName = normalizeEsxAccountName(account)
+  if not accountName then return false end
+  amount = math.floor(tonumber(amount) or 0)
+  if amount <= 0 then return false end
+  if accountName == "money" and xPlayer.removeMoney then
+    xPlayer:removeMoney(amount)
+    return true
+  end
+  if xPlayer.removeAccountMoney then
+    xPlayer:removeAccountMoney(accountName, amount)
+    return true
+  end
+  return false
 end
 
 -- Strafe abziehen: erst money, dann bank (ESX & ox_inventory)
@@ -164,21 +221,23 @@ local function takeJailFine(src, fineOverride)
   -- ESX
   if ESX then
     local xPlayer = ESX.GetPlayerFromId(src)
-    if xPlayer and xPlayer.getAccount and xPlayer.removeAccountMoney and xPlayer.getAccounts then
-      local cash = xPlayer.getAccount('money') and xPlayer.getAccount('money').money or 0
+    if xPlayer then
+      local cash = esxGetMoney(xPlayer, 'money')
       if cash > 0 then
         local take = math.min(remaining, cash)
-        xPlayer.removeAccountMoney('money', take)
-        remaining = remaining - take
-        paid = paid + take
-      end
-      if remaining > 0 then
-        local bank = xPlayer.getAccount('bank') and xPlayer.getAccount('bank').money or 0
-        if bank > 0 then
-          local take = math.min(remaining, bank)
-          xPlayer.removeAccountMoney('bank', take)
+        if esxRemoveMoney(xPlayer, 'money', take) then
           remaining = remaining - take
           paid = paid + take
+        end
+      end
+      if remaining > 0 then
+        local bank = esxGetMoney(xPlayer, 'bank')
+        if bank > 0 then
+          local take = math.min(remaining, bank)
+          if esxRemoveMoney(xPlayer, 'bank', take) then
+            remaining = remaining - take
+            paid = paid + take
+          end
         end
       end
       if paid > 0 then
@@ -530,17 +589,18 @@ AddEventHandler('mtj_arrest:reduceKriminalLevel', function()
   end
 
   -- ESX
-  if not paid and ESX then
-    local xPlayer = ESX.GetPlayerFromId(src)
-    if xPlayer and xPlayer.getAccount then
-      local cash = (xPlayer.getAccount('money') and xPlayer.getAccount('money').money) or 0
-      local bank = (xPlayer.getAccount('bank')  and xPlayer.getAccount('bank').money)  or 0
+  local esx = resolveESX()
+  if not paid and esx then
+    local xPlayer = esx.GetPlayerFromId(src)
+    if xPlayer then
+      local cash = esxGetMoney(xPlayer, 'money')
+      local bank = esxGetMoney(xPlayer, 'bank')
       if cash + bank >= kosten then
         local fromCash = math.min(cash, kosten)
         local fromBank = kosten - fromCash
-        if fromCash > 0 then xPlayer.removeAccountMoney('money', fromCash) end
-        if fromBank > 0 then xPlayer.removeAccountMoney('bank',  fromBank) end
-        paid = true
+        local removedCash = (fromCash <= 0) or esxRemoveMoney(xPlayer, 'money', fromCash)
+        local removedBank = (fromBank <= 0) or esxRemoveMoney(xPlayer, 'bank', fromBank)
+        paid = removedCash and removedBank
       end
     end
   end
