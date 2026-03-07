@@ -1382,6 +1382,7 @@ end
 local function hideAllUI()
   TriggerEvent('mtj_arrest:nui:scenario', false)
   TriggerEvent('mtj_arrest:nui:jail', false)
+  TriggerEvent('mtj_arrest:nui:fine', false)
   hideCombatHUD()
   nativeHudClear()
   dbg("hideAllUI: alle Panels versteckt")
@@ -2040,6 +2041,7 @@ AddEventHandler('mtj_arrest:endScenario', function()
   gpsTrackerActive = false  -- GPS-Tracker freigeben fuer naechstes Szenario
   gpsLastHeliUpdate = 0
   hideScenarioUI()
+  TriggerEvent('mtj_arrest:nui:fine', false)
   hideCombatHUD()
   nativeHudClear()
   -- Spieler-Freeze aufheben wenn er gerade in einer Festnahme-Animation war
