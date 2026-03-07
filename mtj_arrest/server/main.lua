@@ -109,15 +109,29 @@ local function clearAllWeaponsAndItems(src)
   dbg(("[mtj_arrest] clearAllWeaponsAndItems finished for %d removed: ox=%d esx=%d"):format(src, removed_ox, removed_esx))
 end
 
+local function normalizeEsxAccountName(account)
+  if type(account) == "string" then return account end
+  if type(account) == "table" then
+    -- Kompatibilitaet: je nach ESX/Wrapper liegt der Kontoname in .name/.account/.type oder als [1]
+    local name = account.name or account.account or account.type or account[1]
+    if type(name) == "string" and name ~= "" then return name end
+  end
+  return nil
+end
+
 local function esxGetMoney(xPlayer, account)
   if not xPlayer then return 0 end
+  local accountName = normalizeEsxAccountName(account)
+  if not accountName then return 0 end
   if xPlayer.getAccount then
-    local acc = xPlayer:getAccount(account)
-    if acc and acc.money ~= nil then
-      return tonumber(acc.money) or 0
+    local ok, accOrErr = pcall(function() return xPlayer:getAccount(accountName) end)
+    if not ok then
+      dbg(("[mtj_arrest] esxGetMoney:getAccount failed for account '%s': %s"):format(accountName, tostring(accOrErr)))
+    elseif accOrErr and accOrErr.money ~= nil then
+      return tonumber(accOrErr.money) or 0
     end
   end
-  if account == "money" and xPlayer.getMoney then
+  if accountName == "money" and xPlayer.getMoney then
     local ok, val = pcall(function() return xPlayer:getMoney() end)
     if ok then return tonumber(val) or 0 end
   end
@@ -126,14 +140,16 @@ end
 
 local function esxRemoveMoney(xPlayer, account, amount)
   if not xPlayer then return false end
+  local accountName = normalizeEsxAccountName(account)
+  if not accountName then return false end
   amount = math.floor(tonumber(amount) or 0)
   if amount <= 0 then return false end
-  if account == "money" and xPlayer.removeMoney then
+  if accountName == "money" and xPlayer.removeMoney then
     xPlayer:removeMoney(amount)
     return true
   end
   if xPlayer.removeAccountMoney then
-    xPlayer:removeAccountMoney(account, amount)
+    xPlayer:removeAccountMoney(accountName, amount)
     return true
   end
   return false
